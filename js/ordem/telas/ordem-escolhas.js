@@ -1247,6 +1247,8 @@
     function confirmar(fechar) {
       if (!escolhida) return;
       ordem.trilha = escolhida;
+      /* v9.9: Trilha Homebrew — a ficha guarda a sua cópia. */
+      if (global.RAMAOrdemHomebrew) global.RAMAOrdemHomebrew.embutir(ordem, escolhida);
       fechar();
       if (o.aoRegistrar) o.aoRegistrar(null);
     }

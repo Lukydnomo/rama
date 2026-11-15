@@ -1589,7 +1589,7 @@
   /* `ordem` (opcional): com ela, as trilhas gerais entram quando a regra
      Trilha Geral está ligada. */
   function trilhasDaClasse(chaveClasse, ordem) {
-    return TRILHAS.filter(function (t) { return t.classe === chaveClasse || (ordem && trilhaServe(t, chaveClasse, ordem)); });
+    return TRILHAS.concat(trilhasHomebrew()).filter(function (t) { return t.classe === chaveClasse || (ordem && trilhaServe(t, chaveClasse, ordem)); });
   }
 
   function progressaoDaClasse(chaveClasse) {
@@ -1617,6 +1617,37 @@
     return def;
   }
   function classesHomebrew() { return Object.keys(CLASSES_HOMEBREW).map(function (k) { return CLASSES_HOMEBREW[k]; }); }
+
+  /* ORIGENS e TRILHAS Homebrew (v9.9): cópias da ficha ou da biblioteca,
+     com chave versionada (hbo-… / hbt-…). Entram em origem() / trilha(),
+     em origensDisponiveis() e em trilhasDaClasse(); os poderes de uma
+     trilha vão para RAMAOrdemPoderes (habilidadesDaTrilha). As listas
+     oficiais (ORIGENS, TRILHAS) não mudam. */
+  var ORIGENS_HOMEBREW = {}, TRILHAS_HOMEBREW = {};
+  function registrarOrigemHomebrew(d) {
+    if (!d || !/^hbo-[a-z0-9-]{3,60}$/.test(String(d.chave || ""))) return null;
+    var def = JSON.parse(JSON.stringify(d));
+    def.homebrew = true; def.fonte = "HOMEBREW"; def.pagina = 0;
+    if (!Array.isArray(def.pericias)) def.pericias = [];
+    ORIGENS_HOMEBREW[def.chave] = def;
+    POR_CHAVE.origens[def.chave] = def;
+    return def;
+  }
+  function registrarTrilhaHomebrew(d) {
+    if (!d || !/^hbt-[a-z0-9-]{3,60}$/.test(String(d.chave || ""))) return null;
+    var def = JSON.parse(JSON.stringify(d));
+    def.homebrew = true; def.fonte = "HOMEBREW"; def.pagina = 0;
+    if (!Array.isArray(def.poderes)) def.poderes = [];
+    TRILHAS_HOMEBREW[def.chave] = def;
+    POR_CHAVE.trilhas[def.chave] = def;
+    var P = global.RAMAOrdemPoderes;
+    if (P && P.registrarHabilidadesDeTrilha) P.registrarHabilidadesDeTrilha(def);
+    return def;
+  }
+  function origensHomebrew() { return Object.keys(ORIGENS_HOMEBREW).map(function (k) { return ORIGENS_HOMEBREW[k]; }); }
+  function trilhasHomebrew() { return Object.keys(TRILHAS_HOMEBREW).map(function (k) { return TRILHAS_HOMEBREW[k]; }); }
+  /* As do livro e as Homebrew registradas (listas de escolha). */
+  function origensDisponiveis() { return ORIGENS.concat(origensHomebrew()); }
   /* A classe cujos poderes de classe valem para esta (Homebrew: a que a
      mesa escolheu, ou nenhuma). */
   function classeDosPoderes(chave) {
@@ -1629,6 +1660,7 @@
      de cada entrada do catálogo. */
   function referencia(entrada) {
     if (!entrada) return "";
+    if (entrada.homebrew || entrada.fonte === "HOMEBREW") return "Homebrew";
     /* Extra (v5.1): sem livro e sem página — o material, quando houver. */
     if (ehAvulsa(entrada.fonte)) return nomeDoLivro(entrada.fonte) + (entrada.material ? " · " + entrada.material : "");
     if (!entrada.pagina) return "";
@@ -1637,6 +1669,8 @@
 
   global.RAMAOrdemCatalogo = {
     registrarClasseHomebrew: registrarClasseHomebrew, classesHomebrew: classesHomebrew, classeDosPoderes: classeDosPoderes,
+    registrarOrigemHomebrew: registrarOrigemHomebrew, registrarTrilhaHomebrew: registrarTrilhaHomebrew,
+    origensHomebrew: origensHomebrew, trilhasHomebrew: trilhasHomebrew, origensDisponiveis: origensDisponiveis,
     FONTES: { OPRPG: OPRPG, SAH: SAH, AS1: AS1, AS2: AS2, AS3: AS3, AS4: AS4, AS5: AS5, AS6: AS6, AS7: AS7, AS9: AS9, EXTRA: EXTRA },
     LIVROS: LIVROS,
     fonteDe: fonteDe, fonteLiberada: fonteLiberada, motivoDaFonte: motivoDaFonte,

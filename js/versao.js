@@ -118,6 +118,20 @@
 
   var CHANGELOG = [
     {
+      versao: "9.9.0",
+      codinome: "LAPIDA",
+      data: "15/11/2026",
+      mudancas: {
+        "Adicionado": [
+          "Origem Homebrew de Ordem Paranormal: perícias treinadas (fixas e à escolha), o poder com o texto e, se quiser, efeitos que a ficha já sabe somar (Defesa, PV, PE, PV ou SAN por marco, bônus em perícia). Aparece na criação do agente, numa aba Homebrew, e na troca de origem.",
+          "Trilha Homebrew de Ordem Paranormal: para uma classe, com um requisito opcional e os quatro poderes (NEX 10%, 40%, 65% e 99%), que chegam sozinhos no marco. Aparece na vaga de Trilha da progressão, na criação e na Ramificação.",
+          "Como a classe, a ficha guarda a própria cópia da origem e da trilha: mudar a biblioteca não muda um personagem em jogo.",
+        ],
+        "Corrigido": ["Numa ficha com Classe Homebrew que usa as trilhas de uma classe do livro, a trilha escolhida sumia ao reabrir a ficha."],
+        "Técnico": ["Novo js/paginas/homebrew-origem-trilha.js. RAMAOrdemHomebrew ganhou normalizarOrigem/normalizarTrilha, os efeitos aceitos e embutir (cópia ao escolher); o catálogo registra origens e trilhas Homebrew (chaves hbo-/hbt- versionadas) e os poderes da trilha viram habilidades de trilha. Servidor: tipos origem e trilha (só Ordem). testes/executar-homebrew-ordem.js: 71 verificações."],
+      },
+    },
+    {
       versao: "9.8.0",
       codinome: "SOTAQUE",
       data: "15/11/2026",

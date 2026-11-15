@@ -23,6 +23,16 @@
    Faltou a tabela de um trilho: a classe NÃO é oferecida nele (o motivo
    aparece) — nunca cai na tabela de Combatente, Especialista ou Ocultista.
 
+   v9.9 — ORIGEM e TRILHA Homebrew, no mesmo esquema (chave versionada
+   hbo-… / hbt-…, cópia em ordem.homebrew.origens / .trilhas):
+     origem  perícias fixas e à escolha, o poder (nome e texto) e, se a
+             mesa quiser, EFEITOS do conjunto que o motor já calcula
+             (Defesa, PV/PE fixos, PV/SAN por marco, bônus em perícia)
+     trilha  a classe oficial a que serve, um requisito opcional e os
+             quatro poderes (NEX 10%, 40%, 65%, 99%), com os mesmos efeitos
+   Nada mais é inventado: um poder sem efeito é informativo, como os do
+   livro que dependem da cena.
+
    Sem DOM: testes/executar-homebrew-ordem.js.
    ===================================================================== */
 
@@ -51,6 +61,19 @@
   var ESCOLHAS_PATENTE = ESCOLHAS.concat([{ chave: "trilhaElite", rotulo: "Trilha (3ª ou 4ª habilidade)" }]);
   var OFICIAIS = ["combatente", "especialista", "ocultista"];
   var PADRAO_CHAVE = /^hbc-[a-z0-9-]{3,60}$/;
+  var PADRAO_ORIGEM = /^hbo-[a-z0-9-]{3,60}$/;
+  var PADRAO_TRILHA = /^hbt-[a-z0-9-]{3,60}$/;
+  var NEX_TRILHA = [10, 40, 65, 99];
+  /* Os efeitos que uma origem ou um poder de trilha Homebrew podem ter:
+     só os tipos que o motor de Ordem já soma (mesmo formato dos do livro). */
+  var EFEITOS = [
+    { chave: "defesa", rotulo: "Defesa", exemplo: "+2 em Defesa (como Patrulha)" },
+    { chave: "pvFixo", rotulo: "PV (fixo)", exemplo: "+5 PV" },
+    { chave: "peFixo", rotulo: "PE (fixo)", exemplo: "+2 PE" },
+    { chave: "pvPorNex", rotulo: "PV por marco", exemplo: "+1 PV a cada 5% de NEX (como Calejado)" },
+    { chave: "sanPorNex", rotulo: "SAN por marco", exemplo: "+1 SAN a cada 5% de NEX (como Cicatrizes Psicológicas)" },
+    { chave: "bonusPericia", rotulo: "Bônus em perícia", exemplo: "+2 em Diplomacia", pericia: true },
+  ];
 
   function recurso(b, padraoBase, atributos) {
     var x = obj(b);
@@ -64,6 +87,79 @@
     return lista(v).map(String).filter(function (k, i, l) { return ok.indexOf(k) >= 0 && l.indexOf(k) === i; });
   }
   function rotulos(v) { return lista(v).map(function (s) { return texto(s, 80).trim(); }).filter(Boolean).slice(0, 4); }
+
+  function efeitos(v) {
+    var ok = EFEITOS.map(function (e) { return e.chave; });
+    return lista(v).map(obj).filter(function (e) { return ok.indexOf(e.tipo) >= 0; }).map(function (e) {
+      var x = { tipo: e.tipo, valor: int(e.valor, -5, 10, 0) };
+      if (e.tipo === "bonusPericia") x.pericias = pericias(e.pericias || (e.pericia ? [e.pericia] : []), 1);
+      return x;
+    }).filter(function (e) { return e.valor !== 0 && (e.tipo !== "bonusPericia" || e.pericias.length); }).slice(0, 4);
+  }
+  function textoEfeito(e) {
+    var sinal = e.valor > 0 ? "+" + e.valor : String(e.valor);
+    if (e.tipo === "defesa") return sinal + " em Defesa";
+    if (e.tipo === "pvFixo") return sinal + " PV";
+    if (e.tipo === "peFixo") return sinal + " PE";
+    if (e.tipo === "pvPorNex") return sinal + " PV a cada marco (5% de NEX)";
+    if (e.tipo === "sanPorNex") return sinal + " SAN a cada marco (5% de NEX)";
+    if (e.tipo === "bonusPericia") return sinal + " em " + ((C() && C().pericia(e.pericias[0])) || { nome: e.pericias[0] }).nome;
+    return "";
+  }
+  function idCurto(d) { return String(d.homebrewId || "local").toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 8) || "local"; }
+  function chaveVersionada(prefixo, d) {
+    var semChave = Object.assign({}, d); delete semChave.chave;
+    return prefixo + idCurto(d) + "-" + hash(estavel(semChave));
+  }
+
+  /* ORIGEM Homebrew, no formato das do catálogo (pericias, poder, resumo,
+     efeitos, automacao). Fonte "HOMEBREW": nunca bloqueada por suplemento. */
+  function normalizarOrigem(bruto) {
+    var b = obj(bruto);
+    var d = {
+      chave: PADRAO_ORIGEM.test(String(b.chave || "")) ? b.chave : "",
+      nome: texto(b.nome, 60).trim() || "Origem Homebrew",
+      homebrew: true, homebrewId: texto(b.homebrewId, 80), fonte: "HOMEBREW", pagina: 0,
+      descricao: texto(b.descricao, 1200),
+      pericias: pericias(b.pericias, 2),
+      periciasAEscolher: int(b.periciasAEscolher, 0, 4, 0),
+      periciasOpcoes: null,
+      periciasObservacao: texto(b.periciasObservacao, 160).trim(),
+      poder: texto(b.poder, 60).trim() || "Poder de origem",
+      resumo: texto(b.resumo, 1200).trim(),
+      efeitos: efeitos(b.efeitos),
+    };
+    var op = pericias(b.periciasOpcoes, 20).filter(function (k) { return d.pericias.indexOf(k) < 0; });
+    if (d.periciasAEscolher && op.length >= d.periciasAEscolher) d.periciasOpcoes = op;
+    if (!d.periciasOpcoes) delete d.periciasOpcoes;
+    if (!d.periciasObservacao) delete d.periciasObservacao;
+    d.automacao = d.efeitos.length ? "calculo" : "informacao";
+    if (!d.chave) d.chave = chaveVersionada("hbo-", d);
+    return d;
+  }
+
+  /* TRILHA Homebrew: serve a uma classe oficial (e às classes Homebrew que
+     usam as trilhas dela); quatro poderes, um por marco de trilha. */
+  function normalizarTrilha(bruto) {
+    var b = obj(bruto);
+    var pod = lista(b.poderes);
+    var req = obj(lista(b.requisitos)[0]);
+    var d = {
+      chave: PADRAO_TRILHA.test(String(b.chave || "")) ? b.chave : "",
+      nome: texto(b.nome, 60).trim() || "Trilha Homebrew",
+      classe: OFICIAIS.indexOf(b.classe) >= 0 ? b.classe : "combatente",
+      homebrew: true, homebrewId: texto(b.homebrewId, 80), fonte: "HOMEBREW", pagina: 0,
+      resumo: texto(b.resumo || b.descricao, 1200).trim(),
+      requisitos: req.tipo === "treinado" && C() && C().pericia(req.pericia) ? [{ tipo: "treinado", pericia: req.pericia }] : [],
+      poderes: NEX_TRILHA.map(function (nex, i) {
+        var p = obj(pod.filter(function (x) { return obj(x).nex === nex; })[0] || pod[i]);
+        var ef = efeitos(p.efeitos);
+        return { nex: nex, nome: texto(p.nome, 60).trim() || ("Poder de " + nex + "%"), resumo: texto(p.resumo, 1200).trim(), efeitos: ef, pagina: 0, automacao: ef.length ? "calculo" : "informacao" };
+      }),
+    };
+    if (!d.chave) d.chave = chaveVersionada("hbt-", d);
+    return d;
+  }
 
   /* A definição da classe, no formato que o catálogo e o motor leem. */
   function normalizarClasse(bruto) {
@@ -109,11 +205,7 @@
     return d;
   }
   /* A chave muda quando a definição muda: cada versão é uma classe. */
-  function chaveDaClasse(d) {
-    var semChave = Object.assign({}, d); delete semChave.chave;
-    var id = String(d.homebrewId || "local").toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 8) || "local";
-    return "hbc-" + id + "-" + hash(estavel(semChave));
-  }
+  function chaveDaClasse(d) { return chaveVersionada("hbc-", d); }
 
   /* O trilho em uso aceita esta classe? */
   function disponivelNoTrilho(d, trilho) {
@@ -131,7 +223,7 @@
   /* O bloco que a ficha guarda. */
   function normalizarBloco(bruto) {
     var b = obj(bruto);
-    var classes = {}, elementos = {};
+    var classes = {}, elementos = {}, origens = {}, trilhas = {};
     Object.keys(obj(b.classes)).slice(0, 8).forEach(function (k) {
       if (!PADRAO_CHAVE.test(k)) return;
       var d = normalizarClasse(Object.assign({}, b.classes[k], { chave: k }));
@@ -140,14 +232,22 @@
     Object.keys(obj(b.elementos)).slice(0, 20).forEach(function (k) {
       if (EL() && EL().ehHomebrew(k)) elementos[k] = EL().normalizar(Object.assign({}, b.elementos[k], { chave: k }));
     });
-    if (!Object.keys(classes).length && !Object.keys(elementos).length) return null;
-    return { versao: 1, classes: classes, elementos: elementos };
+    Object.keys(obj(b.origens)).slice(0, 8).forEach(function (k) {
+      if (PADRAO_ORIGEM.test(k)) origens[k] = normalizarOrigem(Object.assign({}, b.origens[k], { chave: k }));
+    });
+    Object.keys(obj(b.trilhas)).slice(0, 8).forEach(function (k) {
+      if (PADRAO_TRILHA.test(k)) trilhas[k] = normalizarTrilha(Object.assign({}, b.trilhas[k], { chave: k }));
+    });
+    if (![classes, elementos, origens, trilhas].some(function (m) { return Object.keys(m).length; })) return null;
+    return { versao: 1, classes: classes, elementos: elementos, origens: origens, trilhas: trilhas };
   }
   /* Registra no catálogo (idempotente; chaves versionadas não colidem). */
   function registrar(bloco) {
     var b = obj(bloco);
     Object.keys(obj(b.classes)).forEach(function (k) { if (C() && C().registrarClasseHomebrew) C().registrarClasseHomebrew(b.classes[k]); });
     if (EL()) EL().registrarMapa(b.elementos);
+    Object.keys(obj(b.origens)).forEach(function (k) { if (C() && C().registrarOrigemHomebrew) C().registrarOrigemHomebrew(b.origens[k]); });
+    Object.keys(obj(b.trilhas)).forEach(function (k) { if (C() && C().registrarTrilhaHomebrew) C().registrarTrilhaHomebrew(b.trilhas[k]); });
   }
 
   /* Da biblioteca (registro com modelo) para a definição da ficha. */
@@ -157,17 +257,40 @@
     var def = Object.assign({}, obj(m.def), { nome: reg.nome, resumo: reg.descricao || obj(m.def).resumo, homebrewId: reg.id });
     if (m.subtipo === "classe") return { tipo: "classe", def: normalizarClasse(def) };
     if (m.subtipo === "elemento") return { tipo: "elemento", def: EL() ? EL().normalizar(Object.assign(def, { chave: obj(m.def).chave || "" })) : null };
+    if (m.subtipo === "origem") return { tipo: "origem", def: normalizarOrigem(Object.assign(def, { chave: "", descricao: reg.descricao || "", resumo: obj(m.def).resumo || "" })) };
+    if (m.subtipo === "trilha") return { tipo: "trilha", def: normalizarTrilha(Object.assign(def, { chave: "" })) };
     return null;
   }
   /* Põe uma definição na ficha (cópia) e registra. */
+  var MAPA_DO_TIPO = { classe: "classes", elemento: "elementos", origem: "origens", trilha: "trilhas" };
   function guardarNaFicha(ordem, tipo, def) {
     if (!ordem.homebrew || typeof ordem.homebrew !== "object") ordem.homebrew = { versao: 1, classes: {}, elementos: {} };
-    if (!ordem.homebrew.classes) ordem.homebrew.classes = {};
-    if (!ordem.homebrew.elementos) ordem.homebrew.elementos = {};
-    var alvo = tipo === "classe" ? ordem.homebrew.classes : ordem.homebrew.elementos;
-    alvo[def.chave] = JSON.parse(JSON.stringify(def));
+    var campo = MAPA_DO_TIPO[tipo] || "elementos";
+    if (!ordem.homebrew[campo] || typeof ordem.homebrew[campo] !== "object") ordem.homebrew[campo] = {};
+    ordem.homebrew[campo][def.chave] = JSON.parse(JSON.stringify(def));
     registrar(ordem.homebrew);
     return def.chave;
+  }
+  /* A chave Homebrew que a ficha passou a usar (escolhida numa lista que
+     veio da biblioteca) ganha a sua cópia na ficha. Sem a definição no
+     catálogo, nada muda (e a chave continua identificada). */
+  function tipoDaChave(k) {
+    k = String(k || "");
+    if (PADRAO_CHAVE.test(k)) return "classe";
+    if (PADRAO_ORIGEM.test(k)) return "origem";
+    if (PADRAO_TRILHA.test(k)) return "trilha";
+    if (EL() && EL().ehHomebrew(k)) return "elemento";
+    return "";
+  }
+  function embutir(ordem, chave) {
+    var tipo = tipoDaChave(chave);
+    if (!ordem || !tipo) return false;
+    var campo = MAPA_DO_TIPO[tipo];
+    if (ordem.homebrew && ordem.homebrew[campo] && ordem.homebrew[campo][chave]) return true;
+    var def = tipo === "classe" ? C() && C().classe(chave) : tipo === "origem" ? C() && C().origem(chave) : tipo === "trilha" ? C() && C().trilha(chave) : EL() && EL().def(chave);
+    if (!def || !def.homebrew) return false;
+    guardarNaFicha(ordem, tipo, def);
+    return true;
   }
 
   /* A prévia que a revisão mostra: o 1º marco e os ganhos, pelo motor. */
@@ -184,6 +307,22 @@
     if (d.patentes) linhas.push("Patentes: " + (d.patentes.pv.base + (d.patentes.pv.atributo ? a.vig : 0)) + " PV em Recruta, +" + d.patentes.pv.porPatente + " por patente.");
     return linhas;
   }
+  /* A prévia de uma origem e de uma trilha (revisão do editor, consulta). */
+  function previaOrigem(d) {
+    var nomes = function (l) { return l.map(function (k) { return ((C() && C().pericia(k)) || { nome: k }).nome; }).join(" e "); };
+    var linhas = [];
+    linhas.push("Perícias: " + (d.pericias.length ? nomes(d.pericias) : "nenhuma fixa") + (d.periciasAEscolher ? " + " + d.periciasAEscolher + " à escolha" + (d.periciasOpcoes ? " entre " + nomes(d.periciasOpcoes) : "") : "") + ".");
+    linhas.push("Poder: " + d.poder + (d.resumo ? " — " + d.resumo : ""));
+    linhas.push(d.efeitos.length ? "Na conta da ficha: " + d.efeitos.map(textoEfeito).join(", ") + "." : "Informativo: a ficha mostra o poder; o efeito é aplicado pela mesa.");
+    return linhas;
+  }
+  function previaTrilha(d) {
+    var linhas = ["Para: " + ((C() && C().classe(d.classe)) || { nome: d.classe }).nome + " (e as classes Homebrew que usam as trilhas dela)."];
+    if (d.requisitos.length) linhas.push("Requisito: treinado em " + ((C() && C().pericia(d.requisitos[0].pericia)) || {}).nome + ".");
+    d.poderes.forEach(function (p) { linhas.push("NEX " + p.nex + "%: " + p.nome + (p.efeitos.length ? " (" + p.efeitos.map(textoEfeito).join(", ") + ")" : "")); });
+    return linhas;
+  }
+
   /* A tabela de uma classe oficial, como ponto de partida do editor. */
   function modeloDeOficial(chave) {
     var c = C() && C().classe(chave);
@@ -207,19 +346,25 @@
     if (biblioteca && !forcar) return Promise.resolve(biblioteca);
     if (carga && !forcar) return carga;
     var API = global.RAMAApi;
-    if (!API || !API.listarHomebrew) return Promise.resolve({ classes: [], elementos: [] });
-    carga = API.listarHomebrew({ escopo: "todos", tipos: ["classe", "elemento"] }).then(function (r) {
+    var VAZIA = { classes: [], elementos: [], origens: [], trilhas: [] };
+    if (!API || !API.listarHomebrew) return Promise.resolve(VAZIA);
+    carga = API.listarHomebrew({ escopo: "todos", tipos: ["classe", "elemento", "origem", "trilha"] }).then(function (r) {
       carga = null;
-      var saida = { classes: [], elementos: [] };
+      var saida = { classes: [], elementos: [], origens: [], trilhas: [] };
       ((r && r.ok && r.dados) || []).forEach(function (reg) {
         var x = deRegistro(reg);
         if (!x || !x.def) return;
         if (x.tipo === "elemento") { if (EL()) EL().registrar(x.def); saida.elementos.push(x.def); }
         if (x.tipo === "classe") saida.classes.push(Object.assign({ meu: reg.meu !== false }, x.def));
+        /* Origens e trilhas entram no catálogo (chave versionada: nunca
+           colidem) — as listas da criação, da troca de origem e da vaga de
+           Trilha as mostram; escolher uma grava a cópia na ficha. */
+        if (x.tipo === "origem") { if (C() && C().registrarOrigemHomebrew) C().registrarOrigemHomebrew(x.def); saida.origens.push(x.def); }
+        if (x.tipo === "trilha") { if (C() && C().registrarTrilhaHomebrew) C().registrarTrilhaHomebrew(x.def); saida.trilhas.push(x.def); }
       });
       biblioteca = saida;
       return saida;
-    }, function () { carga = null; return { classes: [], elementos: [] }; });
+    }, function () { carga = null; return VAZIA; });
     return carga;
   }
 
@@ -229,5 +374,7 @@
     normalizarClasse: normalizarClasse, chaveDaClasse: chaveDaClasse, disponivelNoTrilho: disponivelNoTrilho, faltas: faltas,
     normalizarBloco: normalizarBloco, registrar: registrar, deRegistro: deRegistro, guardarNaFicha: guardarNaFicha,
     previa: previa, modeloDeOficial: modeloDeOficial,
+    NEX_TRILHA: NEX_TRILHA, EFEITOS: EFEITOS, normalizarOrigem: normalizarOrigem, normalizarTrilha: normalizarTrilha,
+    textoEfeito: textoEfeito, previaOrigem: previaOrigem, previaTrilha: previaTrilha, embutir: embutir, tipoDaChave: tipoDaChave,
   };
 })(typeof window !== "undefined" ? window : globalThis);

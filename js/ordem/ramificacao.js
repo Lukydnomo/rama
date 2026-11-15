@@ -327,6 +327,8 @@
       if (!c) return { ok: false, motivos: ["Essa trilha não serve para a classe."] };
       if (!c.disponivel) return { ok: false, motivos: c.motivos && c.motivos.length ? c.motivos : ["Trilha indisponível."] };
       o.trilha = dec.trilha;
+      /* v9.9: uma Trilha Homebrew leva a cópia junto (projeção e ficha). */
+      if (global.RAMAOrdemHomebrew && global.RAMAOrdemHomebrew.embutir) global.RAMAOrdemHomebrew.embutir(o, dec.trilha);
       return { ok: true };
     }
     if (dec.tipo === "afinidade" || v.tipo === "afinidade") {

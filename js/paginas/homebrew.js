@@ -780,6 +780,12 @@
       global.RAMAHomebrewClasse.editor({ registro: registro, aoSalvar: carregar });
       return;
     }
+    /* v9.9: Origem e Trilha de Ordem têm editores próprios. */
+    var stHb = registro && registro.modelo && registro.modelo.grupo === "estrutural" ? registro.modelo.subtipo : "";
+    if ((stHb === "origem" || stHb === "trilha") && global.RAMAHomebrewOrigemTrilha) {
+      global.RAMAHomebrewOrigemTrilha[stHb]({ registro: registro, aoSalvar: carregar });
+      return;
+    }
     if (registro && registro.modelo && global.RAMAHomebrewEditor) {
       global.RAMAHomebrewEditor.editor({ registro: registro, aoSalvar: function () { if (global.RAMAOrdemHomebrew) global.RAMAOrdemHomebrew.carregarBiblioteca(true); carregar(); } });
       return;

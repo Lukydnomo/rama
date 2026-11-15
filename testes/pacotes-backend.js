@@ -205,8 +205,13 @@ export function testarPacotesBackend({ t, preparar, novaConta, comoFn }) {
   t.ok("Elemento de Ordem: gravado com a coluna tipo \"elemento\"", vidro.ok && A({ acao: "ler_homebrew", homebrewId: vidro.dados.id }).dados.tipo === "elemento");
   const classeHb = A({ acao: "salvar_homebrew", dados: { tipo: "habilidade", nome: "Vigilante", modelo: Object.assign(modelo("ordem", "estrutural", "classe"), { def: { pvInicial: { base: 18, atributo: "vig" } } }) } });
   t.ok("Classe de Ordem: coluna tipo \"classe\"", classeHb.ok && A({ acao: "ler_homebrew", homebrewId: classeHb.dados.id }).dados.tipo === "classe");
+  /* v9.9: Origem e Trilha de Ordem. */
+  const origemHb = A({ acao: "salvar_homebrew", dados: { tipo: "item", nome: "Vidraceiro", modelo: Object.assign(modelo("ordem", "estrutural", "origem"), { def: { pericias: ["profissao", "percepcao"], poder: "Olho Treinado" } }) } });
+  const trilhaHb = A({ acao: "salvar_homebrew", dados: { tipo: "item", nome: "Lapidador", modelo: Object.assign(modelo("ordem", "estrutural", "trilha"), { def: { classe: "combatente", poderes: [] } }) } });
+  t.ok("Origem e Trilha de Ordem: colunas tipo \"origem\" e \"trilha\"", origemHb.ok && trilhaHb.ok && A({ acao: "ler_homebrew", homebrewId: origemHb.dados.id }).dados.tipo === "origem" && A({ acao: "ler_homebrew", homebrewId: trilhaHb.dados.id }).dados.tipo === "trilha");
+  t.recusa("Origem estrutural em T20 ainda é recusada", A({ acao: "salvar_homebrew", dados: { tipo: "item", nome: "Origem", modelo: modelo("tormenta20", "estrutural", "origem") } }), "dados_invalidos");
   t.recusa("tipo estrutural que o sistema ainda não usa (Raça em T20) é recusado", A({ acao: "salvar_homebrew", dados: { tipo: "item", nome: "Raça", modelo: modelo("tormenta20", "estrutural", "raca") } }), "dados_invalidos");
-  t.recusa("subtipo estrutural desconhecido em Ordem", A({ acao: "salvar_homebrew", dados: { tipo: "item", nome: "X", modelo: modelo("ordem", "estrutural", "trilha") } }), "dados_invalidos");
+  t.recusa("subtipo estrutural desconhecido em Ordem", A({ acao: "salvar_homebrew", dados: { tipo: "item", nome: "X", modelo: modelo("ordem", "estrutural", "raca") } }), "dados_invalidos");
   t.ok("listar com tipos [classe, elemento] devolve os dois", A({ acao: "listar_homebrew", tipos: ["classe", "elemento"] }).dados.length === 2);
   const pOrdemEst = salvar(A, { dados: dados("Livro do Vidro", "ordem"), conteudo: { adicionar: [vidro.dados.id, classeHb.dados.id] } });
   t.ok("pacote de Ordem aceita Classe e Elemento", pOrdemEst.ok && pOrdemEst.dados.tipos.classe === 1 && pOrdemEst.dados.tipos.elemento === 1);

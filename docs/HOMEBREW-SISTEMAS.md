@@ -6,7 +6,7 @@ organiza em três etapas.
 | Etapa | Situação |
 |---|---|
 | **1 — Estrutura e compatibilidade** | entregue na **v9.7.0** |
-| **2 — Tipos estruturais e elementos** | parte 1 na **v9.8.0** (Elemento e Classe de Ordem I); o resto pendente |
+| **2 — Tipos estruturais e elementos** | parte 1 na **v9.8.0** (Elemento e Classe de Ordem I), parte 2 na **v9.9.0** (Origem e Trilha de Ordem I); o resto pendente |
 | **3 — Automação por sistema, publicação e regressão** | pendente |
 
 Este documento é o **inventário de cobertura**. Para cada sistema e tipo,
@@ -153,7 +153,8 @@ Legenda:
 | Ordem I | Criatura | o de sempre | combate, aliados, consulta | **N** | — |
 | Ordem I | **Elemento** (v9.8) | adaptador (cor, símbolo, relações, afinidade) | rituais (principal e vários), criaturas, item paranormal, afinidade | **N** nos campos; sem regra oficial herdada | relações: guardadas, automação na Etapa 3 |
 | Ordem I | **Classe** (v9.8) | editor próprio em 6 etapas | criação de agente (Classes Homebrew), Progressão, Ramificação | **N**: PV/PE/SAN/PD, vagas, poderes e trilhas escolhidos, em NEX, nível e Patentes (com a tabela) | conjuração de rituais pela classe; troca de classe numa ficha existente |
-| Ordem I | **Origem, Trilha** | — | — | — | **Etapa 2** (próxima parte) |
+| Ordem I | **Origem** (v9.9) | editor próprio em 3 etapas | criação de agente (aba Homebrew), troca de origem | **N**: perícias fixas treinadas; efeitos do conjunto que o motor soma (Defesa, PV/PE fixos, PV/SAN por marco, bônus em perícia) | escolhas internas no poder; o resto do texto é da mesa |
+| Ordem I | **Trilha** (v9.9) | editor próprio em 3 etapas | vaga de Trilha (Progressão, criação), Ramificação | **N**: 4 poderes automáticos no marco (NEX, nível, Patentes), com os mesmos efeitos | escolhas internas nos poderes |
 | **Ordem II** | Item: arma, proteção, consumível, equipamento (passos em perícia), outro | adaptador | inventário (Do Homebrew) | **N**: RA + dano, armadura, passos | — |
 | Ordem II | Habilidade, Poder, Ritual (experimental) | adaptador | habilidades (habilidade própria) | **C** (texto) | efeitos estruturados: **Etapa 3** |
 | Ordem II | Ameaça | o de sempre | mesa de Ordem II | **N** | Perfil e Ocupação: **Etapa 2** |
@@ -453,7 +454,7 @@ T20 recusado e pacotes.
 ### O que ainda falta na Etapa 2
 
 **Ordem I:**
-- **Origem** e **Trilha** Homebrew.
+- ~~**Origem** e **Trilha** Homebrew~~ — feitas na v9.9.0 (abaixo).
 - Classe que conjura rituais (o "Escolhido pelo Outro Lado" com círculos por
   NEX).
 - Classes Homebrew também na troca de classe e na transição de uma ficha
@@ -472,3 +473,142 @@ T20 recusado e pacotes.
 - As habilidades Homebrew no motor desses sistemas.
 
 A **Etapa 3** (automação por sistema) continua como descrita acima.
+
+## v9.9.0 — Etapa 2, parte 2: Origem e Trilha Homebrew de Ordem I
+
+### Origem Homebrew
+
+**Homebrew → + Criar → Ordem Paranormal → Origem.** O editor tem três
+etapas (Identidade → Perícias e poder → Revisão), com a prévia ao lado:
+- até duas perícias treinadas fixas;
+- perícias à escolha (0 a 4), opcionalmente entre uma lista, com uma
+  observação ("Duas à escolha do mestre");
+- o poder: nome e texto, como aparece em Habilidades;
+- **efeitos opcionais**, só do conjunto que o motor de Ordem já soma:
+  Defesa, PV fixo, PE fixo, PV por marco, SAN por marco e bônus em
+  perícia (até 4, valor de −5 a +10). Um tipo fora dessa lista é
+  descartado na normalização. Sem efeito, o poder é informativo, como os
+  do livro que dependem da cena.
+
+**Onde entra:** na criação do agente (aba **Homebrew** da etapa Origem) e
+na troca de origem (aba Geral, modo edição). As perícias fixas entram
+treinadas e ficam em `periciasDaOrigem`, como as do livro; os efeitos
+entram na conta da ficha; o cartão em Habilidades mostra o texto,
+"Entra na conta" e "Homebrew".
+
+### Trilha Homebrew
+
+**Homebrew → + Criar → Ordem Paranormal → Trilha.** Três etapas
+(Identidade → Poderes → Revisão):
+- a **classe oficial** a que serve. Serve também às Classes Homebrew que
+  usam as trilhas dela ("Trilhas: as do Especialista");
+- um requisito opcional: ser treinado numa perícia (como Médico de Campo
+  pede Medicina);
+- os **quatro poderes** (NEX 10%, 40%, 65% e 99%), cada um com nome,
+  texto e os mesmos efeitos opcionais da origem.
+
+Os poderes viram habilidades de trilha como as do livro
+(`RAMAOrdemPoderes.habilidadesDaTrilha`): chegam sozinhos no marco, com a
+mesma regra de nível e Patentes das trilhas oficiais. A trilha aparece na
+vaga de Trilha da Progressão, na revisão da criação e na Ramificação.
+
+### Cópia, versão e catálogo
+
+O mesmo esquema da classe:
+- chave versionada (`hbo-<id>-<hash>`, `hbt-<id>-<hash>`): editar na
+  biblioteca cria outra versão, e o personagem em jogo continua com a dele;
+- a ficha guarda a cópia em `ordem.homebrew.origens` e
+  `ordem.homebrew.trilhas`;
+- as origens e trilhas da biblioteca (suas e públicas) entram no catálogo
+  ao carregar (`carregarBiblioteca`), e as listas de escolha as mostram;
+- ao escolher (criação, troca de origem, vaga de Trilha, Ramificação), a
+  cópia é gravada (`RAMAOrdemHomebrew.embutir`). A normalização embute a
+  que faltar;
+- uma chave `hbo-`/`hbt-` com a cópia na ficha nunca é apagada, mesmo numa
+  página sem a biblioteca. Sem a cópia e sem o catálogo, a chave some (nada
+  é inventado).
+
+Fonte `HOMEBREW`: nunca bloqueada por suplemento desligado. A referência
+mostra "Homebrew".
+
+**Correção:** numa ficha com Classe Homebrew que usa as trilhas de uma
+oficial, a trilha escolhida sumia na normalização (a conferência olhava só
+`trilha.classe === ficha.classe`). Agora ela fica, a oficial e a Homebrew.
+
+### Servidor e pacotes
+
+- `TIPOS_HOMEBREW` ganhou `origem` e `trilha`.
+- Os estruturais aceitos em Ordem passaram a ser `classe`, `elemento`,
+  `origem` e `trilha`. Origem estrutural em T20 continua recusada.
+- Pacotes agrupam em "Origens" e "Trilhas" (só em pacote de Ordem).
+- Exportar e importar (`homebrew-estrutural`) refazem a definição pelo
+  normalizador do motor.
+
+### Validação da v9.9.0
+
+**Automática.** `testes/executar-homebrew-ordem.js` passou de 44 para 71:
+- **Origem**: chave versionada; só os efeitos aceitos; fonte Homebrew
+  liberada; +1 Defesa e +1 PV por marco na conta; entra em
+  `origensDisponiveis` sem mexer em `ORIGENS`; sem cópia e sem catálogo
+  some; escolhida da biblioteca, a normalização embute a cópia; opções de
+  perícia.
+- **Trilha**: chave, classe, requisito e os 4 poderes; sobrevive com a
+  cópia; poderes como habilidades de trilha; NEX 10% dá +3 PV e NEX 40%
+  +1 Defesa; entra nas trilhas do Combatente e não nas do Ocultista; numa
+  ficha de outra classe o vínculo some; classe Homebrew com as trilhas do
+  Combatente mantém a Homebrew e a oficial; `embutir` leva a cópia.
+- **Biblioteca e arquivo**: guardar, ida e volta pelo arquivo, o texto do
+  poder não vira descrição, pacote só de Ordem, resumo da lista.
+
+`testes/pacotes-backend.js`: Origem e Trilha gravadas com as colunas
+próprias; Origem estrutural em T20 recusada.
+
+**Na interface** (servidor local, conta sintética):
+- Criei a origem **Vidraceiro** pelo editor (Profissão e Percepção, poder
+  Olho Treinado, +1 Defesa e +1 PV por marco) e a trilha **Lapidador**
+  (Especialista, requisito Profissão, Primeiro Corte +3 PV, Faceta
+  +1 Defesa). A lista e a consulta mostram as regras.
+- **Criação de agente** (Especialista, NEX 10%): a aba "Homebrew (1)"
+  trouxe o Vidraceiro, e Profissão e Percepção vieram "já treinadas pela
+  origem". A prévia somou: PV 25 e Defesa 13. Na revisão, "Escolher trilha"
+  mostrou o Lapidador com "✓ Treinado em Profissão"; escolhido, o PV foi a
+  28.
+- **Ficha gravada**: as cópias estão em `ordem.homebrew.origens` e
+  `ordem.homebrew.trilhas`. PV 28 e Defesa 13 no cabeçalho; Olho Treinado e
+  Primeiro Corte em Habilidades.
+- A troca de origem lista "Vidraceiro (atual)" como Homebrew.
+- O editor reabre com tudo preenchido; no celular, uma coluna, sem rolagem
+  lateral.
+- Sem erros no console nem no servidor.
+
+### Publicar a v9.9.0
+
+**Servidor:** troque **`Codigo.gs`** e crie uma versão nova da implantação.
+**`setupRama()` não é necessário.**
+
+**Site:**
+- `js/paginas/homebrew-origem-trilha.js` (novo);
+- `js/ordem/homebrew-ordem.js`, `js/ordem/catalogo.js`,
+  `js/ordem/poderes.js`, `js/ordem/regras.js`, `js/ordem/ramificacao.js`;
+- `js/ordem/telas/ordem-criar.js`, `js/ordem/telas/ordem-escolhas.js`,
+  `js/ordem/telas/ficha-origens.js`;
+- `js/paginas/homebrew-editor.js`, `js/paginas/homebrew.js`,
+  `js/homebrew-adaptadores.js`, `js/pacotes-homebrew.js`;
+- `css/homebrew.css`, `js/versao.js`, `homebrew/index.html`.
+
+### O que ainda falta na Etapa 2 (depois da v9.9)
+
+**Ordem I:**
+- Classe que conjura rituais (o "Escolhido pelo Outro Lado" com círculos por
+  NEX).
+- Classes Homebrew também na troca de classe e na transição de uma ficha
+  existente (hoje, só na criação).
+- Atualizar uma ficha para a versão nova de uma classe, origem ou trilha
+  (hoje fica a cópia).
+- Escolhas internas nos poderes Homebrew (como "escolha uma perícia" ou "a
+  arma favorita"): hoje só efeitos fixos.
+- Elemento Homebrew em poderes paranormais e maldições Homebrew.
+
+**Os outros sistemas:** os mesmos da lista da v9.8 (T20, Ordem II,
+Oblívio, Vampiro, Goblins e BRUTAL, e as habilidades Homebrew nesses
+motores).

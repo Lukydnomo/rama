@@ -79,6 +79,7 @@
           if (t.chave === "criatura") { if (o.editarCriatura) o.editarCriatura(sistema); return; }
           if (t.chave === "classe") { if (global.RAMAHomebrewClasse) global.RAMAHomebrewClasse.editor({ aoSalvar: o.aoSalvar }); return; }
           if (t.chave === "elemento") { editor({ sistema: sistema, grupo: "estrutural", subtipo: "elemento", aoSalvar: o.aoSalvar }); return; }
+          if ((t.chave === "origem" || t.chave === "trilha") && global.RAMAHomebrewOrigemTrilha) { global.RAMAHomebrewOrigemTrilha[t.chave]({ aoSalvar: o.aoSalvar }); return; }
           if (t.chave === "ritual") { if (o.editarRitual) o.editarRitual(); return; }
           editor({ sistema: sistema, grupo: t.chave, aoSalvar: o.aoSalvar });
         }));
@@ -408,6 +409,13 @@
       HOx.previa(defC, { agi: 2, for: 2, int: 2, pre: 2, vig: 2 }).forEach(function (t, i) { pares.push(["Prévia " + (i + 1), t]); });
       pares.push(["Trilhos", (defC.progressao ? "NEX e nível" : "sem NEX/nível") + " · " + (defC.patentes ? "Patentes" : "sem Patentes")]);
       pares.push(["Poderes e trilhas", (defC.poderesDe || "só gerais") + " · " + (defC.trilhasDe || "sem trilhas")]);
+    }
+    /* Origem e Trilha Homebrew de Ordem (v9.9): a prévia pelo módulo da ficha. */
+    if (s === "ordem" && (st === "origem" || st === "trilha") && global.RAMAOrdemHomebrew) {
+      var HOy = global.RAMAOrdemHomebrew;
+      var x = HOy.deRegistro(reg);
+      if (x && x.def) (st === "origem" ? HOy.previaOrigem(x.def) : HOy.previaTrilha(x.def)).forEach(function (t, i) { pares.push([i ? "" : "Regras", t]); });
+      if (x && x.def && st === "trilha") x.def.poderes.forEach(function (p) { if (p.resumo) pares.push(["NEX " + p.nex + "% · " + p.nome, p.resumo]); });
     }
     if (s === "ordem" && st === "elemento") {
       if (d.forteContra && d.forteContra.length) pares.push(["Forte contra", d.forteContra.map(function (k) { return global.RAMAOrdemElementos ? global.RAMAOrdemElementos.nome(k) : k; }).join(", ")]);

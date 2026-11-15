@@ -1,5 +1,13 @@
 # O banco
 
+## Origem e Trilha Homebrew de Ordem — v9.9
+
+Nenhuma aba nova. No `HOMEBREW`, a coluna `tipo` aceita `origem` e
+`trilha` (`modelo.grupo` igual a `estrutural`). Na ficha de Ordem,
+`ordem.homebrew` ganhou `origens` e `trilhas` (cópias, chaves `hbo-…` e
+`hbt-…`), e `ordem.origem` / `ordem.trilha` aceitam essas chaves. Tudo é
+opcional: nada existente muda.
+
 ## Elemento e Classe Homebrew de Ordem — v9.8
 
 Nenhuma aba nova. No `HOMEBREW`, a coluna `tipo` aceita `classe` e

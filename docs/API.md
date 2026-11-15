@@ -1,5 +1,12 @@
 # A API
 
+## Origem e Trilha Homebrew de Ordem — v9.9
+
+- `salvar_homebrew`: o grupo `estrutural` de Ordem aceita também `origem`
+  e `trilha`. Em outros sistemas, continua `dados_invalidos`
+  (`detalhe: subtipo`).
+- `listar_homebrew` aceita `tipos: ["origem", "trilha"]`.
+
 ## Elemento e Classe Homebrew de Ordem — v9.8
 
 - `salvar_homebrew`: `modelo.grupo` igual a `estrutural` só para os

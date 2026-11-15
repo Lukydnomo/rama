@@ -2151,8 +2151,30 @@
   }
 
   function habilidadesDaTrilha(chaveTrilha) {
-    return HABILIDADES_TRILHA.filter(function (h) { return h.trilha === chaveTrilha; })
+    return HABILIDADES_TRILHA.concat(HABILIDADES_TRILHA_HOMEBREW[chaveTrilha] || []).filter(function (h) { return h.trilha === chaveTrilha; })
       .sort(function (a, b) { return a.nex - b.nex; });
+  }
+
+  /* Trilha Homebrew (v9.9, js/ordem/homebrew-ordem.js): os quatro poderes
+     viram habilidades de trilha como as do livro — automáticas no marco,
+     com os efeitos que a mesa configurou (só tipos que o motor já soma).
+     Chave `<trilha>-p<nex>`: a trilha é versionada, então os poderes
+     também. */
+  var HABILIDADES_TRILHA_HOMEBREW = {};
+  function registrarHabilidadesDeTrilha(tr) {
+    if (!tr || !/^hbt-[a-z0-9-]{3,60}$/.test(String(tr.chave || ""))) return [];
+    var lista = (tr.poderes || []).map(function (p) {
+      var e = entrada({
+        chave: tr.chave + "-p" + p.nex, nome: p.nome, tipo: "trilha", trilha: tr.chave, nex: p.nex,
+        fonte: "HOMEBREW", pagina: 0, resumo: p.resumo || "", efeitos: Array.isArray(p.efeitos) ? p.efeitos : [],
+        automacao: p.efeitos && p.efeitos.length ? "calculo" : "informacao",
+      });
+      e.homebrew = true;
+      POR_CHAVE[e.chave] = e;
+      return e;
+    });
+    HABILIDADES_TRILHA_HOMEBREW[tr.chave] = lista;
+    return lista;
   }
 
   /* As habilidades de uma trilha de Sobrevivente, pelo estágio. */
@@ -2175,6 +2197,7 @@
 
   function referencia(p, classe) {
     if (!p) return "";
+    if (p.homebrew || p.fonte === "HOMEBREW") return "Homebrew";
     var C = global.RAMAOrdemCatalogo;
     /* Extra (v5.1): sem página — o material de onde veio. */
     if (C && C.ehAvulsa && C.ehAvulsa(p.fonte)) return C.referencia(p);
@@ -2206,6 +2229,7 @@
     poderesDeClasse: poderesDeClasse,
     pertenceAClasse: pertenceAClasse,
     habilidadesDaTrilha: habilidadesDaTrilha,
+    registrarHabilidadesDeTrilha: registrarHabilidadesDeTrilha,
     habilidadesDaTrilhaSobrevivente: habilidadesDaTrilhaSobrevivente,
     treinamento: treinamento,
     primeiraDaTrilha: primeiraDaTrilha,

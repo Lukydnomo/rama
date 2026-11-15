@@ -3424,7 +3424,7 @@ function acaoSalvarFoto(corpo, usuario) {
    HOMEBREW
    ===================================================================== */
 
-var TIPOS_HOMEBREW = ['item', 'arma', 'armadura', 'mochila', 'criatura', 'habilidade', 'ritual', 'classe', 'elemento'];
+var TIPOS_HOMEBREW = ['item', 'arma', 'armadura', 'mochila', 'criatura', 'habilidade', 'ritual', 'classe', 'elemento', 'origem', 'trilha'];
 
 /* Até a v2.4.2, 'habilidade' faltava na lista acima e toda habilidade
    enviada à biblioteca era gravada com a coluna tipo = 'item' — mas o
@@ -3650,8 +3650,9 @@ function acaoSalvarHomebrew(corpo, usuario) {
    nativa em modelo.def. Habilidade é "habilidade"; o ritual de Ordem e
    Universal continua com o tipo "ritual". */
 var GRUPOS_DE_HOMEBREW = ['item', 'habilidade', 'estrutural'];
-/* v9.8: os tipos estruturais que cada sistema já sabe usar de verdade. */
-var ESTRUTURAIS_POR_SISTEMA = { ordem: ['classe', 'elemento'] };
+/* v9.8: os tipos estruturais que cada sistema já sabe usar de verdade
+   (v9.9: Ordem ganhou origem e trilha). */
+var ESTRUTURAIS_POR_SISTEMA = { ordem: ['classe', 'elemento', 'origem', 'trilha'] };
 function conferirModeloDeHomebrew(dados, tipoPedido) {
   var m = dados.modelo;
   if (!m || typeof m !== 'object' || Array.isArray(m)) return { ok: false, erro: 'dados_invalidos', detalhe: 'modelo' };

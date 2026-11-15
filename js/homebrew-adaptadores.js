@@ -104,6 +104,8 @@
       { chave: "criatura", rotulo: "Criatura", ajuda: "A ficha de ameaça: VD, elementos, Presença Perturbadora e ações." },
       { chave: "elemento", rotulo: "Elemento", ajuda: "Um elemento da sua mesa (ex.: Vidro): nome, cor, símbolo e, se quiser, relações e afinidade. Aparece onde a regra deixa escolher elemento." },
       { chave: "classe", rotulo: "Classe", ajuda: "PV/PE/SAN, perícias, proficiências e as tabelas de NEX, nível e Patentes. Entra na criação do agente e na progressão." },
+      { chave: "origem", rotulo: "Origem", ajuda: "Perícias treinadas e um poder (com efeito na conta, se quiser). Entra na criação do agente e na troca de origem." },
+      { chave: "trilha", rotulo: "Trilha", ajuda: "Os quatro poderes (NEX 10%, 40%, 65% e 99%) para uma classe. Entra na vaga de Trilha da progressão." },
     ],
     item: {
       subtipos: [
@@ -341,6 +343,9 @@
       campo("permiteAfinidade", "Pode ser escolhido como afinidade (sem efeitos mecânicos oficiais)", "booleano"),
     ] },
     { chave: "classe", rotulo: "Classe", campos: [] },
+    /* v9.9: editores próprios (js/paginas/homebrew-origem-trilha.js). */
+    { chave: "origem", rotulo: "Origem", campos: [] },
+    { chave: "trilha", rotulo: "Trilha", campos: [] },
   ] };
 
   /* Habilidade de Ordem e Universal: o modelo do RAMAHabilidades (o
@@ -370,7 +375,7 @@
   function grupoDe(r) {
     var t = obj(r).tipo;
     if (obj(r).modelo && obj(r).modelo.grupo) return obj(r).modelo.grupo;
-    if (t === "classe" || t === "elemento") return "estrutural";
+    if (t === "classe" || t === "elemento" || t === "origem" || t === "trilha") return "estrutural";
     if (t === "criatura") return "criatura";
     if (t === "habilidade" || t === "ritual") return "habilidade";
     return "item";
@@ -435,6 +440,7 @@
         v.chave = chaveAntiga && ELx && ELx.ehHomebrew(chaveAntiga) ? chaveAntiga : (ELx ? ELx.chaveNova(nome, r.id || "") : "");
       }
       if (subtipo === "classe" && r.classe) reg.modelo.def = r.classe;
+      if ((subtipo === "origem" || subtipo === "trilha") && r.def) reg.modelo.def = r.def;
     }
     if (r.universal && sistema === "universal") reg.universal = normalizarUniversal(r.universal);
     if (r.id) reg.id = r.id;
@@ -530,7 +536,12 @@
     if (g === "criatura") return { modo: "outro", texto: "Criaturas entram no combate, nos aliados e na consulta — não na ficha de personagem." };
     if (g === "estrutural") {
       if (s !== destino) return { modo: "incompativel", texto: "É de " + nomeDoSistema(s) + "." };
-      return { modo: "nativo", texto: subtipoDe(r) === "classe" ? "Escolhida na criação do agente (Classes Homebrew), com a cópia guardada na ficha." : "Aparece nos seletores de elemento (rituais, criaturas, itens e, se permitido, afinidade)." };
+      var stE = subtipoDe(r);
+      return { modo: "nativo", texto: ({
+        classe: "Escolhida na criação do agente (Classes Homebrew), com a cópia guardada na ficha.",
+        origem: "Escolhida na criação do agente (aba Homebrew) ou ao trocar de origem, com a cópia guardada na ficha.",
+        trilha: "Aparece na vaga de Trilha da progressão (e na criação, a partir de NEX 10%) para a classe dela, com a cópia guardada na ficha.",
+      })[stE] || "Aparece nos seletores de elemento (rituais, criaturas, itens e, se permitido, afinidade)." };
     }
     if (s === destino) {
       if (g === "item") return { modo: "nativo", texto: destino === "brutal" ? "Vira o Apego \"item\" da ficha." : "Entra no inventário com as regras do sistema." };
@@ -573,6 +584,8 @@
     if (s === "ordem2" && st === "protecao") p.push("armadura " + (d.armadura || 0));
     if (s === "tormenta20" && st === "magia") p.push(d.circulo + "º círculo");
     if (s === "ordem" && st === "elemento" && d.permiteAfinidade) p.push("pode ser afinidade");
+    if (s === "ordem" && st === "origem" && Array.isArray(d.pericias)) p.push((d.pericias.length + (d.periciasAEscolher || 0)) + " perícias · " + (d.poder || "poder") + (d.efeitos && d.efeitos.length ? " · na conta" : ""));
+    if (s === "ordem" && st === "trilha" && d.classe) p.push("para " + (((global.RAMAOrdemCatalogo && global.RAMAOrdemCatalogo.classe(d.classe)) || {}).nome || d.classe));
     if (s === "ordem" && st === "classe" && d.pvInicial) p.push(d.pvInicial.base + (d.pvInicial.atributo ? " + " + d.pvInicial.atributo.toUpperCase() : "") + " PV iniciais" + (d.patentes ? " · Patentes" : ""));
     var u = obj(r).universal;
     if (u && lista(u.acoes).length) p.push(u.acoes.length === 1 ? "1 ação" : u.acoes.length + " ações");
@@ -745,7 +758,13 @@
     if (!especDoSubtipo(m.sistema, g, m.subtipo)) return { ok: false, erro: "O tipo deste arquivo não existe neste sistema." };
     var classeImportada = g === "estrutural" && m.subtipo === "classe" && global.RAMAOrdemHomebrew ? global.RAMAOrdemHomebrew.normalizarClasse(Object.assign({}, m.def, { chave: "" })) : null;
     if (classeImportada) { delete classeImportada.chave; delete classeImportada.homebrewId; }
-    var r = guardar(m.sistema, g, m.subtipo, { nome: x.nome, descricao: x.descricao || x.texto, origem: x.origem, valores: m.def, universal: x.universal, etiqueta: x.etiqueta, modeloAnterior: m, classe: classeImportada });
+    /* Origem e Trilha (v9.9): refeitas pelo normalizador do motor. */
+    var HOi = global.RAMAOrdemHomebrew, defImportada = null;
+    if (g === "estrutural" && HOi && (m.subtipo === "origem" || m.subtipo === "trilha")) {
+      defImportada = (m.subtipo === "origem" ? HOi.normalizarOrigem : HOi.normalizarTrilha)(Object.assign({}, m.def, { chave: "", nome: x.nome }));
+      ["chave", "homebrewId", "homebrew", "fonte", "pagina", "nome", "descricao"].forEach(function (k) { delete defImportada[k]; });
+    }
+    var r = guardar(m.sistema, g, m.subtipo, { nome: x.nome, descricao: x.descricao || x.texto, origem: x.origem, valores: m.def, universal: x.universal, etiqueta: x.etiqueta, modeloAnterior: m, classe: classeImportada, def: defImportada });
     if (r.ok) { delete r.registro.id; r.registro.visibilidade = "privado"; }
     return r;
   }

@@ -529,8 +529,11 @@
     function etapaOrigem() {
       var termoAntes = buscaOrigem ? buscaOrigem.entrada.value : "";
       buscaOrigem = UI.campo({ rotulo: "Buscar origem", valor: termoAntes, limite: 40, dica: "nome da origem ou do poder" });
-      var origens = C.ORIGENS.filter(function (org) { return liberada(org, d.origem); });
-      var livros = C.LIVROS.filter(function (l) {
+      /* v9.9: as Origens Homebrew (suas e públicas) entram numa aba própria. */
+      var Hb = global.RAMAOrdemHomebrew;
+      if (Hb && !bibliotecaHb) Hb.carregarBiblioteca().then(function (b) { bibliotecaHb = b; if (b.origens && b.origens.length && ETAPAS[etapa] && ETAPAS[etapa].chave === "origem") pintar(); });
+      var origens = (C.origensDisponiveis ? C.origensDisponiveis() : C.ORIGENS).filter(function (org) { return liberada(org, d.origem); });
+      var livros = C.LIVROS.concat([{ sigla: "HOMEBREW", curto: "Homebrew" }]).filter(function (l) {
         return origens.some(function (org) { return (org.fonte || "OPRPG") === l.sigla; });
       });
       if (!abaOrigem) {
@@ -1267,6 +1270,8 @@
         ordem.homebrew = { versao: 1, classes: {}, elementos: {} };
         ordem.homebrew.classes[d.classe] = JSON.parse(JSON.stringify(d.homebrewClasse));
       }
+      /* v9.9: e a cópia da Origem e da Trilha Homebrew escolhidas. */
+      if (global.RAMAOrdemHomebrew) [d.origem, d.trilha].forEach(function (k) { if (k) global.RAMAOrdemHomebrew.embutir(ordem, k); });
 
       var jaTem = periciasJaTreinadas();
       Object.keys(jaTem).forEach(function (p) { ordem.pericias[p] = "treinado"; });

@@ -1,5 +1,5 @@
 /* =====================================================================
-   R.A.M.A. — testes: classe e elemento Homebrew de Ordem (v9.8)
+   R.A.M.A. — testes: classe, elemento, origem e trilha Homebrew de Ordem (v9.8–9.9)
    ---------------------------------------------------------------------
        deno run --allow-read testes/executar-homebrew-ordem.js
 
@@ -137,6 +137,69 @@ t.ok("exportar e importar a Classe: tabelas e recursos voltam", arqCl.ok && arqC
 const daBib = H.deRegistro(Object.assign({}, gCl.registro, { id: "a1b2c3d4-sintetico" }));
 t.ok("da biblioteca para a ficha: a mesma versão gera a mesma chave", daBib.tipo === "classe" && daBib.def.chave === H.deRegistro(Object.assign({}, gCl.registro, { id: "a1b2c3d4-sintetico" })).def.chave);
 t.ok("pacote: Classe de Ordem só em pacote de Ordem", A.compativelComPacote(gCl.registro, "ordem").ok && !A.compativelComPacote(gCl.registro, "tormenta20").ok);
+
+/* ===================== v9.9: Origem e Trilha ===================== */
+t.grupo("Origem Homebrew · definição e motor");
+const P = G.RAMAOrdemPoderes;
+const orgBruta = { nome: "Vidraceiro", homebrewId: "e5f6a7b8-sintetico", pericias: ["profissao", "percepcao"], poder: "Olho Treinado", resumo: "Percebe rachaduras e reflexos.", efeitos: [{ tipo: "defesa", valor: 1 }, { tipo: "pvPorNex", valor: 1 }, { tipo: "inventado", valor: 9 }, { tipo: "bonusPericia", valor: 2, pericias: ["percepcao"] }] };
+const vidr = H.normalizarOrigem(orgBruta);
+t.ok("chave versionada hbo-<id>-<hash>", /^hbo-e5f6a7b8-[a-z0-9]+$/.test(vidr.chave));
+t.ok("só efeitos que o motor já calcula (o inventado sai)", vidr.efeitos.map((e) => e.tipo).join() === "defesa,pvPorNex,bonusPericia" && vidr.automacao === "calculo");
+t.ok("fonte Homebrew: nunca bloqueada por suplemento, referência \"Homebrew\"", vidr.fonte === "HOMEBREW" && C.fonteLiberada(vidr) && C.referencia(vidr) === "Homebrew");
+const fOrg = (extra) => R.normalizar(Object.assign({ classe: "combatente", origem: vidr.chave, nex: 10, atributos: { agi: 1, for: 2, int: 1, pre: 2, vig: 2 }, homebrew: { origens: { [vidr.chave]: vidr } } }, extra || {}));
+const oOrg = fOrg();
+const oAcad = R.normalizar({ classe: "combatente", origem: "academico", nex: 10, atributos: { agi: 1, for: 2, int: 1, pre: 2, vig: 2 } });
+t.ok("a origem Homebrew sobrevive à normalização, com a cópia", oOrg.origem === vidr.chave && oOrg.homebrew.origens[vidr.chave].poder === "Olho Treinado");
+t.iguais("efeitos na conta: +1 Defesa e +1 PV por marco (NEX 10% = 2 marcos)", [R.calcular(oOrg).defesa.total - R.calcular(oAcad).defesa.total, R.calcular(oOrg).pv.total - R.calcular(oAcad).pv.total], [1, 2]);
+t.ok("a origem entra nas listas de escolha (origensDisponiveis)", C.origensDisponiveis().some((x) => x.chave === vidr.chave) && C.ORIGENS.every((x) => !x.homebrew));
+const outra = H.normalizarOrigem(Object.assign(copia(orgBruta), { efeitos: [] }));
+t.ok("sem efeito: informativa, outra versão, outra chave", outra.automacao === "informacao" && outra.chave !== vidr.chave);
+const semCopia = R.normalizar({ classe: "combatente", origem: outra.chave, nex: 5, atributos: { agi: 1, for: 2, int: 1, pre: 2, vig: 2 } });
+t.ok("sem cópia na ficha mas desconhecida do catálogo: some (nada inventado)", semCopia.origem === "");
+C.registrarOrigemHomebrew(outra);
+const embutida = R.normalizar({ classe: "combatente", origem: outra.chave, nex: 5, atributos: { agi: 1, for: 2, int: 1, pre: 2, vig: 2 } });
+t.ok("escolhida de uma lista da biblioteca: a normalização embute a cópia", embutida.origem === outra.chave && embutida.homebrew.origens[outra.chave].nome === "Vidraceiro");
+t.ok("as opções da origem: escolher N entre uma lista", H.normalizarOrigem({ nome: "X", periciasAEscolher: 2, periciasOpcoes: ["luta", "pontaria", "fortitude"] }).periciasOpcoes.length === 3 && !("periciasOpcoes" in H.normalizarOrigem({ nome: "X", periciasAEscolher: 2, periciasOpcoes: ["luta"] })));
+
+t.grupo("Trilha Homebrew · definição e motor");
+const trBruta = { nome: "Lapidador", homebrewId: "c9d0e1f2-sintetico", classe: "combatente", resumo: "Corta o Outro Lado.", requisitos: [{ tipo: "treinado", pericia: "profissao" }],
+  poderes: [{ nex: 10, nome: "Primeiro Corte", resumo: "x", efeitos: [{ tipo: "pvFixo", valor: 3 }] }, { nex: 40, nome: "Faceta", efeitos: [{ tipo: "defesa", valor: 1 }] }, { nex: 65, nome: "Brilho" }, { nex: 99, nome: "Diamante" }] };
+const lap = H.normalizarTrilha(trBruta);
+t.ok("chave versionada hbt-, classe, requisito e os 4 poderes em 10/40/65/99", /^hbt-c9d0e1f2-/.test(lap.chave) && lap.classe === "combatente" && lap.requisitos[0].pericia === "profissao" && lap.poderes.map((p) => p.nex).join() === "10,40,65,99");
+const fTr = (nex, extra) => R.normalizar(Object.assign({ classe: "combatente", origem: "academico", trilha: lap.chave, nex: nex, atributos: { agi: 1, for: 2, int: 1, pre: 2, vig: 2 }, pericias: { profissao: "treinado" }, homebrew: { trilhas: { [lap.chave]: lap } } }, extra || {}));
+const t10 = fTr(10), t40 = fTr(40);
+const semTr = (nex) => R.normalizar({ classe: "combatente", origem: "academico", nex: nex, atributos: { agi: 1, for: 2, int: 1, pre: 2, vig: 2 }, pericias: { profissao: "treinado" } });
+t.ok("a trilha sobrevive à normalização, com a cópia", t10.trilha === lap.chave && t10.homebrew.trilhas[lap.chave].poderes.length === 4);
+t.ok("os poderes viram habilidades de trilha (referência Homebrew)", P.habilidadesDaTrilha(lap.chave).length === 4 && P.referencia(P.habilidadesDaTrilha(lap.chave)[0]) === "Homebrew");
+t.iguais("NEX 10%: Primeiro Corte dá +3 PV; ainda sem a Faceta", [R.calcular(t10).pv.total - R.calcular(semTr(10)).pv.total, R.calcular(t10).defesa.total - R.calcular(semTr(10)).defesa.total], [3, 0]);
+t.iguais("NEX 40%: e a Faceta dá +1 Defesa", R.calcular(t40).defesa.total - R.calcular(semTr(40)).defesa.total, 1);
+t.ok("aparece entre as trilhas do Combatente (vaga de Trilha)", C.trilhasDaClasse("combatente", t10).some((x) => x.chave === lap.chave) && !C.trilhasDaClasse("ocultista").some((x) => x.chave === lap.chave));
+const oc = R.normalizar({ classe: "ocultista", origem: "academico", trilha: lap.chave, nex: 10, atributos: { agi: 1, for: 1, int: 2, pre: 2, vig: 1 }, homebrew: { trilhas: { [lap.chave]: lap } } });
+t.ok("numa ficha de outra classe, a trilha não serve (vínculo quebrado some)", oc.trilha === "");
+const vigT = H.normalizarClasse(Object.assign(copia(bruto), { trilhasDe: "combatente" }));
+const hbTr = R.normalizar({ classe: vigT.chave, origem: "academico", trilha: lap.chave, nex: 10, atributos: { agi: 1, for: 2, int: 1, pre: 2, vig: 2 }, homebrew: { classes: { [vigT.chave]: vigT }, trilhas: { [lap.chave]: lap } } });
+const hbOf = R.normalizar({ classe: vigT.chave, origem: "academico", trilha: "guerreiro", nex: 10, atributos: { agi: 1, for: 2, int: 1, pre: 2, vig: 2 }, homebrew: { classes: { [vigT.chave]: vigT } } });
+t.ok("classe Homebrew com \"trilhas do Combatente\": a trilha Homebrew e a oficial ficam (antes sumiam)", hbTr.trilha === lap.chave && hbOf.trilha === "guerreiro");
+const proj = copia(R.normalizar({ classe: "combatente", origem: "academico", nex: 10, atributos: { agi: 1, for: 2, int: 1, pre: 2, vig: 2 }, pericias: { profissao: "treinado" } }));
+delete proj.homebrew;
+t.ok("embutir: a escolha (vaga, Ramificação) leva a cópia", H.embutir(proj, lap.chave) && proj.homebrew.trilhas[lap.chave].nome === "Lapidador");
+
+t.grupo("Origem e Trilha · biblioteca, arquivo e pacote");
+const limpa = (d) => { const x = copia(d); ["chave", "homebrewId", "homebrew", "fonte", "pagina", "nome", "descricao"].forEach((k) => delete x[k]); return x; };
+const gOr = A.guardar("ordem", "estrutural", "origem", { nome: "Vidraceiro", descricao: "Trabalhava com vidro.", valores: {}, def: limpa(vidr) });
+t.ok("Origem guardada: coluna \"origem\", grupo estrutural", gOr.ok && gOr.registro.tipo === "origem" && gOr.registro.modelo.grupo === "estrutural" && gOr.registro.modelo.def.poder === "Olho Treinado");
+const dbOr = H.deRegistro(Object.assign({}, gOr.registro, { id: "e5f6a7b8-sintetico" }));
+t.ok("da biblioteca: o texto do poder não vira a descrição", dbOr.tipo === "origem" && dbOr.def.resumo === "Percebe rachaduras e reflexos." && dbOr.def.descricao === "Trabalhava com vidro.");
+const arqOr = G.RAMAValidacao.importado(JSON.parse(JSON.stringify(G.RAMAValidacao.exportar(G.RAMAValidacao.tipoDeExportacao(gOr.registro), gOr.registro))));
+t.ok("exportar e importar a Origem: perícias, poder e efeitos voltam", arqOr.ok && arqOr.dados.modelo.def.pericias.join() === "profissao,percepcao" && arqOr.dados.modelo.def.efeitos.length === 3, JSON.stringify(arqOr.ok ? arqOr.dados.modelo : arqOr));
+const lapL = limpa(lap); delete lapL.resumo;
+const gTr = A.guardar("ordem", "estrutural", "trilha", { nome: "Lapidador", descricao: "Corta o Outro Lado.", valores: {}, def: lapL });
+t.ok("Trilha guardada: coluna \"trilha\"", gTr.ok && gTr.registro.tipo === "trilha" && gTr.registro.modelo.def.poderes.length === 4);
+const arqTr = G.RAMAValidacao.importado(JSON.parse(JSON.stringify(G.RAMAValidacao.exportar(G.RAMAValidacao.tipoDeExportacao(gTr.registro), gTr.registro))));
+t.ok("exportar e importar a Trilha: classe, requisito e poderes voltam", arqTr.ok && arqTr.dados.modelo.def.classe === "combatente" && arqTr.dados.modelo.def.poderes[1].efeitos[0].tipo === "defesa" && arqTr.dados.modelo.def.requisitos.length === 1);
+t.ok("da biblioteca, a Trilha tem o resumo pela descrição", H.deRegistro(Object.assign({}, gTr.registro, { id: "x" })).def.resumo === "Corta o Outro Lado.");
+t.ok("pacote: Origem e Trilha de Ordem só em pacote de Ordem", A.compativelComPacote(gOr.registro, "ordem").ok && !A.compativelComPacote(gTr.registro, "vampiro").ok);
+t.ok("o resumo da lista diz o essencial", /2 perícias/.test(A.resumo(gOr.registro)) && /para Combatente/.test(A.resumo(gTr.registro)));
 
 console.log(`\n${FORTE}${passaram} ok${FIM}, ${falharam ? VERMELHO : ""}${falharam} falha(s)${FIM}.`);
 if (falharam) Deno.exit(1);

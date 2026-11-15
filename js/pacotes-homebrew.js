@@ -29,6 +29,8 @@
     { chave: "ritual", rotulo: "Rituais", um: "Ritual" },
     { chave: "classe", rotulo: "Classes", um: "Classe" },
     { chave: "elemento", rotulo: "Elementos", um: "Elemento" },
+    { chave: "origem", rotulo: "Origens", um: "Origem" },
+    { chave: "trilha", rotulo: "Trilhas", um: "Trilha" },
   ];
   var GENERICOS = ["item", "arma", "armadura", "mochila", "habilidade"];
   var NATIVOS = ["oblivio", "vampiro", "goblins", "tormenta20", "ordem2"];

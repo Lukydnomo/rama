@@ -739,7 +739,7 @@
 
     function pintar() {
       var termo = U.chaveDeBusca(busca);
-      var lista = C().ORIGENS.filter(function (org) {
+      var lista = (C().origensDisponiveis ? C().origensDisponiveis() : C().ORIGENS).filter(function (org) {
         /* Suplemento desligado (v6.1): não entra como origem nova; a
            atual continua na lista. */
         if (C().fonteLiberada && !C().fonteLiberada(org) && org !== nova && org.chave !== ctx.ficha.ordem.origem) return false;
@@ -809,6 +809,8 @@
       novas.forEach(function (k) { if (!o.pericias[k]) o.pericias[k] = "treinado"; });
       o.periciasDaOrigem = pl.fixas.concat(escolhidas).filter(function (k, i, l) { return l.indexOf(k) === i; });
       o.origem = nova.chave;
+      /* v9.9: Origem Homebrew — a ficha guarda a sua cópia. */
+      if (nova.homebrew && global.RAMAOrdemHomebrew) global.RAMAOrdemHomebrew.embutir(o, nova.chave);
       ctx.ficha.origem = nova.nome;
       fechar();
       salvar(ctx);
@@ -816,6 +818,8 @@
     }
 
     pintar();
+    /* As Origens Homebrew da biblioteca (suas e públicas) entram na lista. */
+    if (global.RAMAOrdemHomebrew) global.RAMAOrdemHomebrew.carregarBiblioteca().then(function (b) { if (b.origens && b.origens.length && document.body.contains(corpo)) pintar(); });
     return m;
   }
 

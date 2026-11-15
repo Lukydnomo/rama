@@ -2921,8 +2921,20 @@
     if (homebrew && global.RAMAOrdemHomebrew) global.RAMAOrdemHomebrew.registrar(homebrew);
     /* Numa página sem o módulo, as cópias ainda entram no catálogo — e a
        classe Homebrew nunca é apagada por uma página que não a conhece. */
-    else if (homebrew && C.registrarClasseHomebrew) Object.keys(homebrew.classes || {}).forEach(function (k) { C.registrarClasseHomebrew(Object.assign({}, homebrew.classes[k], { chave: k })); });
+    else if (homebrew && C.registrarClasseHomebrew) {
+      Object.keys(homebrew.classes || {}).forEach(function (k) { C.registrarClasseHomebrew(Object.assign({}, homebrew.classes[k], { chave: k })); });
+      if (C.registrarOrigemHomebrew) Object.keys(homebrew.origens || {}).forEach(function (k) { C.registrarOrigemHomebrew(Object.assign({}, homebrew.origens[k], { chave: k })); });
+      if (C.registrarTrilhaHomebrew) Object.keys(homebrew.trilhas || {}).forEach(function (k) { C.registrarTrilhaHomebrew(Object.assign({}, homebrew.trilhas[k], { chave: k })); });
+    }
     var classesValidas = C.classesHomebrew ? C.CLASSES.concat(C.classesHomebrew()) : C.CLASSES;
+    /* v9.9: origens e trilhas Homebrew (as da cópia da ficha e as da
+       biblioteca já carregada). Uma chave hbo-/hbt- com a cópia na ficha
+       nunca é apagada aqui, mesmo sem o catálogo saber dela. */
+    var origensValidas = C.origensDisponiveis ? C.origensDisponiveis() : C.ORIGENS;
+    var trilhasValidas = C.trilhasHomebrew ? C.TRILHAS.concat(C.trilhasHomebrew()) : C.TRILHAS;
+    function copiaHomebrew(campo, padrao, chave) {
+      return homebrew && homebrew[campo] && padrao.test(String(chave || "")) && homebrew[campo][chave] ? chave : "";
+    }
 
     var ficha = {
       nex: nexValido(b.nex),
@@ -2938,8 +2950,8 @@
         .map(function (x) { return String(x || "").trim().slice(0, 40); }).filter(function (x, i, l) { return x && l.indexOf(x) === i; }).slice(0, 12),
       estadoDasOrigens: normalizarEstadoDasOrigens(b.estadoDasOrigens),
       classe: chaveConhecida(b.classe, classesValidas) || (homebrew && homebrew.classes && /^hbc-[a-z0-9-]{3,60}$/.test(String(b.classe || "")) && homebrew.classes[b.classe] ? b.classe : ""),
-      origem: chaveConhecida(b.origem, C.ORIGENS),
-      trilha: chaveConhecida(b.trilha, C.TRILHAS),
+      origem: chaveConhecida(b.origem, origensValidas) || copiaHomebrew("origens", /^hbo-[a-z0-9-]{3,60}$/, b.origem),
+      trilha: chaveConhecida(b.trilha, trilhasValidas) || copiaHomebrew("trilhas", /^hbt-[a-z0-9-]{3,60}$/, b.trilha),
       prestigio: Math.max(0, inteiro(b.prestigio, 0)),
       /* Evolução por Patentes: a patente conquistada (índice 0 a 4), à
          parte dos PP. Guardada sempre; só vale com a regra. */
@@ -2969,7 +2981,11 @@
     var t = C.trilha(ficha.trilha);
     /* Exceção: uma trilha geral (AS3 p. 119) fica — desligar a regra
        Trilha Geral não apaga a escolha (a progressão a suspende). */
-    if (t && ficha.classe && t.classe !== ficha.classe && !(t.geral && C.ehAgente(ficha.classe))) ficha.trilha = "";
+    /* E uma classe Homebrew que usa as trilhas de uma oficial (v9.9; antes
+       a trilha escolhida por ela sumia aqui). */
+    var classeHb = C.classe(ficha.classe);
+    var serveHb = !!(t && classeHb && classeHb.homebrew && C.trilhaServe(t, ficha.classe, ficha));
+    if (t && ficha.classe && t.classe !== ficha.classe && !(t.geral && C.ehAgente(ficha.classe)) && !serveHb) ficha.trilha = "";
 
     var atribBruto = (b.atributos && typeof b.atributos === "object") ? b.atributos : {};
     C.ATRIBUTOS.forEach(function (a) {
@@ -2997,6 +3013,13 @@
        ele já aplicou (js/ordem/ramificacao.js). Sem o módulo, passa como
        veio — nunca some numa gravação. */
     if (homebrew) ficha.homebrew = homebrew;
+    /* v9.9: uma classe, origem ou trilha Homebrew que a ficha usa e cuja
+       cópia ainda não está nela (escolhida numa lista vinda da biblioteca)
+       ganha a cópia agora — quem abrir a ficha depois não depende de
+       biblioteca nenhuma. */
+    if (global.RAMAOrdemHomebrew && global.RAMAOrdemHomebrew.embutir) {
+      [ficha.classe, ficha.origem, ficha.trilha].forEach(function (k) { if (k) global.RAMAOrdemHomebrew.embutir(ficha, k); });
+    }
     ficha.ramificacao = global.RAMAOrdemRamificacao
       ? global.RAMAOrdemRamificacao.normalizarRamificacao(b.ramificacao)
       : (b.ramificacao && typeof b.ramificacao === "object" ? JSON.parse(JSON.stringify(b.ramificacao)) : null);
