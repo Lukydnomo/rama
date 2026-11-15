@@ -310,3 +310,6 @@
 .hbr-hab > legend { padding: 0 var(--e1); }
 .hbr-atributos { display: grid; grid-template-columns: repeat(auto-fill, minmax(8.5rem, 1fr)); gap: var(--e1) var(--e3); border: 0; margin: 0; padding: 0; }
 .hbr-atributos > legend { grid-column: 1 / -1; }
+/* v9.11: Origem e Divindade de Tormenta20 */
+.hbt20-marcas { display: flex; flex-wrap: wrap; gap: var(--e1) var(--e3); border: 0; margin: 0; padding: 0; max-height: 16rem; overflow-y: auto; }
+.hbt20-marcas > legend, .hbt20-marcas > .r-ajuda { flex-basis: 100%; }

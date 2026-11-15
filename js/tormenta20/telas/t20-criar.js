@@ -295,7 +295,8 @@
       var raca = RA().RACA[b.raca.id];
       if (raca && raca.semOrigem) return [el("p", { texto: raca.nome + " não tem origem (veja a raça, p. " + raca.pagina + ")." })];
       var o = OR().ORIGEM[b.origem.id];
-      var lista = OR().ORIGENS.map(function (x) { return { id: x.id, nome: x.nome, linhas: [x.pericias.map(R().nomePericia).slice(0, 3).join(", ") + (x.pericias.length > 3 ? "…" : ""), "p. " + x.pagina] }; }).concat([{ id: "propria", nome: "Origem própria", linhas: ["Crie com o mestre", "p. 95"] }]);
+      /* v9.11: as origens Homebrew da biblioteca vêm depois das do livro. */
+      var lista = (OR().origensDisponiveis ? OR().origensDisponiveis() : OR().ORIGENS).map(function (x) { return { id: x.id, nome: x.nome, linhas: [x.pericias.map(R().nomePericia).slice(0, 3).join(", ") + (x.pericias.length > 3 ? "…" : ""), x.homebrew ? "Homebrew" : "p. " + x.pagina] }; }).concat([{ id: "propria", nome: "Origem própria", linhas: ["Crie com o mestre", "p. 95"] }]);
       var itens = [cartas("Origens", lista, b.origem.id, function (v) { if (v !== b.origem.id) b.origem = { id: v, beneficios: [], escolhas: {}, propria: v === "propria" ? { nome: "", unico: { nome: "", resumo: "" }, itens: "" } : null }; desenhar(); })];
       if (b.origem.id === "propria") {
         var pr = b.origem.propria;
@@ -308,7 +309,8 @@
         return itens;
       }
       if (!o) return itens;
-      var det = [el("p.t20-legenda", { texto: "Itens: " + o.itens.map(function (i) { return typeof i === "string" ? i : i.texto; }).join("; ") + "." })];
+      var det = [el("p.t20-legenda", { texto: "Itens: " + (o.itens.map(function (i) { return typeof i === "string" ? i : i.texto; }).join("; ") || "nenhum") + "." })];
+      if (o.homebrew && o.descricao) det.unshift(el("p.t20-legenda", { texto: o.descricao }));
       if (o.especial === "mestre") { det.push(el("p", { texto: o.unico.nome + ": " + o.unico.resumo })); itens.push(escolhido(o.nome + " · p. " + o.pagina, det)); return itens; }
       var opcoes = o.pericias.map(function (k) { return { tipo: "pericia", id: k, rotulo: "Perícia: " + R().nomePericia(k) }; })
         .concat(o.poderes.map(function (k) { var p = PO().PODER[k]; return { tipo: "poder", id: k, rotulo: "Poder: " + (p ? p.nome : k), dica: p ? p.resumo : "" }; }))
@@ -325,7 +327,7 @@
       if (benOf) det.push(T().selecao("Especialização do Ofício da origem", [{ valor: "", rotulo: "—" }].concat(D().OFICIOS.map(function (o2) { return { valor: o2.chave, rotulo: o2.nome }; })), (benOf.escolhas || {}).oficio || "", function (v) { benOf.escolhas = benOf.escolhas || {}; benOf.escolhas.oficio = v; desenhar(); }));
       if (o.unico) det.push(el("p.t20-legenda", { texto: o.unico.nome + ": " + o.unico.resumo }));
       (o.qualquer || []).forEach(function (g) { det.push(el("p.t20-legenda", { texto: "Esta origem também permite poderes de " + g + " no lugar dos listados; escolha depois na ficha (Habilidades → Poder avulso), com o mestre." })); });
-      itens.push(escolhido(o.nome + " · p. " + o.pagina, det));
+      itens.push(escolhido(o.nome + " · " + (o.homebrew ? "Homebrew" : "p. " + o.pagina), det));
       return itens;
     }
     function beneficiosLivres() {
@@ -376,9 +378,10 @@
     function passoDivindade() {
       var nv = b.niveis.map(function (n) { return n.classe; });
       var dv = b.divindade && DE().DEUS[b.divindade.id];
-      var lista = [{ id: "", nome: "Nenhuma", linhas: ["Não devoto"] }].concat(DE().DEUSES.map(function (d) {
+      /* v9.11: as divindades Homebrew da biblioteca vêm depois do Panteão. */
+      var lista = [{ id: "", nome: "Nenhuma", linhas: ["Não devoto"] }].concat((DE().deusesDisponiveis ? DE().deusesDisponiveis() : DE().DEUSES).map(function (d) {
         var pode = DE().podeSerDevoto(d, b.raca.id, b.raca.variante, nv);
-        return { id: d.id, nome: d.nome, linhas: [d.titulo || "", pode === false ? "Sua raça e classe não estão entre os devotos" : pode === null ? "O mestre decide" : "p. " + d.pagina], indisponivel: pode === false, dica: pode === false ? "Não pode ser devoto" : "" };
+        return { id: d.id, nome: d.nome, linhas: [d.titulo || "", pode === false ? "Sua raça e classe não estão entre os devotos" : pode === null ? "O mestre decide" : (d.homebrew ? "Homebrew" : "p. " + d.pagina)], indisponivel: pode === false, dica: pode === false ? "Não pode ser devoto" : "" };
       }));
       var itens = [cartas("Divindades", lista, b.divindade ? b.divindade.id : "", function (v) {
         var d = v && DE().DEUS[v];
@@ -386,9 +389,10 @@
         b.divindade = v ? { id: v, energia: "", poderes: [] } : null; desenhar();
       })];
       if (dv) {
-        itens.push(escolhido(dv.nome + " · p. " + dv.pagina, [
-          el("p", {}, [el("strong", { texto: "Obrigações e restrições: " }), el("span", { texto: dv.obrigacoes })]),
-          el("p.t20-legenda", { texto: "Energia: " + dv.energia + " · arma preferida: " + (EQ().ITEM[dv.armaPreferida] ? EQ().ITEM[dv.armaPreferida].nome : dv.armaPreferida) }),
+        itens.push(escolhido(dv.nome + " · " + (dv.homebrew ? "Homebrew" : "p. " + dv.pagina), [
+          dv.homebrew && dv.descricao ? el("p.t20-legenda", { texto: dv.descricao }) : null,
+          el("p", {}, [el("strong", { texto: "Obrigações e restrições: " }), el("span", { texto: dv.obrigacoes || "nenhuma registrada (a mesa decide)" })]),
+          el("p.t20-legenda", { texto: "Energia: " + dv.energia + " · arma preferida: " + (EQ().ITEM[dv.armaPreferida] ? EQ().ITEM[dv.armaPreferida].nome : (dv.armaPreferida || "nenhuma")) }),
           dv.energia === "qualquer" ? T().selecao("Energia canalizada (definitiva)", [{ valor: "positiva", rotulo: "Positiva" }, { valor: "negativa", rotulo: "Negativa" }], b.divindade.energia || "positiva", function (v) { b.divindade.energia = v; }) : null,
           el("fieldset.t20-beneficios", {}, [el("legend", { texto: "Poder concedido (escolha um)" })].concat(dv.poderes.map(function (k) {
             var pz = PO().PODER[k];
@@ -545,7 +549,8 @@
     desenhar();
     /* As raças Homebrew da conta (uma viagem; sem rede, só as do livro). */
     if (global.RAMATormenta20Homebrew) global.RAMATormenta20Homebrew.carregarBiblioteca().then(function (r) {
-      if (r && r.racas && r.racas.length && PASSOS[estado.passo].chave === "raca") desenhar();
+      var passo = PASSOS[estado.passo].chave;
+      if (r && ((passo === "raca" && r.racas.length) || (passo === "origem" && r.origens.length) || (passo === "divindade" && r.divindades.length) || (passo === "classe" && r.classes.length))) desenhar();
     });
     return janela;
   }

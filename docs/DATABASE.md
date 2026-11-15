@@ -1,5 +1,13 @@
 # O banco
 
+## Origem e Divindade Homebrew de Tormenta20 — v9.11
+
+Nenhuma aba nova. No `HOMEBREW`, a coluna `tipo` aceita `divindade`; a
+origem de T20 usa a coluna `origem` (com `modelo.sistema` igual a
+`tormenta20`). Na ficha de Tormenta20, `tormenta20.homebrew` ganhou
+`origens` (chave `hbor-…`) e `deuses` (chave `hbdv-…`), e `origem.id` e
+`divindade.id` aceitam essas chaves. Tudo é opcional.
+
 ## Raça Homebrew de Tormenta20 — v9.10
 
 Nenhuma aba nova. No `HOMEBREW`, a coluna `tipo` aceita `raca`

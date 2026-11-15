@@ -1,5 +1,15 @@
 # A API
 
+## Origem e Divindade Homebrew de Tormenta20 — v9.11
+
+- `salvar_homebrew`: o grupo `estrutural` de Tormenta20 aceita `raca`,
+  `origem` e `divindade`. `divindade` em outro sistema é `dados_invalidos`
+  (`detalhe: subtipo`).
+- `listar_homebrew` aceita `tipos: ["origem", "divindade"]` (a coluna
+  `origem` serve a Ordem e a T20; o sistema está em `modelo.sistema`).
+- O motor do servidor mantém as cópias em `tormenta20.homebrew.origens` e
+  `tormenta20.homebrew.deuses`.
+
 ## Raça Homebrew de Tormenta20 — v9.10
 
 - `salvar_homebrew`: o grupo `estrutural` de Tormenta20 aceita `raca`.

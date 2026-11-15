@@ -19,6 +19,11 @@
   "use strict";
 
   function RA() { return global.RAMATormenta20Racas; }
+  function OR() { return global.RAMATormenta20Origens; }
+  function DE() { return global.RAMATormenta20Deuses; }
+  function PO() { return global.RAMATormenta20Poderes; }
+  function EQ() { return global.RAMATormenta20Equipamento; }
+  function CL() { return global.RAMATormenta20Classes; }
   function D() { return global.RAMATormenta20Dados; }
   function obj(v) { return v && typeof v === "object" && !Array.isArray(v) ? v : {}; }
 
@@ -88,11 +93,54 @@
     return { automatico: auto, escolha: escolha, mesa: mesa.concat(["O que o texto descreve além dos efeitos é aplicado pela mesa."]) };
   }
 
+  /* v9.11: a prévia de uma origem e de uma divindade. */
+  function nomePoder(k) { var p = PO() && PO().PODER[k]; return p ? p.nome : k; }
+  function nomePericiaOuOficio(k) {
+    if (/^oficio:/.test(k)) { var o = D() && D().OFICIOS.filter(function (x) { return "oficio:" + x.chave === k; })[0]; return "Ofício (" + (o ? o.nome : k.slice(7)) + ")"; }
+    return nomePericia(k);
+  }
+  function previaOrigem(d) {
+    var l = [];
+    if (d.itens.length) l.push("Itens: " + d.itens.join("; ") + ".");
+    l.push("Perícias: " + (d.pericias.map(nomePericiaOuOficio).join(", ") || "nenhuma") + ".");
+    l.push("Poderes gerais: " + (d.poderes.map(nomePoder).join(", ") || "nenhum") + ".");
+    l.push("Poder único: " + d.unico.nome + (d.unico.efeitos.length ? " (" + d.unico.efeitos.map(textoEfeito).join(", ") + ")" : " (informativo)") + ".");
+    l.push("Quem joga escolhe 2 benefícios entre esses " + (d.pericias.length + d.poderes.length + 1) + ".");
+    return l;
+  }
+  function nomeDevoto(k) {
+    var p = String(k).split(":");
+    var r = RA() && RA().RACA[p[0]], c = CL() && CL().CLASSE[p[0]];
+    return (r || c || { nome: k }).nome;
+  }
+  function previaDeus(d) {
+    var arma = d.armaPreferida && EQ() && EQ().ITEM[d.armaPreferida];
+    var l = [(d.titulo ? d.titulo + " · " : "") + "Energia " + (d.energia === "qualquer" ? "à escolha (positiva ou negativa)" : d.energia) + " · arma preferida: " + (arma ? arma.nome : "nenhuma") + "."];
+    l.push("Devotos: " + (d.devotos === "qualquer" ? "qualquer um" : d.devotos.map(nomeDevoto).join(", ") + " (e humanos e clérigos)") + ".");
+    l.push("Poderes concedidos: " + (d.poderes.map(function (k) {
+      var p = d.poderesProprios.filter(function (x) { return x.id === k; })[0];
+      return p ? p.nome + (p.efeitos.length ? " (" + p.efeitos.map(textoEfeito).join(", ") + ")" : "") : nomePoder(k);
+    }).join(", ") || "nenhum") + ".");
+    if (d.obrigacoes) l.push("Obrigações e restrições: " + d.obrigacoes);
+    return l;
+  }
+
   /* Da biblioteca para a definição do motor. */
   function deRegistro(reg) {
     var m = obj(obj(reg).modelo);
-    if (m.sistema !== "tormenta20" || m.grupo !== "estrutural" || m.subtipo !== "raca" || !RA()) return null;
-    return { tipo: "raca", def: RA().normalizarRacaHomebrew(Object.assign({}, obj(m.def), { id: "", nome: reg.nome, descricao: reg.descricao || "", homebrewId: reg.id })) };
+    if (m.sistema !== "tormenta20" || m.grupo !== "estrutural") return null;
+    var base = Object.assign({}, obj(m.def), { id: "", nome: reg.nome, descricao: reg.descricao || "", homebrewId: reg.id });
+    if (m.subtipo === "raca" && RA()) return { tipo: "raca", def: RA().normalizarRacaHomebrew(base) };
+    if (m.subtipo === "origem" && OR() && OR().normalizarHomebrew) return { tipo: "origem", def: OR().normalizarHomebrew(base) };
+    if (m.subtipo === "divindade" && DE() && DE().normalizarHomebrew) return { tipo: "divindade", def: DE().normalizarHomebrew(base) };
+    if (m.subtipo === "classe" && CL() && CL().normalizarHomebrew) return { tipo: "classe", def: CL().normalizarHomebrew(base) };
+    return null;
+  }
+  function registrarDef(x) {
+    if (x.tipo === "raca") RA().registrarRacaHomebrew(x.def);
+    if (x.tipo === "origem") OR().registrarHomebrew(x.def);
+    if (x.tipo === "divindade") DE().registrarHomebrew(x.def);
+    if (x.tipo === "classe") CL().registrarHomebrew(x.def);
   }
 
   /* As raças da conta (as suas e as públicas) entram no catálogo — uma
@@ -102,25 +150,27 @@
     if (biblioteca && !forcar) return Promise.resolve(biblioteca);
     if (carga && !forcar) return carga;
     var API = global.RAMAApi;
-    if (!API || !API.listarHomebrew || !RA()) return Promise.resolve({ racas: [] });
-    carga = API.listarHomebrew({ escopo: "todos", tipos: ["raca"] }).then(function (r) {
+    var VAZIA = { racas: [], origens: [], divindades: [], classes: [] };
+    if (!API || !API.listarHomebrew || !RA()) return Promise.resolve(VAZIA);
+    carga = API.listarHomebrew({ escopo: "todos", tipos: ["raca", "origem", "divindade", "classe"] }).then(function (r) {
       carga = null;
-      var saida = { racas: [] };
+      var saida = { racas: [], origens: [], divindades: [], classes: [] };
+      var CAMPO = { raca: "racas", origem: "origens", divindade: "divindades", classe: "classes" };
       ((r && r.ok && r.dados) || []).forEach(function (reg) {
         var x = deRegistro(reg);
         if (!x || !x.def) return;
-        RA().registrarRacaHomebrew(x.def);
-        saida.racas.push(Object.assign({ meu: reg.meu !== false }, x.def));
+        registrarDef(x);
+        saida[CAMPO[x.tipo]].push(Object.assign({ meu: reg.meu !== false }, x.def));
       });
       biblioteca = saida;
       return saida;
-    }, function () { carga = null; return { racas: [] }; });
+    }, function () { carga = null; return VAZIA; });
     return carga;
   }
 
   global.RAMATormenta20Homebrew = {
     EFEITOS: EFEITOS, SENTIDOS: SENTIDOS, PROFS: PROFS, NOMES_ATR: NOMES_ATR,
     chaveDoEfeito: chaveDoEfeito, textoEfeito: textoEfeito, textoEscolha: textoEscolha, textoAtributos: textoAtributos,
-    previaRaca: previaRaca, automacao: automacao, deRegistro: deRegistro, carregarBiblioteca: carregarBiblioteca,
+    previaRaca: previaRaca, automacao: automacao, previaOrigem: previaOrigem, previaDeus: previaDeus, nomePoder: nomePoder, nomePericiaOuOficio: nomePericiaOuOficio, deRegistro: deRegistro, carregarBiblioteca: carregarBiblioteca,
   };
 })(typeof window !== "undefined" ? window : globalThis);

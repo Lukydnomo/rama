@@ -209,7 +209,10 @@ export function testarPacotesBackend({ t, preparar, novaConta, comoFn }) {
   const origemHb = A({ acao: "salvar_homebrew", dados: { tipo: "item", nome: "Vidraceiro", modelo: Object.assign(modelo("ordem", "estrutural", "origem"), { def: { pericias: ["profissao", "percepcao"], poder: "Olho Treinado" } }) } });
   const trilhaHb = A({ acao: "salvar_homebrew", dados: { tipo: "item", nome: "Lapidador", modelo: Object.assign(modelo("ordem", "estrutural", "trilha"), { def: { classe: "combatente", poderes: [] } }) } });
   t.ok("Origem e Trilha de Ordem: colunas tipo \"origem\" e \"trilha\"", origemHb.ok && trilhaHb.ok && A({ acao: "ler_homebrew", homebrewId: origemHb.dados.id }).dados.tipo === "origem" && A({ acao: "ler_homebrew", homebrewId: trilhaHb.dados.id }).dados.tipo === "trilha");
-  t.recusa("Origem estrutural em T20 ainda é recusada", A({ acao: "salvar_homebrew", dados: { tipo: "item", nome: "Origem", modelo: modelo("tormenta20", "estrutural", "origem") } }), "dados_invalidos");
+  const origemT20 = A({ acao: "salvar_homebrew", dados: { tipo: "item", nome: "Soprador", modelo: Object.assign(modelo("tormenta20", "estrutural", "origem"), { def: { pericias: ["oficio"], poderes: [] } }) } });
+  const deusT20 = A({ acao: "salvar_homebrew", dados: { tipo: "item", nome: "Vitrea", modelo: Object.assign(modelo("tormenta20", "estrutural", "divindade"), { def: { energia: "positiva" } }) } });
+  t.ok("Origem e Divindade de T20 (v9.11): colunas \"origem\" e \"divindade\"", origemT20.ok && deusT20.ok && A({ acao: "ler_homebrew", homebrewId: origemT20.dados.id }).dados.tipo === "origem" && A({ acao: "ler_homebrew", homebrewId: deusT20.dados.id }).dados.tipo === "divindade");
+  t.recusa("Divindade estrutural em Ordem é recusada", A({ acao: "salvar_homebrew", dados: { tipo: "item", nome: "Deus", modelo: modelo("ordem", "estrutural", "divindade") } }), "dados_invalidos");
   /* v9.10: Raça de T20. */
   const racaHb = A({ acao: "salvar_homebrew", dados: { tipo: "item", nome: "Vidrado", modelo: Object.assign(modelo("tormenta20", "estrutural", "raca"), { def: { tamanho: "pequeno", deslocamento: 6, atributos: { fixo: { des: 2 } }, habilidades: [] } }) } });
   t.ok("Raça de T20: coluna tipo \"raca\" (v9.10)", racaHb.ok && A({ acao: "ler_homebrew", homebrewId: racaHb.dados.id }).dados.tipo === "raca");

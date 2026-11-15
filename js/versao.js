@@ -118,6 +118,20 @@
 
   var CHANGELOG = [
     {
+      versao: "9.11.0",
+      codinome: "PANTEAO",
+      data: "15/11/2026",
+      mudancas: {
+        "Adicionado": [
+          "Origem Homebrew de Tormenta20: itens, as perícias e os poderes gerais de onde saem os dois benefícios, e o poder único (com efeito na conta, se quiser). Aparece na criação de personagem, depois das origens do livro.",
+          "Divindade Homebrew de Tormenta20: título, energia, arma preferida, devotos, obrigações e restrições e os poderes concedidos — do livro e até três próprios, com efeito na conta. Aparece na criação, depois do Panteão.",
+          "Como a raça, a ficha guarda a própria cópia da origem e da divindade: mudar a biblioteca não muda um personagem em jogo.",
+        ],
+        "Corrigido": ["Importar uma Origem de Tormenta20 de um arquivo usava as regras da Origem de Ordem."],
+        "Técnico": ["Novo js/paginas/homebrew-origem-divindade-t20.js. RAMATormenta20Origens e RAMATormenta20Deuses ganharam normalizarHomebrew/registrarHomebrew (chaves hbor-/hbdv- versionadas); os poderes concedidos próprios entram no catálogo de poderes. A normalização trata raça, origem e divindade pelo mesmo caminho (homebrewDaFicha). Servidor: tipo divindade; estruturais de T20: raça, origem e divindade. testes/executar-homebrew-t20.js: 65 verificações."],
+      },
+    },
+    {
       versao: "9.10.0",
       codinome: "FORNALHA",
       data: "15/11/2026",

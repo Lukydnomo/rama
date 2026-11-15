@@ -316,11 +316,14 @@
       if (desl !== 9) corpo.push({ t: "deslocamento", tipo: "terrestre", base: desl });
       d.habilidades.unshift({ id: "corpo", nome: "Tamanho e deslocamento", resumo: textoCorpo(tam, desl), efeitos: corpo, homebrew: true });
     }
-    if (!d.id) {
-      var sem = Object.assign({}, d); delete sem.id;
-      d.id = "hbr-" + (String(d.homebrewId || "local").toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 8) || "local") + "-" + hash(estavel(sem));
-    }
+    if (!d.id) d.id = chaveHomebrew("hbr-", d);
     return d;
+  }
+  /* A chave versionada de qualquer definição Homebrew de T20 (raça,
+     origem, divindade, classe): prefixo + id curto + hash do conteúdo. */
+  function chaveHomebrew(prefixo, d) {
+    var sem = Object.assign({}, d); delete sem.id;
+    return prefixo + (String(d.homebrewId || "local").toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 8) || "local") + "-" + hash(estavel(sem));
   }
   /* Registra no mapa (idempotente; chaves versionadas não colidem). */
   function registrarRacaHomebrew(def) {
@@ -334,7 +337,7 @@
   function referencia(r) { return r && r.homebrew ? "Homebrew" : (r && r.pagina ? "p. " + r.pagina : ""); }
 
   global.RAMATormenta20Racas = { RACAS: RACAS, RACA: RACA, habilidade: habilidade, habilidadesDe: habilidadesDe, atributosDe: atributosDe, HUMANOIDES: HUMANOIDES,
-    ehHomebrew: ehHomebrew, normalizarRacaHomebrew: normalizarRacaHomebrew, registrarRacaHomebrew: registrarRacaHomebrew, efeitoHomebrew: efeitoHomebrew,
+    ehHomebrew: ehHomebrew, chaveHomebrew: chaveHomebrew, escolhaHomebrew: escolhaHomebrew, normalizarRacaHomebrew: normalizarRacaHomebrew, registrarRacaHomebrew: registrarRacaHomebrew, efeitoHomebrew: efeitoHomebrew,
     racasHomebrew: racasHomebrew, racasDisponiveis: racasDisponiveis, referencia: referencia, textoCorpo: textoCorpo,
     TAMANHOS_HB: TAMANHOS_HB, SENTIDOS_HB: SENTIDOS_HB, PROFS_HB: PROFS_HB };
 })(typeof window !== "undefined" ? window : globalThis);

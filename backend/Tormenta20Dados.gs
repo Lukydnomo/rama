@@ -794,11 +794,14 @@
       if (desl !== 9) corpo.push({ t: "deslocamento", tipo: "terrestre", base: desl });
       d.habilidades.unshift({ id: "corpo", nome: "Tamanho e deslocamento", resumo: textoCorpo(tam, desl), efeitos: corpo, homebrew: true });
     }
-    if (!d.id) {
-      var sem = Object.assign({}, d); delete sem.id;
-      d.id = "hbr-" + (String(d.homebrewId || "local").toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 8) || "local") + "-" + hash(estavel(sem));
-    }
+    if (!d.id) d.id = chaveHomebrew("hbr-", d);
     return d;
+  }
+  /* A chave versionada de qualquer definição Homebrew de T20 (raça,
+     origem, divindade, classe): prefixo + id curto + hash do conteúdo. */
+  function chaveHomebrew(prefixo, d) {
+    var sem = Object.assign({}, d); delete sem.id;
+    return prefixo + (String(d.homebrewId || "local").toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 8) || "local") + "-" + hash(estavel(sem));
   }
   /* Registra no mapa (idempotente; chaves versionadas não colidem). */
   function registrarRacaHomebrew(def) {
@@ -812,7 +815,7 @@
   function referencia(r) { return r && r.homebrew ? "Homebrew" : (r && r.pagina ? "p. " + r.pagina : ""); }
 
   global.RAMATormenta20Racas = { RACAS: RACAS, RACA: RACA, habilidade: habilidade, habilidadesDe: habilidadesDe, atributosDe: atributosDe, HUMANOIDES: HUMANOIDES,
-    ehHomebrew: ehHomebrew, normalizarRacaHomebrew: normalizarRacaHomebrew, registrarRacaHomebrew: registrarRacaHomebrew, efeitoHomebrew: efeitoHomebrew,
+    ehHomebrew: ehHomebrew, chaveHomebrew: chaveHomebrew, escolhaHomebrew: escolhaHomebrew, normalizarRacaHomebrew: normalizarRacaHomebrew, registrarRacaHomebrew: registrarRacaHomebrew, efeitoHomebrew: efeitoHomebrew,
     racasHomebrew: racasHomebrew, racasDisponiveis: racasDisponiveis, referencia: referencia, textoCorpo: textoCorpo,
     TAMANHOS_HB: TAMANHOS_HB, SENTIDOS_HB: SENTIDOS_HB, PROFS_HB: PROFS_HB };
 })(typeof window !== "undefined" ? window : globalThis);
@@ -1737,7 +1740,55 @@
     resumo: "Ajuste uma origem (trocar uma perícia, os itens, um poder) ou crie uma nova com o mestre: até dois benefícios entre perícias, poderes e um poder único inventado na medida dos outros.",
   };
 
-  global.RAMATormenta20Origens = { ORIGENS: ORIGENS, ORIGEM: ORIGEM, BENEFICIOS: BENEFICIOS, PROPRIA: PROPRIA };
+  /* =================================================================
+     v9.11 — ORIGEM HOMEBREW (chave hbor-<id>-<hash>, cópia em
+     t20.homebrew.origens). No formato das do livro: itens, perícias e
+     poderes gerais de onde saem os dois benefícios, e o poder único
+     (nome, texto e os efeitos que o motor já soma — o mesmo filtro da
+     raça). Puro: o servidor roda este arquivo.
+     ================================================================= */
+  var PADRAO_HB = /^hbor-[a-z0-9-]{3,30}$/;
+  var ORIGENS_HOMEBREW = [];
+  function RA() { return global.RAMATormenta20Racas; }
+  function PO() { return global.RAMATormenta20Poderes; }
+  function Dd() { return global.RAMATormenta20Dados; }
+  function oo(v) { return v && typeof v === "object" && !Array.isArray(v) ? v : {}; }
+  function ll(v) { return Array.isArray(v) ? v : []; }
+  function tx(v, max) { return String(v === undefined || v === null ? "" : v).slice(0, max || 200); }
+  function ehHomebrew(id) { return PADRAO_HB.test(String(id || "")); }
+  function periciaOk(k) { return !Dd() || Dd().PERICIAS.some(function (p) { return p.chave === k; }) || (/^oficio:[a-z]+$/.test(k) && Dd().OFICIOS.some(function (o2) { return "oficio:" + o2.chave === k; })); }
+  function poderOk(k) { var p = PO() && PO().PODER[k]; return !PO() || (!!p && p.grupo !== "concedido" && !p.homebrew); }
+  function unicos(l) { return l.filter(function (k, i) { return l.indexOf(k) === i; }); }
+  function normalizarOrigemHomebrew(bruto) {
+    var b = oo(bruto), u0 = oo(b.unico);
+    var d = {
+      id: ehHomebrew(b.id) ? b.id : "",
+      nome: tx(b.nome, 60).trim() || "Origem Homebrew",
+      homebrew: true, homebrewId: tx(b.homebrewId, 80), fonte: "HOMEBREW", pagina: 0,
+      descricao: tx(b.descricao, 1200),
+      itens: ll(b.itens).map(function (i) { return tx(typeof i === "string" ? i : oo(i).texto, 120).trim(); }).filter(Boolean).slice(0, 6),
+      pericias: unicos(ll(b.pericias).map(String).filter(periciaOk)).slice(0, 6),
+      poderes: unicos(ll(b.poderes).map(String).filter(poderOk)).slice(0, 6),
+      unico: {
+        id: "hbUnico", unico: true, homebrew: true,
+        nome: tx(u0.nome, 60).trim() || "Poder de origem",
+        resumo: tx(u0.resumo, 600).trim(),
+        efeitos: RA() ? ll(u0.efeitos).map(RA().efeitoHomebrew).filter(Boolean).slice(0, 4) : [],
+      },
+    };
+    if (!d.id) d.id = RA() ? RA().chaveHomebrew("hbor-", d) : "hbor-local-000000";
+    return d;
+  }
+  function registrarOrigemHomebrew(def) {
+    if (!def || !ehHomebrew(def.id)) return null;
+    ORIGEM[def.id] = def;
+    ORIGENS_HOMEBREW = ORIGENS_HOMEBREW.filter(function (x) { return x.id !== def.id; }).concat([def]);
+    return def;
+  }
+  function origensDisponiveis() { return ORIGENS.concat(ORIGENS_HOMEBREW); }
+
+  global.RAMATormenta20Origens = { ORIGENS: ORIGENS, ORIGEM: ORIGEM, BENEFICIOS: BENEFICIOS, PROPRIA: PROPRIA,
+    ehHomebrew: ehHomebrew, normalizarHomebrew: normalizarOrigemHomebrew, registrarHomebrew: registrarOrigemHomebrew, origensDisponiveis: origensDisponiveis };
 })(typeof window !== "undefined" ? window : globalThis);
 /* <<< js/tormenta20/origens.js */
 
@@ -1827,7 +1878,69 @@
     });
   }
 
-  global.RAMATormenta20Deuses = { DEUSES: DEUSES, DEUS: DEUS, podeSerDevoto: podeSerDevoto, PANTEAO: { id: "panteao", nome: "Panteão", armaPreferida: "maca", restricao: "Não usa armas cortantes nem perfurantes." }, BEM: { id: "bem", nome: "O bem (paladino)" } };
+  /* =================================================================
+     v9.11 — DIVINDADE HOMEBREW (chave hbdv-<id>-<hash>, cópia em
+     t20.homebrew.deuses). Energia, arma preferida, devotos (qualquer, ou
+     raças e classes), obrigações & restrições (texto: a mesa aplica) e
+     os poderes concedidos: do livro (por id) e até 3 PRÓPRIOS (nome,
+     texto e os efeitos que o motor já soma), registrados no catálogo de
+     poderes com a chave "<divindade>-p<n>". Puro: o servidor roda este
+     arquivo.
+     ================================================================= */
+  var PADRAO_HB = /^hbdv-[a-z0-9-]{3,30}$/;
+  var DEUSES_HOMEBREW = [];
+  function RA() { return global.RAMATormenta20Racas; }
+  function PO() { return global.RAMATormenta20Poderes; }
+  function CL() { return global.RAMATormenta20Classes; }
+  function EQ() { return global.RAMATormenta20Equipamento; }
+  function oo(v) { return v && typeof v === "object" && !Array.isArray(v) ? v : {}; }
+  function ll(v) { return Array.isArray(v) ? v : []; }
+  function tx(v, max) { return String(v === undefined || v === null ? "" : v).slice(0, max || 200); }
+  function ehHomebrew(id) { return PADRAO_HB.test(String(id || "")); }
+  function devotoOk(k) {
+    var p = String(k).split(":");
+    if (RA() && (RA().RACA[p[0]] || RA().ehHomebrew(p[0]))) return true;
+    return !!(CL() && CL().CLASSE[p[0]]);
+  }
+  function normalizarDeusHomebrew(bruto) {
+    var b = oo(bruto);
+    var arma = tx(b.armaPreferida, 60);
+    var d = {
+      id: ehHomebrew(b.id) ? b.id : "",
+      nome: tx(b.nome, 60).trim() || "Divindade Homebrew",
+      titulo: tx(b.titulo, 80).trim(),
+      homebrew: true, homebrewId: tx(b.homebrewId, 80), fonte: "HOMEBREW", pagina: 0,
+      descricao: tx(b.descricao, 1200),
+      energia: ["positiva", "negativa", QUALQUER].indexOf(b.energia) >= 0 ? b.energia : QUALQUER,
+      armaPreferida: !EQ() || EQ().ARMAS.some(function (a) { return a.id === arma; }) ? arma : "",
+      devotos: b.devotos === QUALQUER || !ll(b.devotos).length ? QUALQUER : ll(b.devotos).map(String).filter(function (k, i, l) { return devotoOk(k) && l.indexOf(k) === i; }).slice(0, 20),
+      obrigacoes: tx(b.obrigacoes, 1200).trim(),
+      poderes: ll(b.poderes).map(String).filter(function (k, i, l) { var p = PO() && PO().PODER[k]; return (!PO() || (p && p.grupo === "concedido" && !p.homebrew)) && l.indexOf(k) === i; }).slice(0, 6),
+      poderesProprios: ll(b.poderesProprios).slice(0, 3).map(function (p0, i) {
+        var p = oo(p0);
+        return { nome: tx(p.nome, 60).trim() || "Poder concedido " + (i + 1), resumo: tx(p.resumo, 600).trim(), efeitos: RA() ? ll(p.efeitos).map(RA().efeitoHomebrew).filter(Boolean).slice(0, 4) : [] };
+      }),
+    };
+    if (d.devotos !== QUALQUER && !d.devotos.length) d.devotos = QUALQUER;
+    if (!d.id) d.id = RA() ? RA().chaveHomebrew("hbdv-", d) : "hbdv-local-000000";
+    /* As chaves dos poderes próprios saem da chave da divindade (versionada). */
+    d.poderesProprios.forEach(function (p, i) { p.id = d.id + "-p" + (i + 1); });
+    d.poderes = d.poderes.concat(d.poderesProprios.map(function (p) { return p.id; }));
+    return d;
+  }
+  function registrarDeusHomebrew(def) {
+    if (!def || !ehHomebrew(def.id)) return null;
+    DEUS[def.id] = def;
+    DEUSES_HOMEBREW = DEUSES_HOMEBREW.filter(function (x) { return x.id !== def.id; }).concat([def]);
+    if (PO()) ll(def.poderesProprios).forEach(function (p) {
+      PO().PODER[p.id] = { id: p.id, nome: p.nome, resumo: p.resumo, grupo: "concedido", efeitos: p.efeitos, homebrew: true, fonte: "HOMEBREW", pagina: 0, deuses: [def.id], req: { devoto: [def.id] } };
+    });
+    return def;
+  }
+  function deusesDisponiveis() { return DEUSES.concat(DEUSES_HOMEBREW); }
+
+  global.RAMATormenta20Deuses = { DEUSES: DEUSES, DEUS: DEUS, podeSerDevoto: podeSerDevoto,
+    ehHomebrew: ehHomebrew, normalizarHomebrew: normalizarDeusHomebrew, registrarHomebrew: registrarDeusHomebrew, deusesDisponiveis: deusesDisponiveis, QUALQUER: QUALQUER, PANTEAO: { id: "panteao", nome: "Panteão", armaPreferida: "maca", restricao: "Não usa armas cortantes nem perfurantes." }, BEM: { id: "bem", nome: "O bem (paladino)" } };
 })(typeof window !== "undefined" ? window : globalThis);
 /* <<< js/tormenta20/deuses.js */
 

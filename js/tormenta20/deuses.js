@@ -83,5 +83,67 @@
     });
   }
 
-  global.RAMATormenta20Deuses = { DEUSES: DEUSES, DEUS: DEUS, podeSerDevoto: podeSerDevoto, PANTEAO: { id: "panteao", nome: "Panteão", armaPreferida: "maca", restricao: "Não usa armas cortantes nem perfurantes." }, BEM: { id: "bem", nome: "O bem (paladino)" } };
+  /* =================================================================
+     v9.11 — DIVINDADE HOMEBREW (chave hbdv-<id>-<hash>, cópia em
+     t20.homebrew.deuses). Energia, arma preferida, devotos (qualquer, ou
+     raças e classes), obrigações & restrições (texto: a mesa aplica) e
+     os poderes concedidos: do livro (por id) e até 3 PRÓPRIOS (nome,
+     texto e os efeitos que o motor já soma), registrados no catálogo de
+     poderes com a chave "<divindade>-p<n>". Puro: o servidor roda este
+     arquivo.
+     ================================================================= */
+  var PADRAO_HB = /^hbdv-[a-z0-9-]{3,30}$/;
+  var DEUSES_HOMEBREW = [];
+  function RA() { return global.RAMATormenta20Racas; }
+  function PO() { return global.RAMATormenta20Poderes; }
+  function CL() { return global.RAMATormenta20Classes; }
+  function EQ() { return global.RAMATormenta20Equipamento; }
+  function oo(v) { return v && typeof v === "object" && !Array.isArray(v) ? v : {}; }
+  function ll(v) { return Array.isArray(v) ? v : []; }
+  function tx(v, max) { return String(v === undefined || v === null ? "" : v).slice(0, max || 200); }
+  function ehHomebrew(id) { return PADRAO_HB.test(String(id || "")); }
+  function devotoOk(k) {
+    var p = String(k).split(":");
+    if (RA() && (RA().RACA[p[0]] || RA().ehHomebrew(p[0]))) return true;
+    return !!(CL() && CL().CLASSE[p[0]]);
+  }
+  function normalizarDeusHomebrew(bruto) {
+    var b = oo(bruto);
+    var arma = tx(b.armaPreferida, 60);
+    var d = {
+      id: ehHomebrew(b.id) ? b.id : "",
+      nome: tx(b.nome, 60).trim() || "Divindade Homebrew",
+      titulo: tx(b.titulo, 80).trim(),
+      homebrew: true, homebrewId: tx(b.homebrewId, 80), fonte: "HOMEBREW", pagina: 0,
+      descricao: tx(b.descricao, 1200),
+      energia: ["positiva", "negativa", QUALQUER].indexOf(b.energia) >= 0 ? b.energia : QUALQUER,
+      armaPreferida: !EQ() || EQ().ARMAS.some(function (a) { return a.id === arma; }) ? arma : "",
+      devotos: b.devotos === QUALQUER || !ll(b.devotos).length ? QUALQUER : ll(b.devotos).map(String).filter(function (k, i, l) { return devotoOk(k) && l.indexOf(k) === i; }).slice(0, 20),
+      obrigacoes: tx(b.obrigacoes, 1200).trim(),
+      poderes: ll(b.poderes).map(String).filter(function (k, i, l) { var p = PO() && PO().PODER[k]; return (!PO() || (p && p.grupo === "concedido" && !p.homebrew)) && l.indexOf(k) === i; }).slice(0, 6),
+      poderesProprios: ll(b.poderesProprios).slice(0, 3).map(function (p0, i) {
+        var p = oo(p0);
+        return { nome: tx(p.nome, 60).trim() || "Poder concedido " + (i + 1), resumo: tx(p.resumo, 600).trim(), efeitos: RA() ? ll(p.efeitos).map(RA().efeitoHomebrew).filter(Boolean).slice(0, 4) : [] };
+      }),
+    };
+    if (d.devotos !== QUALQUER && !d.devotos.length) d.devotos = QUALQUER;
+    if (!d.id) d.id = RA() ? RA().chaveHomebrew("hbdv-", d) : "hbdv-local-000000";
+    /* As chaves dos poderes próprios saem da chave da divindade (versionada). */
+    d.poderesProprios.forEach(function (p, i) { p.id = d.id + "-p" + (i + 1); });
+    d.poderes = d.poderes.concat(d.poderesProprios.map(function (p) { return p.id; }));
+    return d;
+  }
+  function registrarDeusHomebrew(def) {
+    if (!def || !ehHomebrew(def.id)) return null;
+    DEUS[def.id] = def;
+    DEUSES_HOMEBREW = DEUSES_HOMEBREW.filter(function (x) { return x.id !== def.id; }).concat([def]);
+    if (PO()) ll(def.poderesProprios).forEach(function (p) {
+      PO().PODER[p.id] = { id: p.id, nome: p.nome, resumo: p.resumo, grupo: "concedido", efeitos: p.efeitos, homebrew: true, fonte: "HOMEBREW", pagina: 0, deuses: [def.id], req: { devoto: [def.id] } };
+    });
+    return def;
+  }
+  function deusesDisponiveis() { return DEUSES.concat(DEUSES_HOMEBREW); }
+
+  global.RAMATormenta20Deuses = { DEUSES: DEUSES, DEUS: DEUS, podeSerDevoto: podeSerDevoto,
+    ehHomebrew: ehHomebrew, normalizarHomebrew: normalizarDeusHomebrew, registrarHomebrew: registrarDeusHomebrew, deusesDisponiveis: deusesDisponiveis, QUALQUER: QUALQUER, PANTEAO: { id: "panteao", nome: "Panteão", armaPreferida: "maca", restricao: "Não usa armas cortantes nem perfurantes." }, BEM: { id: "bem", nome: "O bem (paladino)" } };
 })(typeof window !== "undefined" ? window : globalThis);

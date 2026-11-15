@@ -102,5 +102,53 @@
     resumo: "Ajuste uma origem (trocar uma perícia, os itens, um poder) ou crie uma nova com o mestre: até dois benefícios entre perícias, poderes e um poder único inventado na medida dos outros.",
   };
 
-  global.RAMATormenta20Origens = { ORIGENS: ORIGENS, ORIGEM: ORIGEM, BENEFICIOS: BENEFICIOS, PROPRIA: PROPRIA };
+  /* =================================================================
+     v9.11 — ORIGEM HOMEBREW (chave hbor-<id>-<hash>, cópia em
+     t20.homebrew.origens). No formato das do livro: itens, perícias e
+     poderes gerais de onde saem os dois benefícios, e o poder único
+     (nome, texto e os efeitos que o motor já soma — o mesmo filtro da
+     raça). Puro: o servidor roda este arquivo.
+     ================================================================= */
+  var PADRAO_HB = /^hbor-[a-z0-9-]{3,30}$/;
+  var ORIGENS_HOMEBREW = [];
+  function RA() { return global.RAMATormenta20Racas; }
+  function PO() { return global.RAMATormenta20Poderes; }
+  function Dd() { return global.RAMATormenta20Dados; }
+  function oo(v) { return v && typeof v === "object" && !Array.isArray(v) ? v : {}; }
+  function ll(v) { return Array.isArray(v) ? v : []; }
+  function tx(v, max) { return String(v === undefined || v === null ? "" : v).slice(0, max || 200); }
+  function ehHomebrew(id) { return PADRAO_HB.test(String(id || "")); }
+  function periciaOk(k) { return !Dd() || Dd().PERICIAS.some(function (p) { return p.chave === k; }) || (/^oficio:[a-z]+$/.test(k) && Dd().OFICIOS.some(function (o2) { return "oficio:" + o2.chave === k; })); }
+  function poderOk(k) { var p = PO() && PO().PODER[k]; return !PO() || (!!p && p.grupo !== "concedido" && !p.homebrew); }
+  function unicos(l) { return l.filter(function (k, i) { return l.indexOf(k) === i; }); }
+  function normalizarOrigemHomebrew(bruto) {
+    var b = oo(bruto), u0 = oo(b.unico);
+    var d = {
+      id: ehHomebrew(b.id) ? b.id : "",
+      nome: tx(b.nome, 60).trim() || "Origem Homebrew",
+      homebrew: true, homebrewId: tx(b.homebrewId, 80), fonte: "HOMEBREW", pagina: 0,
+      descricao: tx(b.descricao, 1200),
+      itens: ll(b.itens).map(function (i) { return tx(typeof i === "string" ? i : oo(i).texto, 120).trim(); }).filter(Boolean).slice(0, 6),
+      pericias: unicos(ll(b.pericias).map(String).filter(periciaOk)).slice(0, 6),
+      poderes: unicos(ll(b.poderes).map(String).filter(poderOk)).slice(0, 6),
+      unico: {
+        id: "hbUnico", unico: true, homebrew: true,
+        nome: tx(u0.nome, 60).trim() || "Poder de origem",
+        resumo: tx(u0.resumo, 600).trim(),
+        efeitos: RA() ? ll(u0.efeitos).map(RA().efeitoHomebrew).filter(Boolean).slice(0, 4) : [],
+      },
+    };
+    if (!d.id) d.id = RA() ? RA().chaveHomebrew("hbor-", d) : "hbor-local-000000";
+    return d;
+  }
+  function registrarOrigemHomebrew(def) {
+    if (!def || !ehHomebrew(def.id)) return null;
+    ORIGEM[def.id] = def;
+    ORIGENS_HOMEBREW = ORIGENS_HOMEBREW.filter(function (x) { return x.id !== def.id; }).concat([def]);
+    return def;
+  }
+  function origensDisponiveis() { return ORIGENS.concat(ORIGENS_HOMEBREW); }
+
+  global.RAMATormenta20Origens = { ORIGENS: ORIGENS, ORIGEM: ORIGEM, BENEFICIOS: BENEFICIOS, PROPRIA: PROPRIA,
+    ehHomebrew: ehHomebrew, normalizarHomebrew: normalizarOrigemHomebrew, registrarHomebrew: registrarOrigemHomebrew, origensDisponiveis: origensDisponiveis };
 })(typeof window !== "undefined" ? window : globalThis);

@@ -6,7 +6,7 @@ organiza em três etapas.
 | Etapa | Situação |
 |---|---|
 | **1 — Estrutura e compatibilidade** | entregue na **v9.7.0** |
-| **2 — Tipos estruturais e elementos** | parte 1 na **v9.8.0** (Elemento e Classe de Ordem I), parte 2 na **v9.9.0** (Origem e Trilha de Ordem I), parte 3 na **v9.10.0** (Raça de Tormenta20); o resto pendente |
+| **2 — Tipos estruturais e elementos** | parte 1 na **v9.8.0** (Elemento e Classe de Ordem I), parte 2 na **v9.9.0** (Origem e Trilha de Ordem I), parte 3 na **v9.10.0** (Raça de Tormenta20), parte 4 na **v9.11.0** (Origem e Divindade de Tormenta20); o resto pendente |
 | **3 — Automação por sistema, publicação e regressão** | pendente |
 
 Este documento é o **inventário de cobertura**. Para cada sistema e tipo,
@@ -160,7 +160,9 @@ Legenda:
 | Ordem II | Ameaça | o de sempre | mesa de Ordem II | **N** | Perfil e Ocupação: **Etapa 2** |
 | **Tormenta20** | Item: arma, armadura, escudo, vestuário, ferramenta, alquímico, esotérico, aventura, alimentação, munição, outro | adaptador (preço, espaços, proficiência, empunhadura, dano, margem, multiplicador, tipo, alcance, munição, bônus de perícia) | inventário (Do Homebrew), como `personalizado` | **N**: ataque calculado, Defesa e penalidade, bônus de perícia (`efeitos`), espaços | melhorias e encantos (pela ficha, como antes) |
 | Tormenta20 | Habilidade: magia (círculo, escola, execução…), poder, habilidade | adaptador | anotações | **Ma** | o motor só aplica poderes e magias do livro: **Etapa 2** |
-| Tormenta20 | Ameaça | o de sempre | mesa de T20 | **N** | Origem, Classe e Divindade: **Etapa 2** |
+| Tormenta20 | Ameaça | o de sempre | mesa de T20 | **N** | Classe: **Etapa 2** |
+| Tormenta20 | **Origem** (v9.11) | editor próprio em 3 etapas | criação de personagem (depois das do livro) | **N**: os dois benefícios (perícia treinada, poder geral com as regras do livro, poder único com efeitos) | itens (texto); o resto do texto do poder único |
+| Tormenta20 | **Divindade** (v9.11) | editor próprio em 3 etapas | criação de personagem (depois do Panteão); poderes concedidos na ficha | **N**: devotos, energia, arma preferida; poderes concedidos do livro (regras do livro) e próprios (efeitos) | obrigações e restrições (texto); o resto dos poderes próprios |
 | Tormenta20 | **Raça** (v9.10) | editor próprio em 3 etapas | criação de personagem (passo Raça, depois das do livro) | **N**: atributos fixos e à escolha, tamanho, deslocamento; efeitos que o motor soma (Defesa, perícia, treino, PV/PM por nível, sentido, RD, proficiência); perícias à escolha (treino ou bônus) | variantes, habilidades ativadas (PM), escolhas de magia/poder; o resto do texto é da mesa |
 | **Goblins** | Item: arma (mãos, ataque, bônus, munição, recarga, arremesso), proteção (uso, durabilidade), equipamento, outro | adaptador | inventário (Do Homebrew), pelo `adicionarItem` com `personalizado` | **N**: ataque, bônus, munição, recarga e durabilidade no `defDoItem` | — |
 | Goblins | Habilidade: magia, técnica, habilidade | adaptador | anotações | **Ma** | **Etapa 2** |
@@ -267,7 +269,7 @@ nova, e o modelo vai no `dadosJson` de sempre.
     `js/ordem/regras.js`, `js/ordem/progressao.js` e
     `js/ordem/inventario.js`. O elemento aceito pelo campo fica separado do
     efeito oficial. O caso de teste é "Vidro".
-- **T20**: ~~Raça~~ (v9.10.0, abaixo), Origem, Classe e Divindade
+- **T20**: ~~Raça~~ (v9.10.0), ~~Origem e Divindade~~ (v9.11.0) e Classe,
   selecionáveis na criação e na progressão.
 - **Ordem II**: Perfil e Ocupação.
 - **Oblívio**: Papel, Motivação, Mazela e Fardo.
@@ -787,3 +789,123 @@ em poderes paranormais e maldições).
 - Vampiro: Clã, Predador, Disciplina, Vantagem e Defeito.
 - Goblins: Ocupação e Descritor.
 - BRUTAL: Arquétipo e Estilo.
+
+## v9.11.0 — Etapa 2, parte 4: Origem e Divindade Homebrew de Tormenta20
+
+### Origem
+
+**Homebrew → + Criar → Tormenta20 → Origem.** Três etapas
+(Identidade → Benefícios → Revisão):
+- itens, um por linha, que entram como texto;
+- as **perícias** (até 6, inclusive Ofício) e os **poderes gerais** (até
+  6, de combate, destino, magia ou Tormenta) de onde saem os dois
+  benefícios;
+- o **poder único**: nome, texto e os efeitos do mesmo conjunto da raça.
+
+Na criação de personagem, a origem aparece depois das do livro, marcada
+"Homebrew". Quem joga marca dois benefícios, como numa origem do livro.
+A perícia escolhida entra treinada. O poder geral entra com as regras do
+livro, e o poder único com os efeitos configurados.
+
+### Divindade
+
+**Homebrew → + Criar → Tormenta20 → Divindade.** Três etapas
+(Identidade → Poderes e obrigações → Revisão):
+- título, descrição, energia (positiva, negativa ou à escolha do devoto)
+  e arma preferida;
+- devotos: qualquer um, ou raças e classes escolhidas. Humanos e clérigos
+  podem ser devotos de qualquer divindade, como no livro (p. 96);
+- obrigações e restrições, em texto. A ficha mostra; a mesa aplica;
+- **poderes concedidos**: até 6 do livro e até 3 **próprios** (nome,
+  texto e efeitos).
+
+Os poderes próprios entram no catálogo de poderes com a chave
+`<divindade>-p<n>`, como concedidos. Um poder concedido do livro listado
+pela divindade atende o requisito "devoto". Na criação, a divindade
+aparece depois do Panteão, com os poderes concedidos para escolher.
+
+### Cópia, versão e servidor
+
+O mesmo esquema da raça:
+- chaves `hbor-…` e `hbdv-…`, versionadas pelo conteúdo;
+- cópias em `tormenta20.homebrew.origens` e `tormenta20.homebrew.deuses`;
+- a normalização (`homebrewDaFicha` em `regras.js`) trata raça, origem e
+  divindade pelo mesmo caminho e as registra nos catálogos do motor. O
+  servidor roda o mesmo código: `origens.js` e `deuses.js` entram em
+  `Tormenta20Dados.gs`.
+
+**Correção:** importar uma Origem de Tormenta20 de um arquivo passava pelo
+normalizador da Origem de Ordem. Agora cada sistema usa o seu.
+
+### Servidor e pacotes
+
+- `TIPOS_HOMEBREW` ganhou `divindade`. Os estruturais de Tormenta20
+  passaram a ser `raca`, `origem` e `divindade`. Divindade em Ordem é
+  recusada.
+- Os pacotes ganharam o grupo "Divindades".
+
+### Validação da v9.11.0
+
+**Automática.** `testes/executar-homebrew-t20.js` passou de 36 para 65
+verificações:
+- **Origem:**
+  - chave;
+  - perícias e poderes válidos (um poder concedido sai);
+  - itens;
+  - poder único só com efeitos aceitos;
+  - benefício de perícia treinada, de poder único (+1 Defesa) e de poder
+    geral (Vontade de Ferro);
+  - resumo da Mesa;
+  - some sem cópia nem catálogo;
+  - raça e origem Homebrew juntas.
+- **Divindade:**
+  - chave;
+  - poderes do livro mais os próprios;
+  - devotos, energia e arma;
+  - chave estável;
+  - poder próprio (+2 Furtividade);
+  - poder do livro (redução de frio 5) com o requisito "devoto" atendido;
+  - quem pode ser devoto;
+  - resumo da Mesa;
+  - some sem cópia nem catálogo.
+- **Biblioteca:** guardar, voltar da biblioteca, destino, resumo,
+  arquivo (com os poderes próprios), pacote e prévias.
+
+`testes/pacotes-backend.js`:
+- Origem e Divindade de T20 são gravadas com as colunas próprias;
+- Divindade em Ordem é recusada.
+
+**Na interface** (servidor local, conta sintética):
+- Criei a origem **Soprador de Vidro** (Investigação, Ofício, Percepção,
+  Vontade de Ferro; poder único Olho de Vidreiro com +1 Defesa).
+- Criei a divindade **Vitrea**:
+  - positiva, adaga;
+  - devotos: anão e guerreiro;
+  - Fulgor Solar e o poder próprio Pele Translúcida, com +2 Furtividade.
+
+  A lista mostra os resumos.
+- **Criação:** um anão guerreiro com o Soprador de Vidro (Investigação e
+  Olho de Vidreiro) e devoto de Vitrea (Pele Translúcida). A conferência
+  mostrou Defesa 11 (10 + Des 0 + 1) e Investigação treinada.
+- **Ficha gravada:**
+  - origem e divindade no topo;
+  - Defesa 12 com o escudo;
+  - Olho de Vidreiro em "Raça e origem" e Pele Translúcida em "Poderes",
+    os dois com "Homebrew";
+  - Furtividade +1 (Des 0 + 2 − 1 do escudo);
+  - no servidor, as cópias em `homebrew.origens` e `homebrew.deuses`.
+- Sem erros no console nem no servidor.
+
+### Publicar a v9.11.0
+
+**Servidor:** troque **`Codigo.gs`**, **`Tormenta20.gs`** e
+**`Tormenta20Dados.gs`**, e crie uma versão nova da implantação.
+**`setupRama()` não é necessário.**
+
+**Site:**
+- `js/paginas/homebrew-origem-divindade-t20.js` (novo);
+- `js/tormenta20/origens.js`, `deuses.js`, `racas.js`, `regras.js`,
+  `homebrew-t20.js`, `telas/t20-criar.js`;
+- `js/homebrew-adaptadores.js`, `js/pacotes-homebrew.js`,
+  `js/paginas/homebrew-editor.js`, `js/paginas/homebrew.js`;
+- `css/homebrew.css`, `js/versao.js`, `homebrew/index.html`.

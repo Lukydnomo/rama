@@ -642,17 +642,39 @@ function acaoTormenta20Operar(corpo, usuario) {
     var op = obj(b.opcoes);
     v.opcoes = { parceirosVulneraveis: !!op.parceirosVulneraveis, envelhecimento: !!op.envelhecimento };
     v.historico = lista(b.historico).slice(-60).map(function (h) { var y = obj(h); return { quando: texto(y.quando, 40), texto: texto(y.texto, 300) }; });
-    /* v9.10: a raça Homebrew vem com a CÓPIA guardada na ficha (ou, se
-       acabou de ser escolhida de uma lista da biblioteca, do catálogo).
-       Sem cópia e sem catálogo, a chave some: nada é inventado. */
-    if (RA() && RA().ehHomebrew && RA().ehHomebrew(v.raca.id)) {
-      var copiaR = obj(obj(b.homebrew).racas)[v.raca.id];
-      var noCatalogo = RA().RACA[v.raca.id];
-      var defR = copiaR && typeof copiaR === "object" ? RA().normalizarRacaHomebrew(Object.assign({}, copiaR, { id: v.raca.id })) : (noCatalogo && noCatalogo.homebrew ? clone(noCatalogo) : null);
-      if (defR) { RA().registrarRacaHomebrew(defR); v.homebrew = { versao: 1, racas: {} }; v.homebrew.racas[defR.id] = defR; }
-      else v.raca = { id: "", variante: "", atributos: [], escolhas: {} };
-    }
+    homebrewDaFicha(b, v);
     return v;
+  }
+
+  /* v9.10–9.11: raça, origem e divindade Homebrew vêm com a CÓPIA
+     guardada na ficha (ou, se acabaram de ser escolhidas de uma lista da
+     biblioteca, do catálogo). A cópia passa pelo mesmo filtro do editor e
+     é registrada no catálogo que o motor lê. Sem cópia e sem catálogo, a
+     escolha some: nada é inventado. */
+  var TIPOS_HOMEBREW = [
+    { campo: "racas", cat: RA, norm: "normalizarRacaHomebrew", reg: "registrarRacaHomebrew", mapa: "RACA",
+      ids: function (v) { return [v.raca.id]; }, tirar: function (v) { v.raca = { id: "", variante: "", atributos: [], escolhas: {} }; } },
+    { campo: "origens", cat: OR, norm: "normalizarHomebrew", reg: "registrarHomebrew", mapa: "ORIGEM",
+      ids: function (v) { return [v.origem.id]; }, tirar: function (v) { v.origem = { id: "", beneficios: [], escolhas: {}, propria: null }; } },
+    { campo: "deuses", cat: DE, norm: "normalizarHomebrew", reg: "registrarHomebrew", mapa: "DEUS",
+      ids: function (v) { return v.divindade ? [v.divindade.id] : []; }, tirar: function (v) { v.divindade = null; } },
+  ];
+  function homebrewDaFicha(b, v) {
+    var hb = obj(b.homebrew), saida = {};
+    TIPOS_HOMEBREW.forEach(function (tp) {
+      var cat = tp.cat();
+      if (!cat || !cat.ehHomebrew) return;
+      tp.ids(v).filter(function (id) { return cat.ehHomebrew(id); }).forEach(function (id) {
+        var copia = obj(hb[tp.campo])[id];
+        var noCatalogo = cat[tp.mapa][id];
+        var def = copia && typeof copia === "object" && Object.keys(copia).length ? cat[tp.norm](Object.assign({}, copia, { id: id })) : (noCatalogo && noCatalogo.homebrew ? clone(noCatalogo) : null);
+        if (!def) { tp.tirar(v); return; }
+        cat[tp.reg](def);
+        saida[tp.campo] = saida[tp.campo] || {};
+        saida[tp.campo][id] = def;
+      });
+    });
+    if (Object.keys(saida).length) v.homebrew = Object.assign({ versao: 1 }, saida);
   }
 
   /* =================================================================
@@ -2039,6 +2061,9 @@ function acaoTormenta20Operar(corpo, usuario) {
     if (req.periciasUm && !req.periciasUm.some(function (p) { return c.pericias[p] && c.pericias[p].treinado; })) falta.push("treinado em " + req.periciasUm.map(nomePericia).join(" ou "));
     lista(req.prof).forEach(function (q) { if (!c.proficiencias[q]) falta.push("proficiência: " + q); });
     if (req.caminho) { var cam = valorDeEscolhaDaClasse(t20, "arcanista", "caminho") || valorDeEscolhaDaClasse(t20, "cavaleiro", "caminho"); var cams = Array.isArray(req.caminho) ? req.caminho : [req.caminho]; if (cams.indexOf(cam) < 0) falta.push("caminho: " + cams.join(" ou ")); }
+    /* Divindade Homebrew: o poder concedido do livro que ela lista vale. */
+    var dvHb = t20.divindade && DE() && DE().DEUS[t20.divindade.id];
+    if (dvHb && dvHb.homebrew && lista(dvHb.poderes).indexOf(def && def.id) >= 0) req = Object.assign({}, req, { devoto: null });
     if (req.devoto) { var dv = t20.divindade && t20.divindade.id; if (req.devoto.indexOf(dv) < 0) falta.push("devoto de " + req.devoto.map(function (x) { return DE().DEUS[x] ? DE().DEUS[x].nome : x; }).join(" ou ")); }
     if (req.tormenta && Math.max(0, c.poderesTormenta) < req.tormenta) falta.push(req.tormenta + " outro(s) poder(es) da Tormenta");
     if (req.lancaMagias && !c.magias.circuloMax && !(c.magias.concedidas || []).length) falta.push("lançar magias");

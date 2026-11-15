@@ -786,7 +786,12 @@
       global.RAMAHomebrewRacaT20.editor({ registro: registro, aoSalvar: carregar });
       return;
     }
-    if ((stHb === "origem" || stHb === "trilha") && global.RAMAHomebrewOrigemTrilha) {
+    var sisHb = registro && registro.modelo ? registro.modelo.sistema : "";
+    if (sisHb === "tormenta20" && (stHb === "origem" || stHb === "divindade") && global.RAMAHomebrewT20Estruturais) {
+      global.RAMAHomebrewT20Estruturais[stHb]({ registro: registro, aoSalvar: carregar });
+      return;
+    }
+    if (sisHb === "ordem" && (stHb === "origem" || stHb === "trilha") && global.RAMAHomebrewOrigemTrilha) {
       global.RAMAHomebrewOrigemTrilha[stHb]({ registro: registro, aoSalvar: carregar });
       return;
     }
