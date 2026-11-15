@@ -106,6 +106,12 @@
     if (e.tipo === "bonusPericia") return sinal + " em " + ((C() && C().pericia(e.pericias[0])) || { nome: e.pericias[0] }).nome;
     return "";
   }
+  function textoEscolha(e) {
+    var lista = e.entre.length ? " entre " + e.entre.map(function (k) { return ((C() && C().pericia(k)) || { nome: k }).nome; }).join(" e ") : " à escolha";
+    if (e.modo === "treinar") return "treinado numa perícia" + lista;
+    if (e.modo === "treinarOuBonus") return "treinado numa perícia" + lista + " (+" + e.valor + " se já for)";
+    return "+" + e.valor + " numa perícia" + lista;
+  }
   function idCurto(d) { return String(d.homebrewId || "local").toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 8) || "local"; }
   function chaveVersionada(prefixo, d) {
     var semChave = Object.assign({}, d); delete semChave.chave;
@@ -134,12 +140,39 @@
     if (!d.periciasOpcoes) delete d.periciasOpcoes;
     if (!d.periciasObservacao) delete d.periciasObservacao;
     d.automacao = d.efeitos.length ? "calculo" : "informacao";
+    /* v9.16: a escolha de perícia no poder, no formato das origens do livro
+       (escolhas + efeitosEscolha, como a Mutação do Experimento). */
+    var esc = escolhaDoPoder(b.escolhaHb);
+    if (esc) {
+      d.escolhaHb = esc;
+      var opc = { chave: "pericia", tipo: "pericia", rotulo: "Perícia — " + d.poder };
+      if (esc.entre.length) opc.entre = esc.entre.slice();
+      if (esc.modo === "treinar") opc.modo = "treinar";
+      d.escolhas = [opc];
+      d.efeitosEscolha = [esc.modo === "treinar" ? { tipo: "treinar", opcao: "pericia" } : esc.modo === "treinarOuBonus" ? { tipo: "treinarOuBonus", opcao: "pericia", bonus: esc.valor } : { tipo: "bonusPericia", opcao: "pericia", valor: esc.valor }];
+      d.automacao = "calculo";
+    }
     if (!d.chave) d.chave = chaveVersionada("hbo-", d);
     return d;
   }
 
   /* TRILHA Homebrew: serve a uma classe oficial (e às classes Homebrew que
      usam as trilhas dela); quatro poderes, um por marco de trilha. */
+  /* v9.16: UMA escolha de perícia num poder de trilha (como a Carteirada:
+     "treinado em Diplomacia ou Enganação, +2 se já for"). Quem joga
+     decide na Progressão ("Falta decidir"), e o efeito entra na conta.
+       treinar          treinado na perícia escolhida
+       treinarOuBonus   treinado; se já for, +valor
+       bonus            +valor na perícia escolhida */
+  var MODOS_ESCOLHA = ["treinar", "treinarOuBonus", "bonus"];
+  function escolhaDoPoder(bruto) {
+    var e = obj(bruto);
+    if (MODOS_ESCOLHA.indexOf(e.modo) < 0) return null;
+    var x = { modo: e.modo, entre: pericias(e.entre, 8), valor: int(e.valor, 1, 5, 2) };
+    if (x.entre.length === 1) x.entre = [];
+    if (e.modo === "treinar") delete x.valor;
+    return x;
+  }
   function normalizarTrilha(bruto) {
     var b = obj(bruto);
     var pod = lista(b.poderes);
@@ -154,7 +187,10 @@
       poderes: NEX_TRILHA.map(function (nex, i) {
         var p = obj(pod.filter(function (x) { return obj(x).nex === nex; })[0] || pod[i]);
         var ef = efeitos(p.efeitos);
-        return { nex: nex, nome: texto(p.nome, 60).trim() || ("Poder de " + nex + "%"), resumo: texto(p.resumo, 1200).trim(), efeitos: ef, pagina: 0, automacao: ef.length ? "calculo" : "informacao" };
+        var x = { nex: nex, nome: texto(p.nome, 60).trim() || ("Poder de " + nex + "%"), resumo: texto(p.resumo, 1200).trim(), efeitos: ef, pagina: 0, automacao: ef.length ? "calculo" : "informacao" };
+        var esc = escolhaDoPoder(p.escolha);
+        if (esc) { x.escolha = esc; x.automacao = "calculo"; }
+        return x;
       }),
     };
     if (!d.chave) d.chave = chaveVersionada("hbt-", d);
@@ -313,13 +349,14 @@
     var linhas = [];
     linhas.push("Perícias: " + (d.pericias.length ? nomes(d.pericias) : "nenhuma fixa") + (d.periciasAEscolher ? " + " + d.periciasAEscolher + " à escolha" + (d.periciasOpcoes ? " entre " + nomes(d.periciasOpcoes) : "") : "") + ".");
     linhas.push("Poder: " + d.poder + (d.resumo ? " — " + d.resumo : ""));
-    linhas.push(d.efeitos.length ? "Na conta da ficha: " + d.efeitos.map(textoEfeito).join(", ") + "." : "Informativo: a ficha mostra o poder; o efeito é aplicado pela mesa.");
+    linhas.push(d.efeitos.length ? "Na conta da ficha: " + d.efeitos.map(textoEfeito).join(", ") + "." : (d.escolhaHb ? "Sem efeito fixo." : "Informativo: a ficha mostra o poder; o efeito é aplicado pela mesa."));
+    if (d.escolhaHb) linhas.push("Escolha (na Progressão): " + textoEscolha(d.escolhaHb) + ".");
     return linhas;
   }
   function previaTrilha(d) {
     var linhas = ["Para: " + ((C() && C().classe(d.classe)) || { nome: d.classe }).nome + " (e as classes Homebrew que usam as trilhas dela)."];
     if (d.requisitos.length) linhas.push("Requisito: treinado em " + ((C() && C().pericia(d.requisitos[0].pericia)) || {}).nome + ".");
-    d.poderes.forEach(function (p) { linhas.push("NEX " + p.nex + "%: " + p.nome + (p.efeitos.length ? " (" + p.efeitos.map(textoEfeito).join(", ") + ")" : "")); });
+    d.poderes.forEach(function (p) { linhas.push("NEX " + p.nex + "%: " + p.nome + (p.efeitos.length ? " (" + p.efeitos.map(textoEfeito).join(", ") + ")" : "") + (p.escolha ? " · " + textoEscolha(p.escolha) : "")); });
     return linhas;
   }
 
@@ -403,7 +440,7 @@
     normalizarClasse: normalizarClasse, chaveDaClasse: chaveDaClasse, disponivelNoTrilho: disponivelNoTrilho, faltas: faltas,
     normalizarBloco: normalizarBloco, registrar: registrar, deRegistro: deRegistro, guardarNaFicha: guardarNaFicha,
     previa: previa, modeloDeOficial: modeloDeOficial,
-    NEX_TRILHA: NEX_TRILHA, EFEITOS: EFEITOS, normalizarOrigem: normalizarOrigem, normalizarTrilha: normalizarTrilha,
+    NEX_TRILHA: NEX_TRILHA, EFEITOS: EFEITOS, MODOS_ESCOLHA: MODOS_ESCOLHA, escolhaDoPoder: escolhaDoPoder, textoEscolha: textoEscolha, normalizarOrigem: normalizarOrigem, normalizarTrilha: normalizarTrilha,
     textoEfeito: textoEfeito, previaOrigem: previaOrigem, previaTrilha: previaTrilha, embutir: embutir, tipoDaChave: tipoDaChave,
   };
 })(typeof window !== "undefined" ? window : globalThis);

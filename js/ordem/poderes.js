@@ -2164,11 +2164,22 @@
   function registrarHabilidadesDeTrilha(tr) {
     if (!tr || !/^hbt-[a-z0-9-]{3,60}$/.test(String(tr.chave || ""))) return [];
     var lista = (tr.poderes || []).map(function (p) {
-      var e = entrada({
+      /* v9.16: a escolha de perícia vira a opção do poder, no formato das
+         trilhas do livro (a Progressão pede; o efeito usa a opção). */
+      var efs = Array.isArray(p.efeitos) ? p.efeitos.slice() : [];
+      var extra = {};
+      var esc = p.escolha;
+      if (esc && esc.modo) {
+        extra.opcoes = [{ chave: "pericia", tipo: "pericia", rotulo: "Perícia", entre: esc.entre && esc.entre.length ? esc.entre.slice() : undefined, modo: esc.modo === "treinar" ? "treinar" : undefined }];
+        if (!extra.opcoes[0].entre) delete extra.opcoes[0].entre;
+        if (!extra.opcoes[0].modo) delete extra.opcoes[0].modo;
+        efs.push(esc.modo === "treinar" ? { tipo: "treinar", opcao: "pericia" } : esc.modo === "treinarOuBonus" ? { tipo: "treinarOuBonus", opcao: "pericia", bonus: esc.valor || 2 } : { tipo: "bonusPericia", opcao: "pericia", valor: esc.valor || 2 });
+      }
+      var e = entrada(Object.assign({
         chave: tr.chave + "-p" + p.nex, nome: p.nome, tipo: "trilha", trilha: tr.chave, nex: p.nex,
-        fonte: "HOMEBREW", pagina: 0, resumo: p.resumo || "", efeitos: Array.isArray(p.efeitos) ? p.efeitos : [],
-        automacao: p.efeitos && p.efeitos.length ? "calculo" : "informacao",
-      });
+        fonte: "HOMEBREW", pagina: 0, resumo: p.resumo || "", efeitos: efs,
+        automacao: efs.length ? "calculo" : "informacao",
+      }, extra));
       e.homebrew = true;
       POR_CHAVE[e.chave] = e;
       return e;

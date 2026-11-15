@@ -246,7 +246,7 @@
     if (!p.id) return null;
     var dec = {};
     Object.keys(obj(p.decisoes)).forEach(function (k) {
-      if (!/^[A-Za-z0-9.]{1,60}$/.test(k)) return;
+      if (!/^[A-Za-z0-9.-]{1,60}$/.test(k)) return;
       var d = normalizarDecisao(p.decisoes[k]);
       if (d) dec[k] = d;
     });

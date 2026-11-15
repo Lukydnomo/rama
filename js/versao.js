@@ -118,6 +118,18 @@
 
   var CHANGELOG = [
     {
+      versao: "9.16.0",
+      codinome: "CARTEIRADA",
+      data: "15/11/2026",
+      mudancas: {
+        "Adicionado": [
+          "Origem e Trilha Homebrew de Ordem: o poder pode ter uma escolha de perícia (treinado; treinado ou +bônus se já for; ou +bônus), entre uma lista ou qualquer perícia. A ficha pede a escolha na Progressão, como nos poderes do livro, e o efeito entra na conta.",
+        ],
+        "Corrigido": ["A escolha de um poder Homebrew de Ordem não seria gravada: o id da vaga (com a chave Homebrew) tem hífen, que o registro, a Ramificação e o servidor recusavam."],
+        "Técnico": ["RAMAOrdemHomebrew ganhou escolhaDoPoder/textoEscolha; a origem gera escolhas e efeitosEscolha, e o poder de trilha, opcoes e o efeito com opcao. testes/executar-homebrew-ordem.js: 83 verificações."],
+      },
+    },
+    {
       versao: "9.15.0",
       codinome: "ATUALIZA",
       data: "15/11/2026",

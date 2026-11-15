@@ -826,7 +826,7 @@
   function normalizarRegistro(bruto) {
     if (!bruto || typeof bruto !== "object") return null;
     var etapa = String(bruto.etapa || "");
-    if (!/^[A-Za-z0-9.]{1,60}$/.test(etapa)) return null;
+    if (!/^[A-Za-z0-9.-]{1,60}$/.test(etapa)) return null; /* v9.16: hífen das chaves Homebrew (b.hbt-…-p10, b.origem.hbo-…) */
     return {
       id: String(bruto.id || uuid()).slice(0, 60),
       etapa: etapa,

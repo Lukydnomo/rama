@@ -1313,3 +1313,77 @@ sistemas.
 - `js/tormenta20/homebrew-t20.js`, `js/tormenta20/telas/ficha-t20.js`;
 - `js/ordem/homebrew-ordem.js`, `js/ordem/telas/ficha-ordem.js`;
 - `js/versao.js`, `ficha/index.html`.
+
+## v9.16.0 — Escolha de perícia nos poderes Homebrew de Ordem
+
+O poder da **Origem Homebrew** e cada poder da **Trilha Homebrew** podem
+ter **uma escolha de perícia**, no formato do livro:
+- **treinado numa perícia** (como Esperto);
+- **treinado; +bônus se já for** (como a Carteirada);
+- **+bônus numa perícia** (como a Mutação do Experimento).
+
+Cada uma pode ser entre uma lista (vazio = qualquer perícia), com bônus
+de +1 a +5.
+
+### Onde
+
+- **Editor:** bloco "Escolha de perícia (opcional)" no poder da origem e
+  em cada poder da trilha. A revisão diz que a escolha é feita na
+  Progressão.
+- **Ficha:** a escolha aparece em **Progressão → Pendentes**, como as do
+  livro. A janela mostra só as perícias que cabem; feita a escolha, o
+  treino ou o bônus entra na conta.
+
+### No motor
+
+Nada novo na conta: o normalizador gera o que as definições do livro já
+usam.
+- Na origem, `escolhas` e `efeitosEscolha`.
+- Na trilha, `opcoes` e o efeito com `opcao: "pericia"` na habilidade da
+  trilha.
+
+A definição guarda `escolhaHb` (origem) ou `escolha` (poder da trilha),
+de onde o resto é refeito.
+
+**Correção:** o id de uma vaga de opção é `b.<chave>`. Com uma chave
+Homebrew (`b.hbt-…-p10`, `b.origem.hbo-…`), ele tem hífen, que três
+validações não aceitavam:
+- o registro da escolha (`progressao.js`);
+- as decisões da Ramificação (`ramificacao.js`);
+- o servidor (`Ordem.gs`).
+
+Sem isso, a escolha de um poder Homebrew nunca seria gravada. As três
+passaram a aceitar hífen.
+
+### Validação da v9.16.0
+
+**Automática.** `testes/executar-homebrew-ordem.js` passou de 75 para 83:
+- a normalização da escolha;
+- o poder de trilha vira habilidade com a opção (entre Diplomacia e
+  Enganação);
+- a Progressão pede a escolha;
+- só vale perícia da lista;
+- escolhida, a perícia fica treinada;
+- na origem, `escolhas` e `efeitosEscolha`;
+- a Progressão pede a perícia da origem;
+- escolhida Investigação, +2 na conta.
+
+**Na interface** (servidor local, conta sintética):
+- Criei a origem **Lapidário** pelo editor (Profissão e Percepção; poder
+  Olho Clínico, +2 numa perícia à escolha). A revisão mostrou "Escolha
+  (na Progressão): +2 numa perícia à escolha".
+- Numa ficha de agente com ela, Progressão → Pendentes mostrou "Olho
+  Clínico · Origem". "Completar" abriu a lista de perícias.
+- Escolhida Investigação, a aba Perícias mostrou +2 nela.
+- Sem erros no console.
+
+### Publicar a v9.16.0
+
+**Servidor:** troque **`Ordem.gs`** e crie uma versão nova da implantação.
+**`setupRama()` não é necessário.**
+
+**Site:**
+- `js/ordem/homebrew-ordem.js`, `js/ordem/poderes.js`,
+  `js/ordem/progressao.js`, `js/ordem/ramificacao.js`;
+- `js/paginas/homebrew-origem-trilha.js`;
+- `js/versao.js`.

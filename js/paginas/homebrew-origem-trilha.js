@@ -32,7 +32,7 @@
     var ehOrigem = tipo === "origem";
     var d = reg && reg.modelo && reg.modelo.def ? JSON.parse(JSON.stringify(reg.modelo.def)) : (ehOrigem ? vaziaOrigem() : vaziaTrilha());
     if (ehOrigem && !Array.isArray(d.periciasOpcoes)) d.periciasOpcoes = [];
-    if (!ehOrigem) d.poderes = H().normalizarTrilha(d).poderes.map(function (p, i) { var x = (d.poderes || [])[i] || {}; return { nex: p.nex, nome: x.nome || "", resumo: x.resumo || "", efeitos: x.efeitos || [] }; });
+    if (!ehOrigem) d.poderes = H().normalizarTrilha(d).poderes.map(function (p, i) { var x = (d.poderes || [])[i] || {}; return { nex: p.nex, nome: x.nome || "", resumo: x.resumo || "", efeitos: x.efeitos || [], escolha: x.escolha || null }; });
     var rotulo = ehOrigem ? "origem" : "trilha";
     var r = { nome: reg ? reg.nome : "", descricao: reg ? reg.descricao || "" : (d.resumo && !ehOrigem ? d.resumo : ""), visibilidade: reg ? reg.visibilidade || "privado" : "privado", passo: 1, sujo: false };
     var pref = ehOrigem ? "hbo" : "hbt";
@@ -97,6 +97,21 @@
       ]));
     }
 
+    /* v9.16: uma escolha de perícia no poder de trilha. */
+    function blocoEscolha(p, id, campo) {
+      campo = campo || "escolha";
+      var e = p[campo];
+      var partes = [el("legend.r-rotulo", { texto: "Escolha de perícia (opcional)" }),
+        sel(id + "-modo", "Quem joga escolhe", [["", "Nada"], ["treinar", "Treinado numa perícia"], ["treinarOuBonus", "Treinado; +bônus se já for (como Carteirada)"], ["bonus", "Bônus numa perícia"]], e ? e.modo : "", function (v) { p[campo] = v ? { modo: v, entre: e ? e.entre : [], valor: e && e.valor ? e.valor : 2 } : null; }, "Decidida na Progressão (\u201cFalta decidir\u201d); o efeito entra na conta.")];
+      if (e) {
+        if (e.modo !== "treinar") partes.push(sel(id + "-valor", "Bônus", [[1, "+1"], [2, "+2"], [3, "+3"], [4, "+4"], [5, "+5"]], e.valor || 2, function (v) { e.valor = Number(v); }));
+        partes.push(el("fieldset.r-campo.hbc-pericias", {}, [el("legend.r-rotulo", { texto: "Entre (vazio = qualquer perícia)" })].concat(C().PERICIAS.map(function (pz) {
+          return el("label.r-marca", {}, [el("input", { type: "checkbox", checked: (e.entre || []).indexOf(pz.chave) >= 0, onchange: function (ev) { e.entre = (e.entre || []).filter(function (k) { return k !== pz.chave; }); if (ev.target.checked) e.entre.push(pz.chave); mudou(); } }), el("span", { texto: pz.nome })]);
+        }))));
+      }
+      return el("fieldset.r-campo.hbo-efeitos", {}, partes);
+    }
+
     /* ---------- 1. identidade ---------- */
     function passo1() {
       var partes = [
@@ -128,6 +143,7 @@
       partes.push(txt("hbo-poder", "Nome do poder", d.poder, function (v) { d.poder = v; }, 60));
       partes.push(txt("hbo-texto", "Texto do poder", d.resumo, function (v) { d.resumo = v; }, 1200, "O que o poder faz, como aparece em Habilidades.", true));
       partes.push(blocoEfeitos(d, "hbo-ef"));
+      partes.push(blocoEscolha(d, "hbo-esc", "escolhaHb"));
       return el("div.pc-editor__passo", {}, partes);
     }
     /* ---------- 2. trilha ---------- */
@@ -138,6 +154,7 @@
           txt("hbt-p" + i + "-nome", "Nome", p.nome, function (v) { p.nome = v; }, 60),
           txt("hbt-p" + i + "-texto", "Texto", p.resumo, function (v) { p.resumo = v; }, 1200, null, true),
           blocoEfeitos(p, "hbt-p" + i + "-ef"),
+          blocoEscolha(p, "hbt-p" + i + "-esc"),
         ]);
       })));
     }
@@ -153,11 +170,11 @@
     function passoRevisao() {
       var def = definicao();
       var auto = ehOrigem
-        ? ["As perícias fixas entram treinadas na criação e na troca de origem.", def.efeitos.length ? "Os efeitos entram na conta (" + def.efeitos.map(H().textoEfeito).join(", ") + ")." : "Sem efeito na conta."]
+        ? ["As perícias fixas entram treinadas na criação e na troca de origem.", def.efeitos.length ? "Os efeitos entram na conta (" + def.efeitos.map(H().textoEfeito).join(", ") + ")." : (def.escolhaHb ? "Sem efeito fixo; a escolha do poder entra na conta depois de feita." : "Sem efeito na conta.")]
         : ["A trilha aparece na vaga de Trilha para " + C().classe(def.classe).nome + " (e para as Classes Homebrew que usam as trilhas dela).", "Cada poder chega no seu marco; os efeitos configurados entram na conta."];
       var manual = ehOrigem
-        ? [def.periciasAEscolher ? "As " + def.periciasAEscolher + " perícias à escolha são escolhidas por quem joga." : null, "O que o texto do poder descreve além dos efeitos é aplicado pela mesa."]
-        : ["O que o texto de cada poder descreve além dos efeitos é aplicado pela mesa."];
+        ? [def.periciasAEscolher ? "As " + def.periciasAEscolher + " perícias à escolha são escolhidas por quem joga." : null, def.escolhaHb ? "Do poder: " + H().textoEscolha(def.escolhaHb) + " — escolhida na Progressão (“Falta decidir”)." : null, "O que o texto do poder descreve além dos efeitos é aplicado pela mesa."]
+        : def.poderes.filter(function (p) { return p.escolha; }).map(function (p) { return "NEX " + p.nex + "% · " + p.nome + ": " + H().textoEscolha(p.escolha) + " — escolhida na Progressão."; }).concat(["O que o texto de cada poder descreve além dos efeitos é aplicado pela mesa."]);
       return el("div.pc-editor__passo", {}, [
         el("p.t-rotulo", { texto: "Prévia" }),
         el("ul.hbe-mini", {}, previa(def).map(function (t) { return el("li", { texto: t }); })),

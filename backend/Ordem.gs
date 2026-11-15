@@ -3935,7 +3935,7 @@ function limparPlanosEvolucao(bruto) {
     var decisoes = p.decisoes && typeof p.decisoes === 'object' && !Array.isArray(p.decisoes) ? p.decisoes : {};
     var limpas = {};
     Object.keys(decisoes).forEach(function (k) {
-      if (/^[A-Za-z0-9.]{1,60}$/.test(k) && decisoes[k] && typeof decisoes[k] === 'object') limpas[k] = decisoes[k];
+      if (/^[A-Za-z0-9.-]{1,60}$/.test(k) && decisoes[k] && typeof decisoes[k] === 'object') limpas[k] = decisoes[k];
     });
     var objeto = function (x) { return x && typeof x === 'object' && !Array.isArray(x) ? x : {}; };
     planos.push({

@@ -215,5 +215,31 @@ const fAtu2 = R.normalizar(fAtu);
 t.ok("atualizada: chaves novas na ficha e nas cópias; as antigas saem", fAtu2.origem === vidrNova.chave && fAtu2.trilha === lapNova.chave && fAtu2.homebrew.origens[vidrNova.chave] && !fAtu2.homebrew.origens[vidr.chave] && !fAtu2.homebrew.trilhas[lap.chave]);
 t.iguais("os números seguem a versão nova: Defesa +3 no lugar de +1 e da Faceta (+1); sem o +1 PV por marco (−8 em NEX 40%) e Primeiro Corte +6 em vez de +3", [R.calcular(fAtu2).defesa.total - R.calcular(fVer).defesa.total, R.calcular(fAtu2).pv.total - R.calcular(fVer).pv.total], [1, -5]);
 
+/* ===================== v9.16: escolha de perícia nos poderes ===================== */
+t.grupo("Ordem Homebrew · escolha de perícia no poder (trilha e origem)");
+t.iguais("escolhaDoPoder: modo, lista e bônus (lista de uma perícia vira qualquer)", [H.escolhaDoPoder({ modo: "treinarOuBonus", entre: ["diplomacia", "enganacao", "inventada"], valor: 9 }), H.escolhaDoPoder({ modo: "treinar", entre: ["luta"] }), H.escolhaDoPoder({ modo: "x" })],
+  [{ modo: "treinarOuBonus", entre: ["diplomacia", "enganacao"], valor: 5 }, { modo: "treinar", entre: [] }, null]);
+const trEsc = H.normalizarTrilha(Object.assign(copia(trBruta), { homebrewId: "e1e1e1e1-sintetico", requisitos: [], poderes: [{ nex: 10, nome: "Lábia de Vidro", escolha: { modo: "treinarOuBonus", entre: ["diplomacia", "enganacao"], valor: 2 } }, { nex: 40, nome: "B" }, { nex: 65, nome: "C" }, { nex: 99, nome: "D" }] }));
+const fEsc = R.normalizar({ classe: "combatente", origem: "academico", trilha: trEsc.chave, nex: 10, atributos: { agi: 1, for: 2, int: 1, pre: 2, vig: 2 }, homebrew: { trilhas: { [trEsc.chave]: trEsc } } });
+const habEsc = P.habilidadesDaTrilha(trEsc.chave)[0];
+t.ok("o poder vira habilidade de trilha com a opção \"Perícia\" (entre Diplomacia e Enganação)", habEsc.opcoes.length === 1 && habEsc.opcoes[0].entre.join() === "diplomacia,enganacao" && habEsc.efeitos.some((e) => e.tipo === "treinarOuBonus" && e.opcao === "pericia"));
+const vEsc = E.vagas(fEsc).filter((v) => (v.rotulo || "").indexOf("Lábia de Vidro") >= 0 || v.beneficio === trEsc.chave + "-p10")[0];
+t.ok("a Progressão pede a escolha (vaga de opção do poder)", !!vEsc, JSON.stringify(E.vagas(fEsc).map((v) => v.id + ":" + v.rotulo)).slice(0, 400));
+const okDip = vEsc ? E.simular(fEsc, vEsc, { valor: "", opcoes: { pericia: "diplomacia" } }, null).avaliacao.valido : false;
+const okLuta = vEsc ? E.simular(fEsc, vEsc, { valor: "", opcoes: { pericia: "luta" } }, null).avaliacao.valido : true;
+t.ok("só vale perícia da lista (Diplomacia sim; Luta não)", okDip && !okLuta);
+if (vEsc) E.registrar(fEsc, vEsc, { valor: "", opcoes: { pericia: "diplomacia" } });
+const grauDip = E.estado(fEsc).graus ? E.estado(fEsc).graus.diplomacia : (R.bonusDePericia(fEsc, "diplomacia", []).total > 0 ? 1 : 0);
+t.ok("escolhida Diplomacia: fica treinado", grauDip >= 1 || /reinad/.test(JSON.stringify(R.bonusDePericia(fEsc, "diplomacia", []))), String(grauDip));
+
+const orgEsc = H.normalizarOrigem(Object.assign(copia(orgBruta), { homebrewId: "f2f2f2f2-sintetico", efeitos: [], escolhaHb: { modo: "bonus", valor: 2 } }));
+t.ok("origem: a escolha vira escolhas + efeitosEscolha (formato das do livro)", orgEsc.escolhas[0].chave === "pericia" && orgEsc.efeitosEscolha[0].tipo === "bonusPericia" && orgEsc.automacao === "calculo" && /Escolha \(na Progressão\): \+2 numa perícia à escolha/.test(H.previaOrigem(orgEsc).join(" ")));
+const fOE = R.normalizar({ classe: "combatente", origem: orgEsc.chave, nex: 5, atributos: { agi: 1, for: 2, int: 1, pre: 2, vig: 2 }, homebrew: { origens: { [orgEsc.chave]: orgEsc } } });
+const vOE = E.vagas(fOE).filter((v) => v.id === "b.origem." + orgEsc.chave)[0];
+t.ok("a Progressão pede a perícia da origem", !!vOE);
+const antesOE = R.bonusDePericia(fOE, "investigacao", []).total;
+if (vOE) E.registrar(fOE, vOE, { valor: "", opcoes: { pericia: "investigacao" } });
+t.iguais("escolhida Investigação: +2 na conta", R.bonusDePericia(fOE, "investigacao", []).total - antesOE, 2);
+
 console.log(`\n${FORTE}${passaram} ok${FIM}, ${falharam ? VERMELHO : ""}${falharam} falha(s)${FIM}.`);
 if (falharam) Deno.exit(1);
