@@ -1,5 +1,13 @@
 # A API
 
+## Dependências nos pacotes — v9.34
+
+- `ler_pacote` / `abrir_pacote_codigo`: cada entrada traz `depende`, a
+  lista dos ids das entradas do mesmo pacote que ela usa (a origem não
+  sai).
+- `importar_pacote`: as chaves Homebrew que apontam para outras entradas
+  (importadas agora ou antes) são remapeadas para as cópias.
+
 ## Opções das variantes de Goblins — v9.33
 
 - `salvar_homebrew`: o grupo `estrutural` de `goblins` aceita

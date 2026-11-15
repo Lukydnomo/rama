@@ -76,5 +76,16 @@ t.ok("moldura 2:3, 320 × 480, estática", Math.abs(cfg.proporcao - 2 / 3) < 1e-
 t.iguais("os limites que a tela explica são os do servidor", [P.LIMITES.entradas, P.LIMITES.pacotes, P.LIMITES.nome, P.LIMITES.descricao, P.LIMITES.importacao, P.LIMITES.capaLargura, P.LIMITES.capaAltura], servidor.limites);
 t.ok("  e a capa do editor tem o tamanho que o servidor registra", P.LIMITES.capaLargura === cfg.largura && P.LIMITES.capaAltura === cfg.altura);
 
+/* v9.34: dependências pela chave versionada. */
+{
+  const am = { id: "7d460043-aaaa-bbbb-cccc-000000000001", tipo: "ameaca", nome: "Vidraceiro", modelo: { def: {} } };
+  const est = { id: "3f2a9c10-1111-2222-3333-444455556666", tipo: "estilo", nome: "Estiloso", modelo: { def: {} } };
+  const outro = { id: "99999999-0000-0000-0000-000000000000", tipo: "item", nome: "Outro", modelo: { def: {} } };
+  const as = { id: "aaaa1111-0000-0000-0000-000000000000", tipo: "assassino", nome: "O Vidraceiro", modelo: { def: { ameacas: ["hbbm-7d460043-abc123"] } } };
+  const arq = { id: "bbbb2222-0000-0000-0000-000000000000", tipo: "arquetipo", nome: "Vlogueira", modelo: { def: { estilos: ["hbbe-3f2a9c101111", "firme"] } } };
+  t.iguais("dependências: o Assassino usa a Ameaça (id curto de 8); o Arquétipo usa o Estilo (id de 12)", [P.dependencias(as, [am, est, outro, as]).map((x) => x.nome), P.dependencias(arq, [am, est, outro]).map((x) => x.nome)], [["Vidraceiro"], ["Estiloso"]]);
+  t.ok("  sem citação, sem dependência (e ninguém depende de si)", !P.dependencias(am, [am, est, as]).length);
+}
+
 console.log(`\n${FORTE}${passaram} ok${FIM}, ${falharam ? VERMELHO : ""}${falharam} falha(s)${FIM}.`);
 if (falharam) Deno.exit(1);

@@ -223,11 +223,13 @@ function conteudoCompleto(alc, usuario) {
   var origens = {};
   if (alc.dono) lerLeves(ABAS.HOMEBREW).forEach(function (h) { if (meu(h, usuario)) origens[String(h.id)] = h; });
   var importadas = importadasPor(p.id, usuario);
+  var dependencias = dependenciasDasEntradas(linhas, conteudo);
   var entradas = linhas.map(function (e) {
     var dados = lerJson(conteudo[e._linha], {}) || {};
     var saida = {
       id: String(e.id), tipo: String(e.tipo), nome: String(e.nome || dados.nome || ''), ordem: Number(e.ordem) || 0,
       dados: dados, temImagem: !!imagens[String(e.id)], importada: !!importadas[String(e.id)],
+      depende: dependencias[String(e.id)] || [],
     };
     if (alc.dono) {
       var o = e.origemId ? origens[String(e.origemId)] : null;
@@ -559,6 +561,43 @@ function acaoCodigoPacote(corpo, usuario) {
    perdida) não duplica: o recibo da entrada já aponta para a cópia. Uma
    cópia que a pessoa apagou deixa de contar, e a entrada pode vir de novo.
    --------------------------------------------------------------------- */
+/* v9.34 — DEPENDÊNCIAS. As chaves Homebrew carregam o id curto da
+   criação de origem (hbXX-<id8>-<hash>; o Estilo de BRUTAL, hbbe-<id12>).
+   Uma entrada DEPENDE de outra quando o conteúdo dela cita a chave da
+   outra (o Assassino que usa uma Ameaça, o clã que usa uma Disciplina, a
+   classe que usa um poder). Na importação, as cópias ganham ids novos: as
+   chaves que apontam para elas são REMAPEADAS, para a dependência
+   continuar resolvida na biblioteca de quem importa. */
+function idAlfanumericoDePacote(id) { return String(id || '').toLowerCase().replace(/[^a-z0-9]/g, ''); }
+function regexDaChaveDePacote(fragmento) {
+  return new RegExp('(hb[a-z0-9]{1,4}-(?:[a-z0-9]+-)*)' + fragmento + '(?=-|"|$)', 'g');
+}
+function citaOrigemDePacote(json, origemId) {
+  var a = idAlfanumericoDePacote(origemId);
+  if (a.length < 8) return false;
+  return regexDaChaveDePacote(a.slice(0, 12)).test(json) || regexDaChaveDePacote(a.slice(0, 8)).test(json);
+}
+function remapearChavesDePacote(json, mapa) {
+  var saida = String(json);
+  mapa.forEach(function (m) {
+    var velho = idAlfanumericoDePacote(m.velho), novo = idAlfanumericoDePacote(m.novo);
+    if (velho.length < 8 || novo.length < 8) return;
+    saida = saida.replace(regexDaChaveDePacote(velho.slice(0, 12)), '$1' + novo.slice(0, 12));
+    saida = saida.replace(regexDaChaveDePacote(velho.slice(0, 8)), '$1' + novo.slice(0, 8));
+    saida = saida.split('"' + m.velho + '"').join('"' + m.novo + '"');
+  });
+  return saida;
+}
+/* As entradas de que cada entrada depende (ids de entrada; a origem não sai). */
+function dependenciasDasEntradas(linhas, conteudo) {
+  var dep = {};
+  linhas.forEach(function (e) {
+    var json = String(conteudo[e._linha] || '');
+    dep[String(e.id)] = linhas.filter(function (o) { return o !== e && o.origemId && String(o.origemId) !== String(e.origemId || '') && citaOrigemDePacote(json, o.origemId); }).map(function (o) { return String(o.id); });
+  });
+  return dep;
+}
+
 function acaoImportarPacote(corpo, usuario) {
   if (!opIdValido(corpo.opId)) return { ok: false, erro: 'dados_invalidos' };
   var pedidas = listaDeIds(corpo.entradas, LIMITE_IMPORTACAO_POR_VEZ);
@@ -582,6 +621,13 @@ function acaoImportarPacote(corpo, usuario) {
     var completo = acharPor(ABAS.PACOTES_HOMEBREW, 'id', p.id);
     var saida = { copiados: [], existentes: [], falhas: [] };
     var agora = new Date().toISOString();
+    /* v9.34: os ids novos antes de copiar, para remapear as chaves que
+       apontam para as entradas (as desta importação e as já importadas). */
+    var idsNovos = {};
+    pedidas.forEach(function (eid) { if (porId[eid] && !ja[eid]) idsNovos[eid] = novoId(); });
+    var mapa = linhas.filter(function (e) { return e.origemId && (idsNovos[String(e.id)] || ja[String(e.id)]); }).map(function (e) {
+      return { velho: String(e.origemId), novo: idsNovos[String(e.id)] || String(ja[String(e.id)].homebrewId) };
+    });
 
     pedidas.forEach(function (eid) {
       var e = porId[eid];
@@ -598,9 +644,9 @@ function acaoImportarPacote(corpo, usuario) {
         dados.tipo = tipo;
         dados.visibilidade = VIS_PRIVADO;
         dados.pacote = { id: String(p.id), entradaId: eid, nome: String(completo ? completo.nome : p.nome).slice(0, MAX_NOME_PACOTE), rev: Number(p.rev) || 0, importadoEm: agora };
-        var json = JSON.stringify(dados);
+        var json = remapearChavesDePacote(JSON.stringify(dados), mapa);
         if (json.length > MAX_CELULA) { saida.falhas.push({ entradaId: eid, nome: String(e.nome), motivo: 'Grande demais para a biblioteca.' }); return; }
-        var hid = novoId();
+        var hid = idsNovos[eid] || novoId();
         inserir(ABAS.HOMEBREW, {
           id: hid, ownerId: usuario.id, tipo: tipo, nome: String(dados.nome || e.nome || 'Criação').trim().slice(0, 120) || 'Criação',
           visibilidade: VIS_PRIVADO, criadoEm: agora, atualizadoEm: agora, rev: 1, dadosJson: json,

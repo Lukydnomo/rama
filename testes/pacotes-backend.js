@@ -243,4 +243,31 @@ export function testarPacotesBackend({ t, preparar, novaConta, comoFn }) {
   const pOrdemEst = salvar(A, { dados: dados("Livro do Vidro", "ordem"), conteudo: { adicionar: [vidro.dados.id, classeHb.dados.id] } });
   t.ok("pacote de Ordem aceita Classe e Elemento", pOrdemEst.ok && pOrdemEst.dados.tipos.classe === 1 && pOrdemEst.dados.tipos.elemento === 1);
   t.ok("pacote de T20 recusa a Classe de Ordem", salvar(A, { dados: dados("Errado", "tormenta20"), conteudo: { adicionar: [classeHb.dados.id] } }).erro === "incompativel");
+
+  t.grupo("Pacotes · dependências entre criações (v9.34)");
+  {
+    const alfa = (id) => String(id).toLowerCase().replace(/[^a-z0-9]/g, "");
+    const amB = A({ acao: "salvar_homebrew", dados: { tipo: "ameaca", nome: "Vidraceiro", modelo: Object.assign(modelo("brutal", "estrutural", "ameaca"), { def: { acoesUnicas: ["segurar"] } }) } });
+    const chaveAm = "hbbm-" + alfa(amB.dados.id).slice(0, 8) + "-abc123";
+    const asB = A({ acao: "salvar_homebrew", dados: { tipo: "assassino", nome: "O Vidraceiro", modelo: Object.assign(modelo("brutal", "estrutural", "assassino"), { def: { ameacas: [chaveAm, "estrategico"], dados: 5 } }) } });
+    const pk = salvar(A, { dados: dados("Thriller de Vidro", "brutal"), conteudo: { adicionar: [amB.dados.id, asB.dados.id] } });
+    t.ok("pacote com a Ameaça e o Assassino que a usa", pk.ok && pk.dados.qtd === 2, JSON.stringify(pk));
+    const cod = A({ acao: "codigo_pacote", pacoteId: pk.dados.id, tipo: "gerar" }).dados.codigo;
+    const lido = B({ acao: "ler_pacote", pacoteId: pk.dados.id, codigo: cod }).dados;
+    const eAm = lido.entradas.find((e) => e.tipo === "ameaca"), eAs = lido.entradas.find((e) => e.tipo === "assassino");
+    t.ok("a entrada do Assassino diz que depende da Ameaça (sem expor a origem)", eAs.depende.length === 1 && eAs.depende[0] === eAm.id && eAm.depende.length === 0 && !("origemId" in eAs));
+    const imp = B({ acao: "importar_pacote", pacoteId: pk.dados.id, codigo: cod, rev: lido.rev, opId: op("imp"), entradas: [eAm.id, eAs.id] });
+    const novoAm = imp.dados.copiados.find((x) => x.entradaId === eAm.id).homebrewId, novoAs = imp.dados.copiados.find((x) => x.entradaId === eAs.id).homebrewId;
+    const lidoAs = B({ acao: "ler_homebrew", homebrewId: novoAs }).dados;
+    t.ok("importados juntos: a chave da Ameaça no Assassino aponta para a CÓPIA (id remapeado; o hash fica)", lidoAs.modelo.def.ameacas[0] === "hbbm-" + alfa(novoAm).slice(0, 8) + "-abc123" && lidoAs.modelo.def.ameacas[1] === "estrategico", JSON.stringify(lidoAs.modelo.def));
+    const asSo = A({ acao: "salvar_homebrew", dados: { tipo: "assassino", nome: "Só o Assassino", modelo: Object.assign(modelo("brutal", "estrutural", "assassino"), { def: { ameacas: [chaveAm] } }) } });
+    const pk2 = salvar(A, { dados: dados("Só um", "brutal"), conteudo: { adicionar: [amB.dados.id, asSo.dados.id] } });
+    const cod2 = A({ acao: "codigo_pacote", pacoteId: pk2.dados.id, tipo: "gerar" }).dados.codigo;
+    const l2 = B({ acao: "ler_pacote", pacoteId: pk2.dados.id, codigo: cod2 }).dados;
+    const am2 = l2.entradas.find((e) => e.tipo === "ameaca"), as2 = l2.entradas.find((e) => e.tipo === "assassino");
+    const i1 = B({ acao: "importar_pacote", pacoteId: pk2.dados.id, codigo: cod2, rev: l2.rev, opId: op("imp"), entradas: [am2.id] });
+    const i2 = B({ acao: "importar_pacote", pacoteId: pk2.dados.id, codigo: cod2, rev: l2.rev, opId: op("imp"), entradas: [as2.id] });
+    const novoAm2 = i1.dados.copiados[0].homebrewId;
+    t.ok("importado depois: a chave aponta para a cópia já importada", B({ acao: "ler_homebrew", homebrewId: i2.dados.copiados[0].homebrewId }).dados.modelo.def.ameacas[0] === "hbbm-" + alfa(novoAm2).slice(0, 8) + "-abc123");
+  }
 }

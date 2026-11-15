@@ -118,6 +118,18 @@
 
   var CHANGELOG = [
     {
+      versao: "9.34.0",
+      codinome: "ELO",
+      data: "15/11/2026",
+      mudancas: {
+        "Adicionado": [
+          "Pacotes: dependências entre criações. Ao montar um pacote, a ficha avisa quando uma criação usa outra sua que não está nele (o Assassino que usa uma Ameaça, o clã que usa uma Disciplina, o Arquétipo que usa um Estilo…) e oferece incluir. Ao importar, uma entrada escolhida que usa outra do pacote mostra o aviso e o botão \u201cSelecionar também\u201d.",
+        ],
+        "Corrigido": ["Pacotes: importar criações que dependem umas das outras deixava a dependência quebrada (a cópia ganha um id novo, e a chave que apontava para ela continuava com o id antigo). Agora o servidor remapeia essas chaves na importação — também para o que já tinha sido importado antes."],
+        "Técnico": ["backend/HomebrewPacotes.gs: depende em cada entrada (ids de entrada, sem expor a origem) e remapearChavesDePacote na importação (o id curto de 8, o de 12 do Estilo de BRUTAL e o homebrewId completo). js/pacotes-homebrew.js: dependencias(reg, pool). testes/pacotes-backend.js: 4 verificações novas; testes/executar-pacotes.js: 2."],
+      },
+    },
+    {
       versao: "9.33.0",
       codinome: "GRAMAALTA",
       data: "15/11/2026",

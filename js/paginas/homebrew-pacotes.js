@@ -370,7 +370,23 @@
           })),
         ]);
       });
+      /* v9.34: uma entrada escolhida que usa outra do pacote (ainda não
+         escolhida nem importada): oferece incluir. */
+      var faltam = [];
+      Object.keys(sel).forEach(function (id) {
+        var e = p.entradas.filter(function (x) { return x.id === id; })[0];
+        (e && e.depende || []).forEach(function (d) {
+          var de = p.entradas.filter(function (x) { return x.id === d; })[0];
+          if (de && !de.importada && !sel[d] && !faltam.some(function (f) { return f.de.id === d; })) faltam.push({ por: e, de: de });
+        });
+      });
+      var avisoDep = !p.meu && faltam.length ? el("div.pc-alerta", { role: "status" }, [
+        el("p", { texto: "Algumas escolhidas usam outras criações deste pacote. Sem elas, o que depende delas fica sem efeito na sua biblioteca:" }),
+        el("ul", {}, faltam.map(function (f) { return el("li", { texto: f.por.nome + " usa " + f.de.nome + " (" + P().tipo(f.de.tipo).um + ")." }); })),
+        el("button.r-botao.r-botao--mini", { type: "button", texto: "Selecionar também", onclick: function () { faltam.forEach(function (f) { sel[f.de.id] = true; }); pintarDetalhe(); } }),
+      ]) : null;
       var importar = p.meu ? null : el("div.pc-importar", {}, [
+        avisoDep,
         el("p.t-mini", { role: "status", texto: disponiveis.length
           ? nSel + " de " + disponiveis.length + " selecionada(s)" + (p.entradas.length > disponiveis.length ? " · " + (p.entradas.length - disponiveis.length) + " já na sua biblioteca" : "")
           : "Tudo deste pacote já está na sua biblioteca." }),
@@ -668,7 +684,22 @@
         ]);
       }
       pintarLista();
+      /* v9.34: o que entra no pacote e usa outra criação sua que não entra. */
+      var noPacote = finais.map(function (x) { return x.registro || null; }).filter(Boolean);
+      var idsNoPacote = {}; noPacote.forEach(function (h) { idsNoPacote[h.id] = true; }); Object.keys(origens).forEach(function (k) { idsNoPacote[k] = true; });
+      var faltamDep = [];
+      noPacote.forEach(function (h) {
+        P().dependencias(h, biblioteca).forEach(function (d) {
+          if (!idsNoPacote[d.id] && !faltamDep.some(function (f) { return f.de.id === d.id; })) faltamDep.push({ por: h, de: d });
+        });
+      });
+      var avisoDep = faltamDep.length ? el("div.pc-alerta", { role: "status" }, [
+        el("p", { texto: "Estas criações usam outras suas que não estão no pacote. Quem importar fica sem elas (o que depende delas fica sem efeito):" }),
+        el("ul", {}, faltamDep.map(function (f) { return el("li", { texto: f.por.nome + " usa " + f.de.nome + " (" + P().tipo(f.de.tipo).um + ")" + (r.sistema && !P().compatibilidade(f.de, r.sistema).ok ? " — não cabe neste pacote" : "") + "." }); })),
+        el("button.r-botao.r-botao--mini", { type: "button", texto: "Incluir as que faltam", onclick: function () { faltamDep.forEach(function (f) { if (!r.sistema || P().compatibilidade(f.de, r.sistema).ok) r.adicionar[f.de.id] = true; }); mudou(); } }),
+      ]) : null;
       return el("div.pc-editor__passo.pc-editor__conteudo", {}, [
+        avisoDep,
         el("p.t-mini", { texto: "Cada criação entra como CÓPIA de agora: editar ou apagar o original depois não muda o pacote. Até " + L.entradas + " criações por pacote." }),
         el("p.pc-contador", { role: "status", texto: finais.length + " de " + L.entradas + " no pacote" + (Object.keys(r.adicionar).length ? " · " + Object.keys(r.adicionar).length + " nova(s) selecionada(s)" : "") }),
         r.manter.length ? el("section.pc-grupo", { "aria-label": "Já no pacote" }, [

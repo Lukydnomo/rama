@@ -134,7 +134,23 @@
     return n.replace(/(.{4})(?=.)/g, "$1-");
   }
 
+  /* v9.34 — dependências: um registro cita outro pela chave versionada
+     (hbXX-<id8>-<hash>; o Estilo de BRUTAL, hbbe-<id12>). O mesmo teste
+     do servidor (backend/HomebrewPacotes.gs). */
+  function idAlfa(id) { return String(id || "").toLowerCase().replace(/[^a-z0-9]/g, ""); }
+  function citaRegistro(json, id) {
+    var a = idAlfa(id);
+    if (a.length < 8) return false;
+    return [a.slice(0, 12), a.slice(0, 8)].some(function (f) { return new RegExp("(hb[a-z0-9]{1,4}-(?:[a-z0-9]+-)*)" + f + "(?=-|\"|$)").test(json); });
+  }
+  /* Os registros de `pool` que `reg` usa (sem ele mesmo). */
+  function dependencias(reg, pool) {
+    var json = JSON.stringify((reg && reg.modelo) || reg || {});
+    return (pool || []).filter(function (x) { return x && x.id && x.id !== reg.id && citaRegistro(json, x.id); });
+  }
+
   global.RAMAPacotesHomebrew = {
+    dependencias: dependencias, citaRegistro: citaRegistro,
     LIMITES: LIMITES, TIPOS: TIPOS, tipo: tipo, nomeDoSistema: nomeDoSistema,
     sistemasComRituais: sistemasComRituais, sistemaNativo: sistemaNativo, compatibilidade: compatibilidade,
     agrupar: agrupar, resumoDosTipos: resumoDosTipos,

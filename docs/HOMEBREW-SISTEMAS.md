@@ -283,8 +283,8 @@ nova, e o modelo vai no `dadosJson` de sempre.
 - ~~**Habilidades Homebrew no motor** de T20, Vampiro, Goblins, Oblívio e
   BRUTAL~~ (T20 na v9.14.0; Vampiro v9.29.0, Goblins v9.30.0, Oblívio
   v9.31.0, BRUTAL v9.32.0).
-- **Dependências nos pacotes**: elemento de um ritual, poder de uma classe
-  e assim por diante.
+- ~~**Dependências nos pacotes**: elemento de um ritual, poder de uma classe
+  e assim por diante~~ (v9.34.0).
 
 **Etapa 3 — automação por sistema.** Ações estruturadas pelo motor de cada
 ficha: bônus por condição, dano/cura, custos, cargas, concessões e
@@ -2908,3 +2908,78 @@ nova da implantação. **`setupRama()` não é necessário.**
 Feitos os tipos estruturais de todos os sistemas, as Habilidades Homebrew
 no motor, os modelos de mesa de BRUTAL e as opções das variantes de
 Goblins. Da Etapa 2 resta **dependências nos pacotes**.
+
+## v9.34.0 — Dependências nos pacotes
+
+As chaves Homebrew carregam o id curto da criação de origem:
+`hbXX-<id8>-<hash>`, ou `hbbe-<id12>` no Estilo de BRUTAL. Uma criação
+**depende** de outra quando a definição dela cita a chave da outra.
+Alguns exemplos:
+- o Assassino que usa uma Ameaça;
+- o clã ou o Predador que usa uma Disciplina;
+- o Arquétipo que usa um Estilo;
+- a classe de T20 que usa um poder;
+- o ritual que usa um elemento.
+
+### Ao montar um pacote
+
+Na etapa **Conteúdo**, se uma criação do pacote usa outra **sua** que não
+está nele, aparece o aviso, por exemplo: "O Vidraceiro usa Vidraceiro
+(Ameaça)". O botão **Incluir as que faltam** põe no pacote as que cabem
+nele. Só entram criações da própria conta: nada de outra conta é
+exportado.
+
+### Ao importar
+
+Cada entrada do pacote traz `depende`, os ids das entradas de que ela
+precisa. O servidor calcula isso e a origem não sai. Se a pessoa escolhe
+uma entrada que usa outra do pacote ainda não escolhida nem importada,
+aparece o aviso, com **Selecionar também**.
+
+### Correção: as chaves na importação
+
+A cópia importada ganha um id novo. A chave que apontava para ela, numa
+outra criação, continuava com o id antigo, e a dependência ficava
+quebrada na biblioteca de quem importou.
+
+Agora o servidor **remapeia** essas chaves na importação. Isso vale para
+as entradas importadas junto e para as que já tinham sido importadas
+antes. O id curto muda e o hash fica: a definição continua sendo a
+mesma. O motor de cada sistema recalcula a chave versionada ao usar a
+criação.
+
+### Validação da v9.34.0
+
+**Automática.**
+- `testes/pacotes-backend.js`, 4 verificações novas:
+  - o pacote com a Ameaça e o Assassino;
+  - o `depende` sem expor a origem;
+  - importados juntos: a chave aponta para a cópia;
+  - importado depois: a chave aponta para a cópia já importada.
+- `testes/executar-pacotes.js`, 2 verificações: as dependências pelo id
+  de 8 e pelo de 12.
+
+As outras suítes continuam verdes.
+
+**Na interface** (servidor local, conta sintética):
+- Gravei a Ameaça **Vidraceiro** e o Assassino **O Vidraceiro**, que usa
+  a Ameaça.
+- Em **Pacotes → + Criar pacote** (BRUTAL), marquei só o Assassino. O
+  aviso mostrou "O Vidraceiro usa Vidraceiro (Ameaça)".
+- **Incluir as que faltam** pôs a Ameaça no pacote ("2 de 40"), e o
+  aviso sumiu.
+- O aviso do lado da importação foi validado pelos testes do servidor,
+  não na interface.
+
+### Publicar a v9.34.0
+
+**Servidor:** troque **`HomebrewPacotes.gs`** e crie uma versão nova da
+implantação. **`setupRama()` não é necessário.**
+
+**Site:** `js/pacotes-homebrew.js`, `js/paginas/homebrew-pacotes.js` e
+`js/versao.js`.
+
+### Etapa 2 concluída
+
+Com esta versão, a Etapa 2 da especificação está completa. A próxima, a
+Etapa 3, é a automação por sistema.
