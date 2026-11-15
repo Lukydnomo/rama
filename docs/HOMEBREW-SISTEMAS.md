@@ -2427,3 +2427,46 @@ versão nova da implantação. **`setupRama()` não é necessário.**
   `js/paginas/homebrew.js`;
 - `js/homebrew-adaptadores.js`, `js/pacotes-homebrew.js`;
 - `js/versao.js`.
+
+## v9.28.0 — Ordem I: elemento Homebrew nas origens Exorcizado e Ferido por Ritual
+
+As duas origens que pedem um elemento ficaram pendentes na v9.25. Elas
+seguem o mesmo critério: o elemento Homebrew entra onde a regra serve a
+qualquer elemento.
+
+| Origem | Decisão | Por quê |
+|---|---|---|
+| **Exorcizado** (O Que Restou, AS7 p. 80) | **aceita** o elemento Homebrew | RD 5 contra o tipo do elemento e perda de Sanidade no primeiro contato da cena: regra genérica |
+| **Ferido por Ritual** (Mácula Ritualística, AS1 p. 43) | **só os elementos do livro** | a perícia da origem vem de uma tabela do livro (Fortitude para Sangue, Vontade para Morte e Conhecimento, Reflexos para Energia) |
+
+No Exorcizado, a RD 5 contra o elemento Homebrew entra na conta, com o
+nome dele. Escolher um elemento Homebrew em Ferido por Ritual dá o
+motivo: "este poder tem efeitos só para os elementos do livro".
+
+### Validação da v9.28.0
+
+**Automática.** `testes/executar-homebrew-ordem.js` ganhou 3
+verificações (agora 120):
+- Exorcizado aceita Vidro;
+- a RD 5 contra Vidro entra na conta;
+- Ferido por Ritual recusa Vidro, com o motivo.
+
+**Na interface:** não abri o navegador nesta versão. A escolha de origem
+usa o mesmo seletor de elemento validado no navegador na v9.25.0.
+
+### Publicar a v9.28.0
+
+**Servidor:** nada muda.
+
+**Site:** `js/ordem/catalogo.js` e `js/versao.js`.
+
+### Etapa 2 depois da v9.28
+
+Os pendentes que eu tinha listado na Etapa 2 estão feitos. Ainda ficam,
+da lista geral da especificação:
+- as opções das variantes de Goblins (como PokéPragas);
+- os modelos de mesa de BRUTAL;
+- as Habilidades Homebrew no motor de Vampiro, Goblins, Oblívio e BRUTAL
+  (resolver ids de Homebrew junto com o catálogo, com cópia versionada
+  na ficha). Em T20, Magia e Poder Homebrew já entram no motor desde a
+  v9.14.

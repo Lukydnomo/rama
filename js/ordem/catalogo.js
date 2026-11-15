@@ -1182,7 +1182,8 @@
       pericias: ["fortitude", "ocultismo"],
       poder: "O Que Restou", automacao: "parcial", controles: true,
       resumo: "Uma parte da criatura que o possuiu ficou. Escolha um elemento (exceto Medo): você recebe RD 5 contra o tipo dele. Sempre que entra em contato com esse elemento pela primeira vez numa cena (presenciando rituais, itens amaldiçoados, criaturas ou poderes paranormais), perde 2 de Sanidade.",
-      escolhas: [{ chave: "elemento", tipo: "elemento", rotulo: "Elemento do que restou (exceto Medo)" }],
+      /* v9.28: a RD serve a qualquer elemento — o Homebrew da mesa entra. */
+      escolhas: [{ chave: "elemento", tipo: "elemento", aceitaHomebrew: true, rotulo: "Elemento do que restou (exceto Medo)" }],
       efeitosEscolha: [{ tipo: "resistenciaDano", opcao: "elemento", valor: 5 }],
       nota: "A RD 5 entra na conta pelo elemento escolhido. Quem diz que houve contato é a mesa: o cartão registra a primeira vez da cena e tira os 2 de Sanidade uma vez só — a segunda tentativa na mesma cena é recusada. Com Jogando sem Sanidade, a perda não se aplica (SAH p. 104), como nas outras perdas de Sanidade da ficha." },
 

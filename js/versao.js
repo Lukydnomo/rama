@@ -118,6 +118,17 @@
 
   var CHANGELOG = [
     {
+      versao: "9.28.0",
+      codinome: "RESQUICIO",
+      data: "15/11/2026",
+      mudancas: {
+        "Adicionado": [
+          "Ordem Paranormal: a origem Exorcizado (O Que Restou) aceita o elemento Homebrew da mesa — a RD 5 contra o elemento serve a qualquer um. Ferido por Ritual continua só com os elementos do livro (a perícia vem de uma tabela por elemento).",
+        ],
+        "Técnico": ["catalogo.js: a escolha de elemento do Exorcizado com aceitaHomebrew. testes/executar-homebrew-ordem.js: 3 verificações novas (120)."],
+      },
+    },
+    {
       versao: "9.27.0",
       codinome: "MURANO",
       data: "15/11/2026",

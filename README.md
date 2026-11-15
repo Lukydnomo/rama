@@ -929,6 +929,10 @@ segredo nenhum — ele os lê das Script Properties. Publicá-lo não expõe nad
 
 ### Atualizar o backend
 
+**v9.28.0 — RESQUICIO:** o Exorcizado de Ordem Paranormal aceita o
+elemento Homebrew. **Só o site muda: o servidor fica como está.** Site:
+`js/ordem/catalogo.js` e `js/versao.js`.
+
 **v9.27.0 — MURANO:** Ficha de Conhecimento Homebrew em Vampiro, e a
 compra com XP de Homebrew passa a gravar a cópia. Troque **`Codigo.gs`**
 e **`Vampiro.gs`** e crie uma versão nova da implantação.
@@ -2118,7 +2122,7 @@ Três números diferentes, que não se misturam:
 
 | | Onde | O que é |
 |---|---|---|
-| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v9.27.0 |
+| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v9.28.0 |
 | `schemaVersion` | `js/ficha.js` | o formato da FICHA |
 | `versaoFormato` | `js/config.js` | o formato dos arquivos de importação |
 

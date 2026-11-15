@@ -339,5 +339,23 @@ t.grupo("Elemento Homebrew · poderes, itens e maldições (v9.25)");
   }
 }
 
+t.grupo("Elemento Homebrew · origens Exorcizado e Ferido por Ritual (v9.28)");
+{
+  EL.registrar(vidro);
+  const base = (origem) => R.normalizar({ classe: "combatente", origem, nex: 5, atributos: { agi: 1, for: 1, int: 1, pre: 1, vig: 2 }, homebrew: { elementos: { [vidro.chave]: vidro } } });
+  const ex = base("exorcizado");
+  const vEx = E.vagas(ex).filter((v) => v.id === "b.origem.exorcizado")[0];
+  const simEx = vEx ? E.simular(copia(ex), vEx, { valor: "", opcoes: { elemento: vidro.chave } }, {}).avaliacao : null;
+  t.ok("Exorcizado aceita Vidro (RD 5 contra o elemento: regra genérica)", simEx && simEx.valido, JSON.stringify(simEx || E.vagas(ex).map((v) => v.id)));
+  if (vEx) E.registrar(ex, vEx, { valor: "", opcoes: { elemento: vidro.chave } });
+  const rdEx = R.resistencias ? R.resistencias(ex) : null;
+  const linha = rdEx ? JSON.stringify(rdEx) : "";
+  t.ok("  e a RD 5 contra Vidro entra na conta", rdEx && linha.indexOf(vidro.chave) >= 0 && /Vidro/.test(linha), linha.slice(0, 300));
+  const fr = base("feridoPorRitual");
+  const vFr = E.vagas(fr).filter((v) => v.id === "b.origem.feridoPorRitual")[0];
+  const simFr = vFr ? E.simular(copia(fr), vFr, { valor: "", opcoes: { elemento: vidro.chave } }, {}).avaliacao : null;
+  t.ok("Ferido por Ritual recusa Vidro (perícia por elemento é tabela do livro)", simFr && !simFr.valido && /elementos do livro/.test(JSON.stringify(simFr)), JSON.stringify(simFr));
+}
+
 console.log(`\n${FORTE}${passaram} ok${FIM}, ${falharam ? VERMELHO : ""}${falharam} falha(s)${FIM}.`);
 if (falharam) Deno.exit(1);
