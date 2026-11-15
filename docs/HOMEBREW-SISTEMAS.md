@@ -1994,3 +1994,95 @@ Continuam pendentes:
   - o elemento Homebrew em poderes paranormais e maldições;
 - detalhes por sistema, como a escolha de poder geral dentro de uma
   habilidade de raça em T20 e a Ficha de Conhecimento em Vampiro.
+
+## v9.23.0 — Ordem I: Classe Homebrew na transição para agente
+
+Até a v9.22, só as três classes do livro apareciam quando um Mundano
+("Atingindo NEX 5%", OPRPG p. 172) ou um Sobrevivente ("Treinamento
+Especial", SAH p. 32) virava agente: a tabela de ganhos da transição
+lista só elas. Agora a Classe Homebrew também aparece.
+
+### A conta dos ganhos
+
+`RAMAOrdemCatalogo.ganhosDeTransicao(def, de)` segue a mesma conta que
+as três classes do livro seguem. Os testes conferem que ela reproduz a
+tabela do livro nas três.
+
+**Mundano.** É o que falta ao Mundano para chegar ao agente novato:
+- PV, PE e SAN iniciais da classe, menos os do Mundano;
+- as perícias obrigatórias e fixas da classe;
+- as perícias livres da classe, menos a 1 que o Mundano já tem;
+- as proficiências que o Mundano não tem;
+- as habilidades de NEX 5%.
+
+**Sobrevivente.** Os mesmos ganhos, com 4 PV, 1 PE e 4 SAN a menos,
+nunca abaixo de 0. É a diferença que as três classes do livro têm entre
+as duas tabelas.
+
+Nos dois casos, o atributo de cada recurso continua o da fase anterior:
+a transição soma números fixos, como no livro.
+
+### No motor
+
+- Registrar uma Classe Homebrew (pela cópia da ficha ou ao escolher) põe
+  a classe em `TRANSICOES` e o treinamento dela em `RAMAOrdemPoderes`
+  (`registrarTreinamentos`).
+- O treinamento tem chave `treinamento.<de>.<classe>`, versionada como a
+  classe.
+- O resto do caminho é o de sempre:
+  - o plano da transição;
+  - as vagas "Ponto de atributo" e "Treinamento" em Falta decidir;
+  - as vagas de NEX 5% da tabela da classe Homebrew.
+
+### Na ficha
+
+**Progressão → Atingir NEX 5% / Treinamento Especial.** A janela lista:
+- as três classes do livro;
+- as Classes Homebrew já registradas e as da biblioteca (as suas e as
+  públicas), com "(Homebrew)" e os ganhos.
+
+Uma classe sem a tabela do trilho em uso aparece desabilitada, com o
+motivo, como na criação. Ao confirmar, a ficha guarda a **cópia** da
+classe escolhida.
+
+### Validação da v9.23.0
+
+**Automática.** `testes/executar-homebrew-ordem.js` ganhou 9
+verificações (agora 92):
+- a conta reproduz a tabela do livro nas três classes, de Mundano e de
+  Sobrevivente;
+- os ganhos de uma Classe Homebrew de exemplo;
+- o treinamento;
+- Mundano → Classe Homebrew: classe, NEX, trajetória, cópia, recursos e
+  pendências;
+- Sobrevivente → Classe Homebrew.
+
+As outras suítes continuam verdes.
+
+**Na interface** (servidor local, conta sintética):
+- Criei a Classe Homebrew **Vigilante** (18 PV, 3 PE, 10 SAN iniciais)
+  e um Mundano.
+- Em **Atingir NEX 5%**, a janela mostrou "Vigilante (Homebrew) · +10 PV
+  · +2 PE · +2 SAN".
+- O resumo mostrou PV 10 → 20 e as duas pendências (treinamento e ponto
+  de atributo).
+- Confirmei. A ficha virou "Vigilante · NEX 5%". Relida do servidor,
+  tinha a trajetória Mundano → Vigilante e a cópia da classe.
+
+### Publicar a v9.23.0
+
+**Servidor:** nada muda.
+
+**Site:**
+- `js/ordem/catalogo.js`, `js/ordem/poderes.js`,
+  `js/ordem/telas/ficha-ordem.js`;
+- `js/versao.js`.
+
+### Etapa 2 depois da v9.23
+
+Continuam pendentes:
+- em **Ordem I**:
+  - a classe que conjura rituais;
+  - o elemento Homebrew em poderes paranormais e maldições;
+- detalhes por sistema, como a escolha de poder geral dentro de uma
+  habilidade de raça em T20 e a Ficha de Conhecimento em Vampiro.

@@ -3471,14 +3471,29 @@
     });
     var botao = m.janela.querySelector(".r-modal__rodape .r-botao--principal");
 
+    /* v9.23: as Classes Homebrew — as já registradas e as da biblioteca
+       (as suas e as públicas), uma vez cada. */
+    var HO = global.RAMAOrdemHomebrew, bibliotecaHb = HO ? null : { classes: [] };
+    if (HO) HO.carregarBiblioteca().then(function (b) { bibliotecaHb = b || { classes: [] }; pintar(); }, function () { bibliotecaHb = { classes: [] }; pintar(); });
+    function classesHb() {
+      var vistas = {}, lista = [];
+      (C.classesHomebrew ? C.classesHomebrew() : []).concat((bibliotecaHb && bibliotecaHb.classes) || []).forEach(function (d) {
+        if (!d || !d.chave || vistas[d.chave]) return;
+        vistas[d.chave] = true; lista.push(d);
+      });
+      return lista;
+    }
+
     function pintar() {
       var partes = [el("p", {
         texto: fase.perfil === "sobrevivente"
           ? "Acolhido e treinado pela Ordem, o sobrevivente vira um personagem de NEX 5% da classe escolhida, no lugar da próxima subida de estágio, e mantém tudo o que já tinha (Sobrevivendo ao Horror, p. 32)."
           : "Depois do treinamento, o mundano recebe 1 ponto de atributo (sem passar de 3) e o que a classe escolhida dá (Ordem Paranormal RPG, p. 172).",
       })];
-      partes.push(el("div.criacao-lista.transicao__classes", {}, C.classesDeAgente().map(function (cl) {
-        var g = C.TRANSICOES[fase.perfil].classes[cl.chave];
+      partes.push(el("div.criacao-lista.transicao__classes", {}, C.classesDeAgente().concat(classesHb()).map(function (cl) {
+        var hb = !!cl.homebrew;
+        var disp = hb && HO ? HO.disponivelNoTrilho(cl, R.trilho(o)) : { ok: true };
+        var g = C.TRANSICOES[fase.perfil].classes[cl.chave] || C.ganhosDeTransicao(cl, fase.perfil);
         var ganhos = [];
         if (g.pv) ganhos.push("+" + g.pv + " PV");
         if (g.pe) ganhos.push("+" + g.pe + " PE");
@@ -3487,13 +3502,22 @@
           type: "button", "aria-pressed": String(escolhida === cl.chave),
           class: escolhida === cl.chave ? "criacao-opcao--escolhida" : "",
           dataset: { foco: "transicao-" + cl.chave },
-          onclick: function () { escolhida = cl.chave; pintar(); },
+          disabled: !disp.ok || null,
+          onclick: function () {
+            if (!disp.ok) return;
+            /* A Classe Homebrew entra no catálogo ao ser escolhida (como na
+               criação); a cópia vai para a ficha ao confirmar. */
+            if (hb) C.registrarClasseHomebrew(cl);
+            escolhida = cl.chave; pintar();
+          },
         }, [
-          el("span.criacao-opcao__nome", { texto: cl.nome }),
+          el("span.criacao-opcao__nome", { texto: cl.nome + (hb ? " (Homebrew)" : "") }),
           el("span.criacao-opcao__meta", { texto: ganhos.join(" · ") || "sem ganho de recursos" }),
-          el("span.criacao-opcao__texto", { texto: "Proficiências: " + (g.proficiencias.join(", ") || "nenhuma") + ". Habilidades: " + g.habilidades.join(", ") + "." }),
+          el("span.criacao-opcao__texto", { texto: "Proficiências: " + (g.proficiencias.join(", ") || "nenhuma") + ". Habilidades: " + (g.habilidades.join(", ") || "nenhuma") + "." }),
+          !disp.ok ? el("span.criacao-opcao__texto.t-aviso", { texto: disp.motivo }) : null,
         ]);
       })));
+      if (bibliotecaHb === null) partes.push(el("p.t-mini", { texto: "Consultando as Classes Homebrew…" }));
       if (escolhida) partes.push(resumoDoPlano(E.planoDeTransicao(o, escolhida, contextoDe(ctx))));
       U.trocar(corpo, partes);
       botao.disabled = !escolhida;
@@ -3526,6 +3550,8 @@
       var r = E.transicionar(o, escolhida, { id: idOperacao, contexto: contextoDe(ctx) });
       gravando = false;
       if (!r.ok) { UI.avisoErro(r.motivo); return; }
+      /* v9.23: a ficha guarda a cópia da Classe Homebrew escolhida. */
+      if (HO && /^hbc-/.test(escolhida)) HO.embutir(o, escolhida);
       /* O nome da classe que a ficha mostra no topo acompanha. */
       var cl = C.classe(o.classe);
       if (cl) ctx.ficha.classe = cl.nome;

@@ -241,5 +241,36 @@ const antesOE = R.bonusDePericia(fOE, "investigacao", []).total;
 if (vOE) E.registrar(fOE, vOE, { valor: "", opcoes: { pericia: "investigacao" } });
 t.iguais("escolhida Investigação: +2 na conta", R.bonusDePericia(fOE, "investigacao", []).total - antesOE, 2);
 
+t.grupo("Classe Homebrew · Mundano e Sobrevivente viram agente (v9.23)");
+{
+  const P = G.RAMAOrdemPoderes;
+  const forma = (g) => ({ pv: g.pv, pe: g.pe, san: g.san, pares: g.pericias.pares.map((p) => p.slice().sort().join("|")).sort(), fixas: g.pericias.fixas.slice().sort(), livres: g.pericias.livres, prof: g.proficiencias.slice().sort() });
+  ["mundano", "sobrevivente"].forEach((de) => {
+    const dif = ["combatente", "especialista", "ocultista"].filter((k) => JSON.stringify(forma(C.ganhosDeTransicao(C.classe(k), de))) !== JSON.stringify(forma(C.TRANSICOES[de].classes[k])));
+    t.ok("a conta reproduz a tabela do livro nas três classes (" + de + ")", !dif.length, dif.map((k) => k + ": " + JSON.stringify(forma(C.ganhosDeTransicao(C.classe(k), de)))).join("; "));
+  });
+  C.registrarClasseHomebrew(vig);
+  const gm = C.TRANSICOES.mundano.classes[vig.chave], gs = C.TRANSICOES.sobrevivente.classes[vig.chave];
+  t.iguais("Vigilante, de Mundano: +10 PV, +2 PE, +2 SAN (o que falta para o novato)", [gm.pv, gm.pe, gm.san], [10, 2, 2]);
+  t.iguais("Vigilante, de Sobrevivente: 4 PV, 1 PE e 4 SAN a menos, nunca abaixo de 0", [gs.pv, gs.pe, gs.san], [6, 1, 0]);
+  const tre = P.treinamento("mundano", vig.chave);
+  t.ok("o treinamento existe, com as perícias da classe e a marca de Homebrew", tre && tre.homebrew && tre.opcoes.some((o) => o.chave === "par0") && /Vigilante/.test(tre.nome), JSON.stringify(tre && tre.opcoes));
+  const atr = { agi: 1, for: 2, int: 1, pre: 2, vig: 2 };
+  const om = R.normalizar({ classe: "mundano", origem: "academico", atributos: atr });
+  const rt = E.transicionar(om, vig.chave, { id: "tr-hb-m" });
+  H.embutir(om, vig.chave);
+  const om2 = R.normalizar(JSON.parse(JSON.stringify(om)));
+  t.ok("Mundano → Vigilante: classe, NEX 5%, trajetória e a cópia na ficha", rt.ok && om2.classe === vig.chave && om2.nex === 5 && om2.trajetoria[0].para === vig.chave && !!om2.homebrew.classes[vig.chave], JSON.stringify(rt.ok ? om2.trajetoria : rt));
+  t.iguais("  recursos = os de um Vigilante novato (18 + Vig 2, 3 + Pre 2, 10)", [R.calcular(om2).pv.total, R.calcular(om2).pe.total, R.calcular(om2).san.total], [20, 5, 10]);
+  const ids = E.vagas(om2).map((v) => v.id);
+  t.ok("  o ponto de atributo e o treinamento ficam em Falta decidir", ids.indexOf("t.atributo") >= 0 && ids.indexOf("t.treinamento") >= 0, ids.join(","));
+  const os = R.normalizar({ classe: "sobrevivente", estagio: 2, origem: "academico", atributos: atr });
+  const pvS = R.calcular(os).pv.total, peS = R.calcular(os).pe.total;
+  const rs = E.transicionar(os, vig.chave, { id: "tr-hb-s" });
+  H.embutir(os, vig.chave);
+  const os2 = R.normalizar(JSON.parse(JSON.stringify(os)));
+  t.ok("Sobrevivente → Vigilante: +6 PV e +1 PE sobre o que tinha, sem ponto de atributo", rs.ok && R.calcular(os2).pv.total === pvS + 6 && R.calcular(os2).pe.total === peS + 1 && E.vagas(os2).every((v) => v.id !== "t.atributo"), [pvS, R.calcular(os2).pv.total, peS, R.calcular(os2).pe.total].join(","));
+}
+
 console.log(`\n${FORTE}${passaram} ok${FIM}, ${falharam ? VERMELHO : ""}${falharam} falha(s)${FIM}.`);
 if (falharam) Deno.exit(1);

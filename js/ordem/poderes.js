@@ -1917,51 +1917,68 @@
     if (!CAT || !CAT.TRANSICOES) return [];
     var lista = [];
     Object.keys(CAT.TRANSICOES).forEach(function (de) {
-      var t = CAT.TRANSICOES[de];
-      Object.keys(t.classes).forEach(function (para) {
-        var g = t.classes[para];
-        var opcoes = [];
-        var efeitos = [];
-        g.pericias.pares.forEach(function (par, i) {
-          var nomes = par.map(function (k) { var pr = CAT.pericia(k); return pr ? pr.nome : k; });
-          opcoes.push({ chave: "par" + i, tipo: "pericia", entre: par.slice(), modo: "treinar", rotulo: nomes.join(" ou ") });
-          efeitos.push({ tipo: "treinar", opcao: "par" + i });
-        });
-        g.pericias.fixas.forEach(function (k) {
-          efeitos.push({ tipo: "grauMinimo", pericia: k, grau: "treinado" });
-        });
-        if (g.pericias.livres) {
-          opcoes.push({ chave: "livres", tipo: "pericias", quantidade: g.pericias.livres, modo: "treinar",
-            rotulo: g.pericias.livres + " perícias à sua escolha" });
-          efeitos.push({ tipo: "treinarLista", opcao: "livres" });
-        }
-        var nomeClasse = CAT.classe(para) ? CAT.classe(para).nome : para;
-        var ganhos = [];
-        if (g.pv) ganhos.push("+" + g.pv + " PV");
-        if (g.pe) ganhos.push("+" + g.pe + " PE");
-        if (g.san) ganhos.push("+" + g.san + " SAN");
-        lista.push(entrada({
-          chave: "treinamento." + de + "." + para,
-          nome: t.titulo + " · " + nomeClasse,
-          tipo: "treinamento",
-          classes: [para],
-          fonte: t.fonte, pagina: t.pagina,
-          resumo: (ganhos.length ? ganhos.join(", ") + "; " : "") + "perícias: " +
-            [].concat(g.pericias.pares.map(function (par) { return par.map(function (k) { return CAT.pericia(k).nome; }).join(" ou "); }))
-              .concat(g.pericias.fixas.map(function (k) { return CAT.pericia(k).nome; }))
-              .concat(g.pericias.livres ? [g.pericias.livres + " à sua escolha"] : []).join(", ") +
-            "; proficiências: " + (g.proficiencias.length ? g.proficiencias.join(" e ") : "nenhuma") +
-            "; habilidades: " + g.habilidades.join(" e ") + ".",
-          opcoes: opcoes,
-          efeitos: efeitos,
-          automacao: "calculo",
-        }));
-      });
+      Object.keys(CAT.TRANSICOES[de].classes).forEach(function (para) { lista.push(montarTreinamento(de, para)); });
     });
     return lista;
   }
+  function montarTreinamento(de, para) {
+    var CAT = global.RAMAOrdemCatalogo;
+    var t = CAT.TRANSICOES[de];
+    var g = t.classes[para];
+    var opcoes = [];
+    var efeitos = [];
+    g.pericias.pares.forEach(function (par, i) {
+      var nomes = par.map(function (k) { var pr = CAT.pericia(k); return pr ? pr.nome : k; });
+      opcoes.push({ chave: "par" + i, tipo: "pericia", entre: par.slice(), modo: "treinar", rotulo: nomes.join(" ou ") });
+      efeitos.push({ tipo: "treinar", opcao: "par" + i });
+    });
+    g.pericias.fixas.forEach(function (k) {
+      efeitos.push({ tipo: "grauMinimo", pericia: k, grau: "treinado" });
+    });
+    if (g.pericias.livres) {
+      opcoes.push({ chave: "livres", tipo: "pericias", quantidade: g.pericias.livres, modo: "treinar",
+        rotulo: g.pericias.livres + " perícias à sua escolha" });
+      efeitos.push({ tipo: "treinarLista", opcao: "livres" });
+    }
+    var nomeClasse = CAT.classe(para) ? CAT.classe(para).nome : para;
+    var ganhos = [];
+    if (g.pv) ganhos.push("+" + g.pv + " PV");
+    if (g.pe) ganhos.push("+" + g.pe + " PE");
+    if (g.san) ganhos.push("+" + g.san + " SAN");
+    var e = entrada({
+      chave: "treinamento." + de + "." + para,
+      nome: t.titulo + " · " + nomeClasse,
+      tipo: "treinamento",
+      classes: [para],
+      fonte: t.fonte, pagina: t.pagina,
+      resumo: (ganhos.length ? ganhos.join(", ") + "; " : "") + "perícias: " +
+        [].concat(g.pericias.pares.map(function (par) { return par.map(function (k) { return CAT.pericia(k).nome; }).join(" ou "); }))
+          .concat(g.pericias.fixas.map(function (k) { return CAT.pericia(k).nome; }))
+          .concat(g.pericias.livres ? [g.pericias.livres + " à sua escolha"] : []).join(", ") +
+        "; proficiências: " + (g.proficiencias.length ? g.proficiencias.join(" e ") : "nenhuma") +
+        "; habilidades: " + (g.habilidades.length ? g.habilidades.join(" e ") : "nenhuma") + ".",
+      opcoes: opcoes,
+      efeitos: efeitos,
+      automacao: "calculo",
+    });
+    if (g.homebrew) e.homebrew = true;
+    return e;
+  }
 
   var TREINAMENTOS = treinamentosDeTransicao();
+
+  /* v9.23: o treinamento para uma Classe Homebrew, quando o catálogo a
+     registra (os ganhos vêm de RAMAOrdemCatalogo.ganhosDeTransicao). A
+     chave da classe é versionada; a do treinamento também. */
+  function registrarTreinamentos(chaveClasse) {
+    var CAT = global.RAMAOrdemCatalogo;
+    if (!CAT || !CAT.TRANSICOES) return [];
+    return Object.keys(CAT.TRANSICOES).filter(function (de) { return CAT.TRANSICOES[de].classes[chaveClasse]; }).map(function (de) {
+      var e = montarTreinamento(de, chaveClasse);
+      POR_CHAVE[e.chave] = e;
+      return e;
+    });
+  }
 
   /* Os estágios de cada habilidade automática, por NEX. */
   var ESTAGIOS = {
@@ -2230,7 +2247,7 @@
     NEX_DE_ALTERACAO: NEX_DE_ALTERACAO,
     ALTERACOES_GERAIS: ALTERACOES_GERAIS,
     HABILIDADES_SOBREVIVENTE: HABILIDADES_SOBREVIVENTE,
-    TREINAMENTOS: TREINAMENTOS,
+    TREINAMENTOS: TREINAMENTOS, registrarTreinamentos: registrarTreinamentos,
     TODOS: TODOS,
 
     poder: poder,

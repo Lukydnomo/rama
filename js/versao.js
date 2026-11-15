@@ -118,6 +118,17 @@
 
   var CHANGELOG = [
     {
+      versao: "9.23.0",
+      codinome: "SELO",
+      data: "15/11/2026",
+      mudancas: {
+        "Adicionado": [
+          "Ordem Paranormal: Mundano e Sobrevivente podem virar agente de uma Classe Homebrew. A janela da transição mostra as Classes Homebrew (as da ficha e as da biblioteca) com os ganhos calculados pela mesma conta das três classes do livro, e a ficha guarda a cópia da classe ao confirmar.",
+        ],
+        "Técnico": ["RAMAOrdemCatalogo.ganhosDeTransicao(def, de) monta os ganhos (conferida contra a tabela do livro nos testes); registrar uma Classe Homebrew põe a classe em TRANSICOES e o treinamento em RAMAOrdemPoderes (registrarTreinamentos). testes/executar-homebrew-ordem.js: 9 verificações novas (92)."],
+      },
+    },
+    {
       versao: "9.22.0",
       codinome: "CARIMBO",
       data: "15/11/2026",

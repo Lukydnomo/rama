@@ -1614,7 +1614,50 @@
     POR_CHAVE.classes[def.chave] = def;
     if (Array.isArray(def.progressao) && def.progressao.length) PROGRESSAO[def.chave] = def.progressao; else delete PROGRESSAO[def.chave];
     if (def.patentes && Array.isArray(def.patentes.patentes)) EVOLUCAO_PATENTES.classes[def.chave] = def.patentes; else delete EVOLUCAO_PATENTES.classes[def.chave];
+    /* v9.23: Mundano e Sobrevivente também viram agente desta classe. */
+    Object.keys(TRANSICOES).forEach(function (de) { TRANSICOES[de].classes[def.chave] = ganhosDeTransicao(def, de); });
+    var P = global.RAMAOrdemPoderes;
+    if (P && P.registrarTreinamentos) P.registrarTreinamentos(def.chave);
     return def;
+  }
+
+  /* Os ganhos da transição para uma Classe Homebrew (v9.23), pela mesma
+     conta que as três do livro seguem — conferida contra a tabela, nos
+     testes:
+       Mundano (OPRPG p. 172): o que falta ao Mundano para chegar ao
+         agente novato. PV, PE e SAN iniciais da classe menos os do
+         Mundano; as perícias obrigatórias e fixas da classe, e as livres
+         menos a 1 que o Mundano já tem; as proficiências que o Mundano
+         não tem; as habilidades de NEX 5%.
+       Sobrevivente (SAH p. 32): os mesmos, com 4 PV, 1 PE e 4 SAN a
+         menos (a diferença que as três classes do livro têm entre as
+         duas tabelas), nunca abaixo de 0.
+     O atributo de cada recurso continua o da fase anterior: a transição
+     soma números fixos, como no livro. */
+  var REDUCAO_SOBREVIVENTE = (function () {
+    var m = TRANSICOES.mundano.classes.especialista, s = TRANSICOES.sobrevivente.classes.especialista;
+    return { pv: m.pv - s.pv, pe: m.pe - s.pe, san: m.san - s.san };
+  })();
+  function ganhosDeTransicao(def, de) {
+    var mundano = CLASSES.filter(function (c) { return c.chave === "mundano"; })[0] || {};
+    function dif(q) {
+      var r = def[q + "Inicial"], b = mundano[q + "Inicial"];
+      var g = Math.max(0, (r ? Number(r.base) || 0 : 0) - (b ? Number(b.base) || 0 : 0));
+      return de === "sobrevivente" ? Math.max(0, g - REDUCAO_SOBREVIVENTE[q]) : g;
+    }
+    var livres = def.periciasLivres ? Number(def.periciasLivres.base) || 0 : 0;
+    var jaTem = (mundano.proficiencias || []).map(function (p) { return String(p).toLowerCase(); });
+    return {
+      pv: dif("pv"), pe: dif("pe"), san: dif("san"),
+      pericias: {
+        pares: (def.periciasEscolhaObrigatoria || []).map(function (e) { return (e.entre || []).slice(); }).filter(function (p) { return p.length >= 2; }),
+        fixas: (def.periciasFixas || []).slice(),
+        livres: Math.max(0, livres - ((mundano.periciasLivres && mundano.periciasLivres.base) || 0)),
+      },
+      proficiencias: (def.proficiencias || []).filter(function (p) { return jaTem.indexOf(String(p).toLowerCase()) < 0; }),
+      habilidades: (def.habilidadesIniciais || []).slice(),
+      homebrew: true,
+    };
   }
   function classesHomebrew() { return Object.keys(CLASSES_HOMEBREW).map(function (k) { return CLASSES_HOMEBREW[k]; }); }
 
@@ -1668,7 +1711,7 @@
   }
 
   global.RAMAOrdemCatalogo = {
-    registrarClasseHomebrew: registrarClasseHomebrew, classesHomebrew: classesHomebrew, classeDosPoderes: classeDosPoderes,
+    registrarClasseHomebrew: registrarClasseHomebrew, classesHomebrew: classesHomebrew, classeDosPoderes: classeDosPoderes, ganhosDeTransicao: ganhosDeTransicao,
     registrarOrigemHomebrew: registrarOrigemHomebrew, registrarTrilhaHomebrew: registrarTrilhaHomebrew,
     origensHomebrew: origensHomebrew, trilhasHomebrew: trilhasHomebrew, origensDisponiveis: origensDisponiveis,
     FONTES: { OPRPG: OPRPG, SAH: SAH, AS1: AS1, AS2: AS2, AS3: AS3, AS4: AS4, AS5: AS5, AS6: AS6, AS7: AS7, AS9: AS9, EXTRA: EXTRA },
