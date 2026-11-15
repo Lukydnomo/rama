@@ -118,6 +118,17 @@
 
   var CHANGELOG = [
     {
+      versao: "9.37.0",
+      codinome: "CHANCELA",
+      data: "15/11/2026",
+      mudancas: {
+        "Adicionado": [
+          "Etapa 3 concluída: a validação dos pacotes na interface com duas contas — privado com código, importação parcial com dependência (o aviso e a chave remapeada), pacote Universal e pacote no formato anterior. Registrada em docs/HOMEBREW-SISTEMAS.md.",
+        ],
+        "Técnico": ["Sem mudança de código: esta versão registra a validação da Etapa 3 e marca as etapas da especificação como concluídas."],
+      },
+    },
+    {
       versao: "9.36.0",
       codinome: "MATRIZ",
       data: "15/11/2026",

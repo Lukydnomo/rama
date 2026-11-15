@@ -6,12 +6,12 @@ organiza em três etapas.
 | Etapa | Situação |
 |---|---|
 | **1 — Estrutura e compatibilidade** | entregue na **v9.7.0** |
-| **2 — Tipos estruturais e elementos** | parte 1 na **v9.8.0** (Elemento e Classe de Ordem I), parte 2 na **v9.9.0** (Origem e Trilha de Ordem I), parte 3 na **v9.10.0** (Raça de Tormenta20), parte 4 na **v9.11.0** (Origem e Divindade de Tormenta20), parte 5 na **v9.12.0** (Classe de Tormenta20), parte 6 na **v9.13.0** (ativadas, magia e variantes em T20), parte 7 na **v9.14.0** (Magia e Poder no motor de T20); o resto pendente |
-| **3 — Automação por sistema, publicação e regressão** | pendente |
+| **2 — Tipos estruturais e elementos** | parte 1 na **v9.8.0** (Elemento e Classe de Ordem I), parte 2 na **v9.9.0** (Origem e Trilha de Ordem I), parte 3 na **v9.10.0** (Raça de Tormenta20), parte 4 na **v9.11.0** (Origem e Divindade de Tormenta20), parte 5 na **v9.12.0** (Classe de Tormenta20), parte 6 na **v9.13.0** (ativadas, magia e variantes em T20), parte 7 na **v9.14.0** (Magia e Poder no motor de T20) e as demais até a **v9.34.0**: **concluída** |
+| **3 — Automação por sistema, publicação e regressão** | **v9.35.0** (ações Universais com recursos nativos), **v9.36.0** (inventário de cobertura e matriz de regressão), **v9.37.0** (pacotes na interface): **concluída** |
 
-Este documento é o **inventário de cobertura**. Para cada sistema e tipo,
-ele diz qual editor existe, para onde o conteúdo vai, o que é automático e o
-que fica manual. Ele é atualizado a cada etapa.
+O inventário de cobertura atual, gerado dos adaptadores, está em
+**`docs/HOMEBREW-COBERTURA.md`** (v9.36.0). Este documento guarda o
+histórico de cada entrega, com o que mudou e como foi validado.
 
 ## O que a Etapa 1 entrega
 
@@ -286,11 +286,12 @@ nova, e o modelo vai no `dadosJson` de sempre.
 - ~~**Dependências nos pacotes**: elemento de um ritual, poder de uma classe
   e assim por diante~~ (v9.34.0).
 
-**Etapa 3 — automação por sistema.** Ações estruturadas pelo motor de cada
+~~**Etapa 3 — automação por sistema.** Ações estruturadas pelo motor de cada
 ficha: bônus por condição, dano/cura, custos, cargas, concessões e
 expiração. Ações de Universal em ficha de sistema cadastrado pelo adaptador
 de destino, com a escolha do recurso ou da perícia nativa. Reenvio com IDs
-de operação nas mesas. A matriz de regressão por sistema.
+de operação nas mesas. A matriz de regressão por sistema.~~ (v9.35.0 a
+v9.37.0; o inventário de cobertura está em `docs/HOMEBREW-COBERTURA.md`).
 
 ## v9.8.0 — Etapa 2, parte 1: Elemento e Classe Homebrew de Ordem I
 
@@ -3156,3 +3157,62 @@ Ainda faltam, dos critérios de aceitação:
 
 Os testes do servidor já cobrem os dois casos; falta passar por eles na
 interface.
+
+## v9.37.0 — Etapa 3, parte 3: pacotes na interface, com duas contas
+
+Esta versão não muda código. Ela registra a passagem pela interface
+pelos cenários de pacote dos critérios de aceitação. Os testes do
+servidor já cobriam esses cenários; agora foram feitos também na tela.
+
+Feito no servidor local, com as contas sintéticas **dona** (quem monta)
+e **editora** (quem importa).
+
+### Pacote privado com código
+
+A dona montou três pacotes privados e gerou o código de cada um:
+- **Thriller de Vidro** (BRUTAL): a Ameaça "Vidraceiro" e o Assassino
+  "O Vidraceiro", que usa a Ameaça;
+- **Botica Universal**: o item "Tônico de Ervas", com a ação "Beber";
+- **Arsenal Antigo** (Ordem): a arma "Pé de Cabra Antigo", no formato
+  anterior, sem modelo.
+
+A editora abriu cada um por **Pacotes → Abrir com código**.
+
+### Importação parcial com dependência
+
+Na editora, marquei só **O Vidraceiro**:
+- apareceu o aviso "O Vidraceiro usa Vidraceiro (Ameaça)";
+- **Selecionar também** marcou a Ameaça, e o botão passou a "Importar
+  selecionadas (2)";
+- a importação copiou as duas;
+- na biblioteca da editora, a chave da Ameaça no Assassino é
+  `hbbm-<id da cópia>-abc123`, remapeada para a cópia importada (v9.34).
+
+### Pacote Universal
+
+"Importar tudo" copiou o Tônico de Ervas, **privado** e com a ação
+intacta. A ação roda nas fichas de sistema com os recursos nativos
+(v9.35).
+
+### Pacote no formato anterior
+
+O "Pé de Cabra Antigo" (tipo `arma`, sem modelo) foi copiado com o dano
+"1d6" e continua acessível como **Universal**, até a pessoa escolher um
+sistema. É a regra de compatibilidade da especificação: nada é inferido
+sem informação confiável.
+
+### As três etapas da especificação
+
+| Etapa | Versões |
+|---|---|
+| 1 — Estrutura e compatibilidade | v9.7.0 |
+| 2 — Tipos estruturais e elementos | v9.8.0 a v9.34.0 |
+| 3 — Automação, publicação e regressão | v9.35.0 a v9.37.0 |
+
+O inventário de cobertura (tipo, editor, destino, automação e pontos
+manuais) está em `docs/HOMEBREW-COBERTURA.md`. Ele é gerado pela matriz
+de regressão (`testes/executar-homebrew-matriz.js --gerar`).
+
+### Publicar a v9.37.0
+
+**Servidor:** nada muda. **Site:** `js/versao.js`.
