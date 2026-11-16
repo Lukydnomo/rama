@@ -118,6 +118,16 @@
 
   var CHANGELOG = [
     {
+      versao: "9.11.1",
+      codinome: "CAMAFEU",
+      data: "16/11/2026",
+      mudancas: {
+        "Corrigido": [
+          "Ficha de Vampiro: o retrato da personagem ocupava quase toda a largura do topo. Agora tem tamanho fixo ao lado do nome, como nas outras fichas.",
+        ],
+      },
+    },
+    {
       versao: "9.11.0",
       codinome: "ARREMESSO",
       data: "15/11/2026",

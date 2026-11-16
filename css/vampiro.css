@@ -107,6 +107,10 @@
   align-items: start;
 }
 .vamp-bloco__identidade { display: flex; gap: var(--e3); align-items: flex-start; min-width: 0; }
+/* v9.11.1: o retrato num tamanho fixo, como no Goblins; sem isto ele
+   ocupava toda a largura livre. */
+.vamp-bloco__identidade .ficha-foto { width: 6.5rem; flex: none; }
+.vamp-bloco__identidade .ficha-foto__vazio svg { max-width: 2.5rem; }
 .vamp-bloco__textos { display: flex; flex-direction: column; gap: var(--e1); min-width: 0; }
 .vamp-bloco__linha {
   margin: 0;
@@ -356,6 +360,7 @@ button.vamp-dado:focus-visible { outline: 3px solid var(--cor-foco); outline-off
    ================================================================= */
 
 @media (max-width: 720px) {
+  .vamp-bloco__identidade .ficha-foto { width: 4.5rem; }
   .vamp-bloco { grid-template-columns: minmax(0, 1fr); }
   .vamp-grade { grid-template-columns: minmax(0, 1fr); }
   .vamp-dl { grid-template-columns: minmax(0, 1fr); }
