@@ -41,6 +41,9 @@
 /* ---------- lista ---------- */
 
 #painel-homebrew .hb-lista { display: flex; flex-direction: column; min-width: 0; border-top: var(--borda) solid var(--cor-traco-fraca); }
+/* Públicas: as suas e as de outras contas, em duas seções. */
+#painel-homebrew .hb-secao-publica { display: flex; flex-direction: column; gap: var(--e2); padding: var(--e3) 0 var(--e2); }
+#painel-homebrew .hb-lista > .hb-secao-publica + .hb-secao-publica { border-top: var(--borda) solid var(--cor-traco-fraca); }
 
 #painel-homebrew .hb-linha {
   display: grid;

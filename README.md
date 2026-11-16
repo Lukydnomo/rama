@@ -929,6 +929,10 @@ segredo nenhum — ele os lê das Script Properties. Publicá-lo não expõe nad
 
 ### Atualizar o backend
 
+**v9.10.2 — MOSTRUÁRIO:** aba Públicas do Homebrew com as suas públicas e as
+de outras contas em seções separadas. **Só o site muda.** Site:
+`js/paginas/homebrew.js`, `css/homebrew.css` e `js/versao.js`.
+
 **v9.10.1 — CRIVO:** filtros da biblioteca Homebrew para todos os tipos.
 **Só o site muda.** Site: `js/paginas/homebrew.js` e `js/versao.js`.
 
@@ -2047,7 +2051,7 @@ Três números diferentes, que não se misturam:
 
 | | Onde | O que é |
 |---|---|---|
-| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v9.10.1 |
+| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v9.10.2 |
 | `schemaVersion` | `js/ficha.js` | o formato da FICHA |
 | `versaoFormato` | `js/config.js` | o formato dos arquivos de importação |
 

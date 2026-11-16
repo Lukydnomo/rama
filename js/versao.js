@@ -118,6 +118,17 @@
 
   var CHANGELOG = [
     {
+      versao: "9.10.2",
+      codinome: "MOSTRUÁRIO",
+      data: "15/11/2026",
+      mudancas: {
+        "Melhorado": [
+          "Homebrew, aba Públicas: agora mostra também as suas criações públicas, separadas em duas seções — Minhas públicas e De outras contas. Fica fácil ver o que de seu está publicado, e as dos outros continuam como antes.",
+        ],
+        "Técnico": ["A aba Públicas lista com escopo \u201ctodos\u201d e deixa de fora as suas privadas; o servidor não muda."],
+      },
+    },
+    {
       versao: "9.10.1",
       codinome: "CRIVO",
       data: "15/11/2026",

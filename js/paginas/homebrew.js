@@ -111,11 +111,15 @@
     estado = "carregando";
     desenhar();
 
-    var r = await global.RAMAApi.listarHomebrew({ escopo: escopo });
+    /* Públicas: as suas que estão públicas e as que outras contas
+       publicaram, em duas seções (o servidor manda as suas privadas
+       também em "todos"; elas ficam de fora). */
+    var r = await global.RAMAApi.listarHomebrew({ escopo: escopo === "publicos" ? "todos" : escopo });
     if (meu !== pedido) return;
     if (!r.ok) { estado = "erro"; falha = r; desenhar(); return; }
 
     registros = r.dados || [];
+    if (escopo === "publicos") registros = registros.filter(function (x) { return x.meu === false || x.visibilidade === "publico"; });
     contagens[escopo] = registros.length;
     estado = "pronto";
     desenhar();
@@ -270,7 +274,25 @@
     var filtrando = !!(U.aparar(busca) || tipoFiltro || sistemaFiltro);
     contagem.textContent = filtrando ? v.length + " de " + registros.length + (registros.length === 1 ? " registro" : " registros")
       : registros.length + (registros.length === 1 ? " registro" : " registros");
+    if (escopo === "publicos" && v.length) {
+      var minhas = v.filter(function (x) { return x.meu !== false; });
+      var outras = v.filter(function (x) { return x.meu === false; });
+      resultados.removeAttribute("role");
+      U.trocar(resultados, [
+        secaoPublica("hb-pub-minhas", "Minhas públicas", minhas, "Nenhuma criação sua está pública" + (registros.some(function (x) { return x.meu !== false; }) ? " com esses filtros." : ". Para publicar, edite uma criação e escolha \u201cPública\u201d.")),
+        secaoPublica("hb-pub-outras", "De outras contas", outras, registros.some(function (x) { return x.meu === false; }) ? "Nada de outras contas com esses filtros." : "Ninguém mais publicou nada ainda."),
+      ]);
+      return;
+    }
+    resultados.setAttribute("role", "list");
     U.trocar(resultados, v.length ? v.map(linha) : [nadaEncontrado()]);
+  }
+
+  function secaoPublica(id, titulo, lista, vazio) {
+    return el("section.hb-secao-publica", { "aria-labelledby": id }, [
+      el("h3.t-secao.hb-secao-publica__titulo", { id: id, texto: titulo + " (" + lista.length + ")" }),
+      lista.length ? el("div.hb-lista", { role: "list" }, lista.map(linha)) : el("p.t-mini", { texto: vazio }),
+    ]);
   }
 
   function contar(chave) {
@@ -291,7 +313,7 @@
     if (escopo === "publicos") {
       return UI.vazio({
         titulo: "Nada publicado ainda",
-        texto: "Quando alguém marcar uma criatura, item ou habilidade como pública, ela aparece aqui.",
+        texto: "Quando você ou outra conta marcar uma criação como pública, ela aparece aqui: as suas numa seção, as dos outros em outra.",
         acao: { rotulo: "Ver minhas criações", aoClicar: function () { trocarEscopo("meus"); } },
       });
     }
