@@ -2319,3 +2319,10 @@ body.pagina-ficha--painel .ficha-topo__nome { font-size: var(--texto-medio); }
 @media (min-width: 761px) {
   .ram-grade[data-aba="resumo"] .ram-escolhas { display: flex; }
 }
+
+/* Rolagem livre (v9.11.0): uma linha só, sem painel. */
+.rolagem-livre { display: flex; flex-direction: column; gap: var(--e1); max-width: 34rem; }
+.rolagem-livre__linha { display: flex; align-items: center; gap: var(--e2); }
+.rolagem-livre__rotulo { flex: none; white-space: nowrap; }
+.rolagem-livre__entrada { flex: 1 1 auto; min-width: 0; }
+.rolagem-livre__erro:empty { display: none; }

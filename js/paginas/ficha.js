@@ -560,9 +560,17 @@
       case "abas": return [abas()];
       case "conteudo": return [el("div", { id: "aba-conteudo", role: "tabpanel", "aria-labelledby": "aba-" + secao.chave },
         [!sistemaDaFicha().conhecido ? semSistemaConhecido(sistemaDaFicha())
-          : global[secao.secao] ? global[secao.secao].aba(ctx) : semMotorDoSistema(sistemaDaFicha())])];
+          : global[secao.secao] ? comRolagemLivre(secao, global[secao.secao].aba(ctx)) : semMotorDoSistema(sistemaDaFicha())])];
     }
     return [];
+  }
+
+  /* v9.11.0: a rolagem livre no alto da aba principal dos sistemas.
+     Ordem a põe sozinha, em cima de Condições e efeitos. */
+  function comRolagemLivre(secao, conteudo) {
+    if (secao.chave !== "geral" || secao.secao === "RAMASecaoOrdemGeral" || !global.RAMARolagens || !global.RAMARolagens.campoLivre) return conteudo;
+    var campo = global.RAMARolagens.campoLivre({ valorDe: function (n) { return F.valorDeReferencia(estado.ficha, n); } });
+    return el("div.pilha.rolagem-livre__aba", {}, [campo, conteudo]);
   }
 
   function regiao(nome, secao) {

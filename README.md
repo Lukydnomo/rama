@@ -929,6 +929,11 @@ segredo nenhum — ele os lê das Script Properties. Publicá-lo não expõe nad
 
 ### Atualizar o backend
 
+**v9.11.0 — ARREMESSO:** rolagem livre na ficha (expressões e fórmulas de
+dados). **Só o site muda.** Site: `js/paginas/ficha-rolagens.js`,
+`js/paginas/ficha.js`, `js/ordem/telas/ficha-ordem.js`, `css/ficha.css` e
+`js/versao.js`.
+
 **v9.10.2 — MOSTRUÁRIO:** aba Públicas do Homebrew com as suas públicas e as
 de outras contas em seções separadas. **Só o site muda.** Site:
 `js/paginas/homebrew.js`, `css/homebrew.css` e `js/versao.js`.
@@ -2051,7 +2056,7 @@ Três números diferentes, que não se misturam:
 
 | | Onde | O que é |
 |---|---|---|
-| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v9.10.2 |
+| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v9.11.0 |
 | `schemaVersion` | `js/ficha.js` | o formato da FICHA |
 | `versaoFormato` | `js/config.js` | o formato dos arquivos de importação |
 

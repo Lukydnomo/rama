@@ -118,6 +118,17 @@
 
   var CHANGELOG = [
     {
+      versao: "9.11.0",
+      codinome: "ARREMESSO",
+      data: "15/11/2026",
+      mudancas: {
+        "Adicionado": [
+          "Ficha: rolagem livre. Um campo pequeno para rolar qualquer expressão de dados, com contas e fórmulas — 2d6+3, 1d20*2, max(1d8, 1d8)+2, (@FOR)d20. Na ficha de Ordem fica em cima de Condições e efeitos, e @AGI, @FOR, @INT, @PRE e @VIG valem o atributo; nos outros sistemas fica no alto da aba principal. A rolagem aparece no canto e entra no histórico da campanha, como as outras.",
+        ],
+        "Técnico": ["Usa o leitor de fórmulas de RAMADados (somando todos os dados); a ficha não muda e o servidor também não."],
+      },
+    },
+    {
       versao: "9.10.2",
       codinome: "MOSTRUÁRIO",
       data: "15/11/2026",

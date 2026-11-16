@@ -337,6 +337,7 @@
             painelResistencias(ctx, o, c),
           ]),
           el("div.ordem-sessao__coluna.ordem-sessao__jogo", {}, [
+            rolagemLivre(o),
             critico ? null : condicoes,
             painelAtaques(ctx, o),
             CS && SC && CS.ligada(o, "contagemMunicao") ? SC.painelMunicao(ctx) : null,
@@ -1684,6 +1685,19 @@
     }
     partes.push(linhaDaCena(ctx, cond));
     return el("div.pilha--curta.condicoes", { class: "pilha" }, partes);
+  }
+
+  /* v9.11.0: a rolagem livre, em cima de Condições e efeitos; @AGI,
+     @FOR… (ou o nome) valem o atributo efetivo. */
+  function rolagemLivre(o) {
+    if (!global.RAMARolagens || !global.RAMARolagens.campoLivre) return null;
+    return global.RAMARolagens.campoLivre({
+      valorDe: function (nome) {
+        var alvo = U.chaveDeBusca(nome);
+        var a = C.ATRIBUTOS.filter(function (x) { return U.chaveDeBusca(x.sigla) === alvo || U.chaveDeBusca(x.nome) === alvo; })[0];
+        return a ? R.atributo(o, a.chave) : undefined;
+      },
+    });
   }
 
   function painelDeCondicoes(ctx, o, c) {

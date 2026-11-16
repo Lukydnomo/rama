@@ -218,6 +218,46 @@
     }));
   }
 
+  /* Rolagem livre (v9.11.0): um campo pequeno para qualquer expressão
+     — "1d20+5", "2d6*2", "max(1d8, 1d8) + 3", "(@AGI)d20" — somando
+     todos os dados, pelo mesmo leitor de fórmulas de RAMADados (nada de
+     eval). Não mexe na ficha: só rola e passa pelo funil de mostrar().
+       opcoes.valorDe(nome) → número   os @atributos da ficha, se houver */
+  function campoLivre(opcoes) {
+    var o = opcoes || {};
+    var id = "rolagem-livre-" + (++contadorLivre);
+    var entrada = el("input.r-entrada.rolagem-livre__entrada", {
+      id: id, type: "text", autocomplete: "off", spellcheck: "false",
+      maxlength: global.RAMADados ? global.RAMADados.MAX_FORMULA : 200,
+      placeholder: "1d20+5, 2d6*2, max(1d8, 1d8)…",
+      "aria-describedby": id + "-erro",
+    });
+    var erro = el("p.t-mini.t-erro.rolagem-livre__erro", { id: id + "-erro", role: "alert" });
+    function rolarAgora(ev) {
+      if (ev) ev.preventDefault();
+      var texto = U.aparar(entrada.value);
+      erro.textContent = "";
+      entrada.classList.remove("r-entrada--erro");
+      if (!texto) { entrada.focus(); return; }
+      var r = global.RAMADados.formula({ nome: "Rolagem livre", formula: texto, contagem: "soma", valorDe: o.valorDe || null });
+      if (!r.ok) {
+        erro.textContent = r.mensagem || "Não deu para ler essa expressão.";
+        entrada.classList.add("r-entrada--erro");
+        return;
+      }
+      mostrar(r, { nome: "Rolagem livre · " + r.expressao });
+    }
+    return el("form.rolagem-livre", { onsubmit: rolarAgora, "aria-label": "Rolagem livre" }, [
+      el("div.rolagem-livre__linha", {}, [
+        el("label.t-mini.rolagem-livre__rotulo", { for: id, texto: "Rolagem livre" }),
+        entrada,
+        el("button.r-botao.r-botao--mini", { type: "submit", texto: "Rolar" }),
+      ]),
+      erro,
+    ]);
+  }
+  var contadorLivre = 0;
+
   function limpar() {
     var caixa = area();
     if (caixa) U.limpar(caixa);
@@ -228,6 +268,7 @@
     exibir: exibir,
     cartao: function (resultado, opcoes, aparencia) { return montar(resultado || {}, opcoes || {}, aparencia || null); },
     limpar: limpar,
+    campoLivre: campoLivre,
     textoDasFaces: textoDasFaces,
     historico: function () { return historico.slice(); },
   };
