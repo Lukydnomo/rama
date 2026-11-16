@@ -118,6 +118,19 @@
 
   var CHANGELOG = [
     {
+      versao: "9.10.0",
+      codinome: "BRASÃO",
+      data: "15/11/2026",
+      mudancas: {
+        "Adicionado": [
+          "Ordem Paranormal: Poder de classe Homebrew (+ Criar → Ordem Paranormal → Habilidade → Poder de classe) — de uma classe do livro ou só de uma Classe Homebrew sua, com requisitos (atributo, perícia treinada, NEX), efeitos na conta, escolha de perícia e o grupo da Evolução Modular.",
+          "Ele aparece na vaga de Poder de classe da classe dele; o exclusivo, só na Classe Homebrew dele, em qualquer versão dela. A ficha guarda a cópia.",
+          "E o contrário: no editor de Classe, além dos poderes oficiais, você marca os poderes de classe Homebrew que a classe usa. Os feitos só para ela aparecem marcados e entram sempre.",
+        ],
+        "Técnico": ["Subtipo poderClasse no grupo Habilidade de Ordem (o servidor já aceitava). RAMAOrdemHomebrew.normalizarPoderClasse (chave hbpc- versionada; classeHomebrew pelo id do registro) e ordem.homebrew.poderesClasse; classe com poderesHomebrew. RAMAOrdemPoderes.registrarPoderClasseHomebrew e poderHomebrewServe, usados por poderesDeClasse, pertenceAClasse e grupoModular. testes/executar-homebrew-ordem.js: 18 verificações novas (165)."],
+      },
+    },
+    {
       versao: "9.9.0",
       codinome: "LIAME",
       data: "15/11/2026",

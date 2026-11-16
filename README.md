@@ -929,6 +929,13 @@ segredo nenhum — ele os lê das Script Properties. Publicá-lo não expõe nad
 
 ### Atualizar o backend
 
+**v9.10.0 — BRASÃO:** Poder de classe Homebrew de Ordem, exclusivo de uma
+Classe Homebrew ou de uma classe do livro, e a classe escolhe os seus.
+**Só o site muda.** Site: `js/ordem/poderes.js`, `js/ordem/homebrew-ordem.js`,
+`js/ordem/progressao.js`, `js/homebrew-adaptadores.js`,
+`js/paginas/homebrew-classe.js`, `js/paginas/homebrew-origem-trilha.js`,
+`js/paginas/homebrew-editor.js`, `js/paginas/homebrew.js` e `js/versao.js`.
+
 **v9.9.0 — LIAME:** Trilha Homebrew exclusiva de uma Classe Homebrew, e a
 classe escolhe as suas trilhas Homebrew. **Só o site muda.** Site:
 `js/ordem/catalogo.js`, `js/ordem/homebrew-ordem.js`, `js/ordem/progressao.js`,
@@ -2037,7 +2044,7 @@ Três números diferentes, que não se misturam:
 
 | | Onde | O que é |
 |---|---|---|
-| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v9.9.0 |
+| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v9.10.0 |
 | `schemaVersion` | `js/ficha.js` | o formato da FICHA |
 | `versaoFormato` | `js/config.js` | o formato dos arquivos de importação |
 

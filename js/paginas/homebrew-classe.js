@@ -61,8 +61,25 @@
     });
     function mudou(repintar) { r.sujo = true; if (repintar) pintar(); else pintarLado(); }
     /* As trilhas Homebrew da biblioteca (para escolher as que a classe usa). */
-    var trilhasHb = null;
-    if (H() && H().carregarBiblioteca) H().carregarBiblioteca().then(function (b) { trilhasHb = (b && b.trilhas) || []; if (r.passo === 1 && form.isConnected) pintar(); }, function () { trilhasHb = []; });
+    var trilhasHb = null, poderesHb = null;
+    if (H() && H().carregarBiblioteca) H().carregarBiblioteca().then(function (b) { trilhasHb = (b && b.trilhas) || []; poderesHb = (b && b.poderesClasse) || []; if (r.passo === 1 && form.isConnected) pintar(); }, function () { trilhasHb = []; poderesHb = []; });
+    /* Os poderes de classe Homebrew: os feitos só para esta classe entram
+       sempre; os das classes oficiais, a mesa marca. */
+    function blocoPoderesHb() {
+      if (!poderesHb) return el("p.t-mini", { texto: "Carregando os seus poderes de classe Homebrew…" });
+      var minha = reg ? reg.id : "";
+      var proprios = poderesHb.filter(function (p) { return minha && p.classeHomebrew === minha; });
+      var livres = poderesHb.filter(function (p) { return !p.classeHomebrew; });
+      d.poderesHomebrew = Array.isArray(d.poderesHomebrew) ? d.poderesHomebrew : [];
+      return el("fieldset.r-campo.hbc-pericias", {}, [el("legend.r-rotulo", { texto: "Poderes de classe Homebrew desta classe (opcional)" })]
+        .concat(proprios.map(function (p) { return el("label.r-marca", {}, [el("input", { type: "checkbox", checked: true, disabled: true }), el("span", { texto: p.nome + " (feito para esta classe)" })]); }))
+        .concat(livres.map(function (p) {
+          return el("label.r-marca", {}, [el("input", { type: "checkbox", checked: d.poderesHomebrew.indexOf(p.homebrewId) >= 0, onchange: function (ev) {
+            d.poderesHomebrew = d.poderesHomebrew.filter(function (k) { return k !== p.homebrewId; }); if (ev.target.checked) d.poderesHomebrew.push(p.homebrewId); mudou();
+          } }), el("span", { texto: p.nome + " (de " + ((C().classe(p.classe) || {}).nome || p.classe) + ")" })]);
+        }))
+        .concat([el("p.r-ajuda", { texto: (proprios.length || livres.length ? "" : "Você ainda não tem poderes de classe Homebrew. ") + "Um poder criado \u201csó para esta classe\u201d (Habilidade → Poder de classe) entra sempre, em qualquer versão da classe" + (reg ? "." : " — salve a classe primeiro para ela aparecer lá.") })]));
+    }
     function blocoTrilhasHb() {
       if (!trilhasHb) return el("p.t-mini", { texto: "Carregando as suas trilhas Homebrew…" });
       var minha = reg ? reg.id : "";
@@ -120,7 +137,8 @@
             UI.confirmar({ titulo: "Copiar as tabelas do " + C().classe(k).nome + "?", texto: "Recursos, perícias, progressão e Patentes viram uma cópia editável. O que você já preencheu nessas partes é substituído.", rotuloConfirmar: "Copiar" }).then(function (s) { if (s) { d = H().modeloDeOficial(k); mudou(true); } });
           } });
         }).concat([el("button.r-botao.r-botao--mini.r-botao--fantasma", { type: "button", texto: "Em branco", onclick: function () { d = vazia(); mudou(true); } })])), el("p.r-ajuda", { texto: "É uma cópia: a classe Homebrew nunca muda se a oficial mudar." })]) : null,
-        sel("hbc-poderes", "Poderes de classe", oficiais, d.poderesDe, function (v) { d.poderesDe = v; }),
+        sel("hbc-poderes", "Poderes de classe oficiais", oficiais, d.poderesDe, function (v) { d.poderesDe = v; }),
+        blocoPoderesHb(),
         sel("hbc-trilhas", "Trilhas oficiais", [["", "Nenhuma trilha oficial"]].concat(H().OFICIAIS.map(function (k) { return [k, "As do " + C().classe(k).nome]; })), d.trilhasDe, function (v) { d.trilhasDe = v; }),
         blocoTrilhasHb(),
         el("p.t-mini", { texto: "Nas vagas \"Poder de classe\" e \"Trilha\", a ficha oferece só o que você escolher aqui. Nada é emprestado sozinho de uma classe oficial." }),
@@ -240,7 +258,7 @@
         el("p.t-rotulo", { texto: "Prévia (com todos os atributos em 2)" }),
         el("ul.hbe-mini", {}, H().previa(def, { agi: 2, for: 2, int: 2, pre: 2, vig: 2 }).map(function (t) { return el("li", { texto: t }); })),
         el("p.t-rotulo", { texto: "Automático" }),
-        el("ul.hbe-mini", {}, ["PV, PE, SAN e PD pela tabela, em cada marco.", "As vagas de cada marco aparecem na Progressão da ficha e na Ramificação.", def.poderesDe ? "Poderes de classe: os do " + C().classe(def.poderesDe).nome + " e os gerais." : "Poderes de classe: só os gerais.", (def.trilhasDe ? "Trilhas: as do " + C().classe(def.trilhasDe).nome : "Trilhas: nenhuma oficial") + (def.trilhasHomebrew.length ? ", mais " + def.trilhasHomebrew.length + " Homebrew escolhida(s)" : "") + "; as trilhas feitas só para esta classe entram sempre."].map(function (t) { return el("li", { texto: t }); })),
+        el("ul.hbe-mini", {}, ["PV, PE, SAN e PD pela tabela, em cada marco.", "As vagas de cada marco aparecem na Progressão da ficha e na Ramificação.", (def.poderesDe ? "Poderes de classe: os do " + C().classe(def.poderesDe).nome + " e os gerais" : "Poderes de classe: os gerais") + (def.poderesHomebrew.length ? ", mais " + def.poderesHomebrew.length + " Homebrew escolhido(s)" : "") + "; os feitos só para esta classe entram sempre.", (def.trilhasDe ? "Trilhas: as do " + C().classe(def.trilhasDe).nome : "Trilhas: nenhuma oficial") + (def.trilhasHomebrew.length ? ", mais " + def.trilhasHomebrew.length + " Homebrew escolhida(s)" : "") + "; as trilhas feitas só para esta classe entram sempre."].map(function (t) { return el("li", { texto: t }); })),
         el("p.t-rotulo", { texto: "Decisão da mesa / manual" }),
         el("ul.hbe-mini", {}, ["O efeito mecânico das habilidades escritas nos marcos (o texto aparece; a automação de cada uma é da Etapa 3)."].concat(f.map(function (x) { return "Falta a " + x + ": a classe não será oferecida nesse trilho."; })).map(function (t) { return el("li", { texto: t }); })),
         el("div.r-campo", {}, [el("span.r-rotulo", { texto: "Visibilidade" }), el("div.filtros__grupo", { role: "group", "aria-label": "Visibilidade" }, [["privado", "Privada"], ["publico", "Pública"]].map(function (x) {

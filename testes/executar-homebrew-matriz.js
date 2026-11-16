@@ -83,7 +83,7 @@ for (const s of SISTEMAS) {
       }
       const pc = A.compativelComPacote(reg, s === "universal" ? "ordem" : s), pcOutro = A.compativelComPacote(reg, s === "ordem" ? "goblins" : "ordem");
       if (!pc || !pc.ok || (s !== "universal" && pcOutro && pcOutro.ok)) pacote.push(g + "/" + spec.chave);
-      const editor = g === "estrutural" ? ((spec.campos || []).length ? "editor de campos" : "editor próprio (por etapas)") : (s === "ordem" && spec.chave === "ritual" ? "editor de rituais" : s === "ordem" && spec.chave === "poderParanormal" ? "editor próprio (por etapas)" : "editor de campos");
+      const editor = g === "estrutural" ? ((spec.campos || []).length ? "editor de campos" : "editor próprio (por etapas)") : (s === "ordem" && spec.chave === "ritual" ? "editor de rituais" : s === "ordem" && (spec.chave === "poderParanormal" || spec.chave === "poderClasse") ? "editor próprio (por etapas)" : "editor de campos");
       linhas.push({ s, g, st: spec.chave, rotulo: spec.rotulo, editor, modo: d ? d.modo : "?", texto: d ? d.texto : "" });
     }
   }

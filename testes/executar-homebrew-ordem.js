@@ -436,5 +436,56 @@ t.grupo("Trilha × Classe Homebrew · vínculo exclusivo nos dois sentidos");
   t.ok("a trilha livre continua valendo para a classe oficial dela", C.trilhasDaClasse("especialista").some((x) => x.chave === livre.chave));
 }
 
+t.grupo("Poder de classe Homebrew · exclusivo de uma Classe Homebrew, e a classe escolhe os seus");
+{
+  const P = G.RAMAOrdemPoderes, A = G.RAMAHomebrewAdaptadores;
+  const IDC = "cl000010-sintetico";
+  const baseC = Object.assign(copia(H.modeloDeOficial("combatente")), { nome: "Sentinela", homebrewId: IDC, poderesDe: "", trilhasDe: "", patentes: null });
+  const sen = H.normalizarClasse(baseC);
+  C.registrarClasseHomebrew(sen);
+  const exc = H.normalizarPoderClasse({ nome: "Postura de Muralha", homebrewId: "pc000001-sintetico", classe: "combatente", classeHomebrew: IDC, classeHomebrewNome: "Sentinela", resumo: "Firme.", efeitos: [{ tipo: "defesa", valor: 2 }], grupoModular: "combate" });
+  t.ok("o poder exclusivo guarda o id do registro da classe, sem classe oficial", /^hbpc-pc000001-/.test(exc.chave) && exc.classeHomebrew === IDC && exc.classe === "");
+  t.ok("a prévia diz para quem ele é", /só da classe Homebrew Sentinela/.test(H.previaPoderClasse(exc)[0]));
+  const reg = { id: "pc000001-sintetico", nome: "Postura de Muralha", tipo: "habilidade", modelo: { sistema: "ordem", grupo: "habilidade", subtipo: "poderClasse", def: { classeHomebrew: IDC, classeHomebrewNome: "Sentinela", resumo: "Firme.", efeitos: [{ tipo: "defesa", valor: 2 }], grupoModular: "combate" } } };
+  const x = H.deRegistro(reg);
+  t.ok("da biblioteca: o registro vira a definição", x && x.tipo === "poderClasse" && x.def.chave === exc.chave, JSON.stringify(x && x.def && x.def.chave) + " " + exc.chave);
+  const g = A.guardar("ordem", "habilidade", "poderClasse", { nome: "Postura de Muralha", descricao: "Firme.", valores: {}, def: reg.modelo.def });
+  t.ok("o adaptador grava o subtipo, com destino Nativo", g.ok && g.registro.modelo.subtipo === "poderClasse" && A.destinoNaFicha(g.registro, "ordem").modo === "nativo");
+  P.registrarPoderClasseHomebrew(exc);
+  const ficha15 = (cl) => R.normalizar({ classe: cl.chave || cl, origem: "academico", nex: 15, atributos: { agi: 1, for: 2, int: 1, pre: 1, vig: 2 }, homebrew: cl.chave ? { classes: { [cl.chave]: cl } } : undefined });
+  const o = ficha15(sen);
+  const cands = E.candidatosPoderClasse(o, "d3.poderClasse", {}).map((c) => c.entrada.chave);
+  t.ok("aparece na vaga de Poder de classe da classe Homebrew dele", cands.indexOf(exc.chave) >= 0, cands.slice(-5).join(","));
+  t.ok("e não aparece para o Combatente do livro", E.candidatosPoderClasse(ficha15("combatente"), "d3.poderClasse", {}).every((c) => c.entrada.chave !== exc.chave));
+  const outra = H.normalizarClasse(Object.assign(copia(baseC), { nome: "Outra", homebrewId: "cl000011-sintetico", poderesDe: "combatente" }));
+  C.registrarClasseHomebrew(outra);
+  t.ok("nem para outra classe Homebrew (mesmo com os poderes do Combatente)", !P.pertenceAClasse(exc, outra.chave));
+  const sen2 = H.normalizarClasse(Object.assign(copia(baseC), { pvInicial: { base: 22, atributo: "vig" } }));
+  C.registrarClasseHomebrew(sen2);
+  t.ok("vale em qualquer versão da classe", sen2.chave !== sen.chave && P.pertenceAClasse(exc, sen2.chave));
+  const vaga = E.vagas(o).filter((v) => v.id === "d3.poderClasse")[0];
+  const sim = E.simular(copia(o), vaga, { valor: exc.chave, opcoes: {} }, {}).avaliacao;
+  t.ok("escolhê-lo é válido", sim && sim.valido, JSON.stringify(sim));
+  const antes = R.calcular(o).defesa.total;
+  E.registrar(o, vaga, { valor: exc.chave, opcoes: {} });
+  t.ok("a ficha guarda a cópia do poder", o.homebrew.poderesClasse && o.homebrew.poderesClasse[exc.chave] && o.homebrew.poderesClasse[exc.chave].nome === "Postura de Muralha", JSON.stringify(o.homebrew));
+  t.iguais("e o efeito entra na conta (+2 Defesa)", R.calcular(o).defesa.total - antes, 2);
+  t.ok("recarregar mantém a cópia", R.normalizar(copia(o)).homebrew.poderesClasse[exc.chave]);
+  t.iguais("o grupo da Evolução Modular é o escolhido", P.grupoModular(P.poder(exc.chave)), "combate");
+  const comReq = H.normalizarPoderClasse({ nome: "Golpe Pesado Sintético", homebrewId: "pc000002-sintetico", classeHomebrew: IDC, requisitoAtributo: { atributo: "for", valor: 3 } });
+  P.registrarPoderClasseHomebrew(comReq);
+  const simReq = E.simular(copia(o), E.vagas(o).filter((v) => v.id === "d3.poderClasse")[0], { valor: comReq.chave, opcoes: {} }, {}).avaliacao;
+  t.ok("o requisito For 3 é conferido (For 2: recusado)", simReq && !simReq.valido, JSON.stringify(simReq));
+  const livre = H.normalizarPoderClasse({ nome: "Truque Livre", homebrewId: "pc000003-sintetico", classe: "especialista", resumo: "Livre." });
+  P.registrarPoderClasseHomebrew(livre);
+  t.ok("um poder livre vale para a classe oficial dele", P.pertenceAClasse(P.poder(livre.chave), "especialista") && !P.pertenceAClasse(P.poder(livre.chave), "combatente"));
+  t.ok("e não para a classe Homebrew que não o escolheu", !P.pertenceAClasse(P.poder(livre.chave), sen.chave));
+  const sen3 = H.normalizarClasse(Object.assign(copia(baseC), { poderesHomebrew: [livre.homebrewId, "inválido!"] }));
+  C.registrarClasseHomebrew(sen3);
+  t.iguais("a classe guarda os poderes Homebrew escolhidos (ids válidos)", sen3.poderesHomebrew, [livre.homebrewId]);
+  const cands3 = P.poderesDeClasse(sen3.chave).map((p) => p.chave);
+  t.ok("e oferece o escolhido, junto do exclusivo", cands3.indexOf(livre.chave) >= 0 && cands3.indexOf(exc.chave) >= 0);
+}
+
 console.log(`\n${FORTE}${passaram} ok${FIM}, ${falharam ? VERMELHO : ""}${falharam} falha(s)${FIM}.`);
 if (falharam) Deno.exit(1);

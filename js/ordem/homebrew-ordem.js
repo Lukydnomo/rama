@@ -65,6 +65,9 @@
   var PADRAO_ORIGEM = /^hbo-[a-z0-9-]{3,60}$/;
   var PADRAO_TRILHA = /^hbt-[a-z0-9-]{3,60}$/;
   var PADRAO_PODER = /^hbpp-[a-z0-9-]{3,60}$/;
+  var PADRAO_PODER_CLASSE = /^hbpc-[a-z0-9-]{3,60}$/;
+  var ID_REGISTRO = /^[A-Za-z0-9_-]{1,80}$/;
+  var ATRIBUTOS_REQ = ["agi", "for", "int", "pre", "vig"];
   var NEX_TRILHA = [10, 40, 65, 99];
   /* Os efeitos que uma origem ou um poder de trilha Homebrew podem ter:
      só os tipos que o motor de Ordem já soma (mesmo formato dos do livro). */
@@ -229,6 +232,48 @@
     if (!d.chave) d.chave = chaveVersionada("hbpp-", d);
     return d;
   }
+  /* PODER DE CLASSE Homebrew: de uma classe oficial (e das Classes
+     Homebrew que usam os poderes dela) ou só de uma Classe Homebrew (o id
+     do registro). Requisitos do formato do livro (atributo, perícia
+     treinada, NEX), efeitos, escolha de perícia e o grupo da Evolução
+     Modular. */
+  function normalizarPoderClasse(bruto) {
+    var b = obj(bruto);
+    var classeHb = ID_REGISTRO.test(String(b.classeHomebrew || "")) ? String(b.classeHomebrew) : "";
+    var ra = obj(b.requisitoAtributo);
+    var d = {
+      chave: PADRAO_PODER_CLASSE.test(String(b.chave || "")) ? b.chave : "",
+      nome: texto(b.nome, 60).trim() || "Poder de classe Homebrew",
+      tipo: "classe",
+      homebrew: true, homebrewId: texto(b.homebrewId, 80), fonte: "HOMEBREW", pagina: 0,
+      classe: classeHb ? "" : (OFICIAIS.indexOf(b.classe) >= 0 ? b.classe : "combatente"),
+      resumo: texto(b.resumo, 1200).trim(),
+      requisitoAtributo: ATRIBUTOS_REQ.indexOf(ra.atributo) >= 0 ? { atributo: ra.atributo, valor: int(ra.valor, 1, 5, 2) } : null,
+      requisitoPericia: C() && C().pericia(b.requisitoPericia) ? b.requisitoPericia : "",
+      requisitoNex: int(b.requisitoNex, 0, 99, 0),
+      repetivel: b.repetivel === true,
+      grupoModular: b.grupoModular === "combate" ? "combate" : "utilidade",
+      efeitos: efeitos(b.efeitos),
+    };
+    if (classeHb) { d.classeHomebrew = classeHb; d.classeHomebrewNome = texto(b.classeHomebrewNome, 60).trim() || "Classe Homebrew"; }
+    var esc = escolhaDoPoder(b.escolhaHb);
+    if (esc) d.escolhaHb = esc;
+    if (!d.chave) d.chave = chaveVersionada("hbpc-", d);
+    return d;
+  }
+  function previaPoderClasse(d) {
+    var reqs = [];
+    if (d.requisitoAtributo) reqs.push(d.requisitoAtributo.atributo.toUpperCase() + " " + d.requisitoAtributo.valor);
+    if (d.requisitoPericia) reqs.push("treinado em " + ((C() && C().pericia(d.requisitoPericia)) || { nome: d.requisitoPericia }).nome);
+    if (d.requisitoNex) reqs.push("NEX " + d.requisitoNex + "%");
+    var linhas = [d.classeHomebrew
+      ? "Poder de classe só da classe Homebrew " + d.classeHomebrewNome + " (em qualquer versão dela)."
+      : "Poder de classe do " + ((C() && C().classe(d.classe)) || { nome: d.classe }).nome + " (e das Classes Homebrew que usam os poderes dele ou que o escolherem)."];
+    linhas.push("Requisitos: " + (reqs.length ? reqs.join(", ") : "nenhum") + (d.repetivel ? " · pode ser escolhido várias vezes" : "") + " · Evolução Modular: " + d.grupoModular + ".");
+    linhas.push(d.efeitos.length ? "Na conta da ficha: " + d.efeitos.map(textoEfeito).join(", ") + "." : (d.escolhaHb ? "Sem efeito fixo." : "Informativo: a ficha mostra o poder; o efeito é aplicado pela mesa."));
+    if (d.escolhaHb) linhas.push("Escolha (na Progressão): " + textoEscolha(d.escolhaHb) + ".");
+    return linhas;
+  }
   function nomeDoElem(k) { return EL() ? EL().nome(k) : k; }
   function previaPoder(d) {
     var linhas = [];
@@ -261,6 +306,7 @@
       trilhasDe: OFICIAIS.indexOf(b.trilhasDe) >= 0 ? b.trilhasDe : "",
       /* As trilhas Homebrew que a classe usa (ids dos registros), além das
          feitas só para ela (essas entram sempre). */
+      poderesHomebrew: lista(b.poderesHomebrew).map(String).filter(function (k, i, l) { return /^[A-Za-z0-9_-]{1,80}$/.test(k) && l.indexOf(k) === i; }).slice(0, 30),
       trilhasHomebrew: lista(b.trilhasHomebrew).map(String).filter(function (k, i, l) { return /^[A-Za-z0-9_-]{1,80}$/.test(k) && l.indexOf(k) === i; }).slice(0, 12),
       habilidadesIniciais: lista(b.habilidadesIniciais).map(function (s) { return texto(s, 80).trim(); }).filter(Boolean).slice(0, 6),
       progressao: null, patentes: null,
@@ -325,7 +371,7 @@
   /* O bloco que a ficha guarda. */
   function normalizarBloco(bruto) {
     var b = obj(bruto);
-    var classes = {}, elementos = {}, origens = {}, trilhas = {}, poderes = {};
+    var classes = {}, elementos = {}, origens = {}, trilhas = {}, poderes = {}, poderesClasse = {};
     Object.keys(obj(b.classes)).slice(0, 8).forEach(function (k) {
       if (!PADRAO_CHAVE.test(k)) return;
       var d = normalizarClasse(Object.assign({}, b.classes[k], { chave: k }));
@@ -343,9 +389,13 @@
     Object.keys(obj(b.poderes)).slice(0, 20).forEach(function (k) {
       if (PADRAO_PODER.test(k)) poderes[k] = normalizarPoder(Object.assign({}, b.poderes[k], { chave: k }));
     });
-    if (![classes, elementos, origens, trilhas, poderes].some(function (m) { return Object.keys(m).length; })) return null;
+    Object.keys(obj(b.poderesClasse)).slice(0, 30).forEach(function (k) {
+      if (PADRAO_PODER_CLASSE.test(k)) poderesClasse[k] = normalizarPoderClasse(Object.assign({}, b.poderesClasse[k], { chave: k }));
+    });
+    if (![classes, elementos, origens, trilhas, poderes, poderesClasse].some(function (m) { return Object.keys(m).length; })) return null;
     var saida = { versao: 1, classes: classes, elementos: elementos, origens: origens, trilhas: trilhas };
     if (Object.keys(poderes).length) saida.poderes = poderes;
+    if (Object.keys(poderesClasse).length) saida.poderesClasse = poderesClasse;
     return saida;
   }
   /* Registra no catálogo (idempotente; chaves versionadas não colidem). */
@@ -356,11 +406,15 @@
     Object.keys(obj(b.origens)).forEach(function (k) { if (C() && C().registrarOrigemHomebrew) C().registrarOrigemHomebrew(b.origens[k]); });
     Object.keys(obj(b.trilhas)).forEach(function (k) { if (C() && C().registrarTrilhaHomebrew) C().registrarTrilhaHomebrew(b.trilhas[k]); });
     Object.keys(obj(b.poderes)).forEach(function (k) { if (P() && P().registrarParanormalHomebrew) P().registrarParanormalHomebrew(b.poderes[k]); });
+    Object.keys(obj(b.poderesClasse)).forEach(function (k) { if (P() && P().registrarPoderClasseHomebrew) P().registrarPoderClasseHomebrew(b.poderesClasse[k]); });
   }
 
   /* Da biblioteca (registro com modelo) para a definição da ficha. */
   function deRegistro(reg) {
     var m = obj(obj(reg).modelo);
+    if (m.sistema === "ordem" && m.grupo === "habilidade" && m.subtipo === "poderClasse") {
+      return { tipo: "poderClasse", def: normalizarPoderClasse(Object.assign({}, obj(m.def), { chave: "", nome: reg.nome, resumo: obj(m.def).resumo || reg.descricao || reg.texto || "", homebrewId: reg.id })) };
+    }
     if (m.sistema === "ordem" && m.grupo === "habilidade" && m.subtipo === "poderParanormal") {
       return { tipo: "poder", def: normalizarPoder(Object.assign({}, obj(m.def), { chave: "", nome: reg.nome, resumo: obj(m.def).resumo || reg.descricao || reg.texto || "", homebrewId: reg.id })) };
     }
@@ -373,7 +427,7 @@
     return null;
   }
   /* Põe uma definição na ficha (cópia) e registra. */
-  var MAPA_DO_TIPO = { classe: "classes", elemento: "elementos", origem: "origens", trilha: "trilhas", poder: "poderes" };
+  var MAPA_DO_TIPO = { classe: "classes", elemento: "elementos", origem: "origens", trilha: "trilhas", poder: "poderes", poderClasse: "poderesClasse" };
   function guardarNaFicha(ordem, tipo, def) {
     if (!ordem.homebrew || typeof ordem.homebrew !== "object") ordem.homebrew = { versao: 1, classes: {}, elementos: {} };
     var campo = MAPA_DO_TIPO[tipo] || "elementos";
@@ -396,6 +450,7 @@
     if (PADRAO_ORIGEM.test(k)) return "origem";
     if (PADRAO_TRILHA.test(k)) return "trilha";
     if (PADRAO_PODER.test(k)) return "poder";
+    if (PADRAO_PODER_CLASSE.test(k)) return "poderClasse";
     if (EL() && EL().ehHomebrew(k)) return "elemento";
     return "";
   }
@@ -404,8 +459,8 @@
     if (!ordem || !tipo) return false;
     var campo = MAPA_DO_TIPO[tipo];
     if (ordem.homebrew && ordem.homebrew[campo] && ordem.homebrew[campo][chave]) return true;
-    var pz = tipo === "poder" && P() && P().poder(chave);
-    var def = tipo === "poder" ? (pz && pz.defHomebrew) : tipo === "classe" ? C() && C().classe(chave) : tipo === "origem" ? C() && C().origem(chave) : tipo === "trilha" ? C() && C().trilha(chave) : EL() && EL().def(chave);
+    var pz = (tipo === "poder" || tipo === "poderClasse") && P() && P().poder(chave);
+    var def = tipo === "poder" || tipo === "poderClasse" ? (pz && pz.defHomebrew) : tipo === "classe" ? C() && C().classe(chave) : tipo === "origem" ? C() && C().origem(chave) : tipo === "trilha" ? C() && C().trilha(chave) : EL() && EL().def(chave);
     if (!def || !def.homebrew) return false;
     guardarNaFicha(ordem, tipo, def);
     return true;
@@ -470,11 +525,11 @@
     if (biblioteca && !forcar) return Promise.resolve(biblioteca);
     if (carga && !forcar) return carga;
     var API = global.RAMAApi;
-    var VAZIA = { classes: [], elementos: [], origens: [], trilhas: [], poderes: [] };
+    var VAZIA = { classes: [], elementos: [], origens: [], trilhas: [], poderes: [], poderesClasse: [] };
     if (!API || !API.listarHomebrew) return Promise.resolve(VAZIA);
     carga = API.listarHomebrew({ escopo: "todos", tipos: ["classe", "elemento", "origem", "trilha", "habilidade"] }).then(function (r) {
       carga = null;
-      var saida = { classes: [], elementos: [], origens: [], trilhas: [], poderes: [] };
+      var saida = { classes: [], elementos: [], origens: [], trilhas: [], poderes: [], poderesClasse: [] };
       ((r && r.ok && r.dados) || []).forEach(function (reg) {
         var x = deRegistro(reg);
         if (!x || !x.def) return;
@@ -487,6 +542,8 @@
         if (x.tipo === "trilha") { if (C() && C().registrarTrilhaHomebrew) C().registrarTrilhaHomebrew(x.def); saida.trilhas.push(x.def); }
         /* Poder paranormal: entra nas vagas de poder paranormal. */
         if (x.tipo === "poder") { if (P() && P().registrarParanormalHomebrew) P().registrarParanormalHomebrew(x.def); saida.poderes.push(x.def); }
+        /* Poder de classe: entra nas vagas de Poder de classe. */
+        if (x.tipo === "poderClasse") { if (P() && P().registrarPoderClasseHomebrew) P().registrarPoderClasseHomebrew(x.def); saida.poderesClasse.push(x.def); }
       });
       biblioteca = saida;
       return saida;
@@ -496,7 +553,7 @@
 
   /* v9.15: as cópias da ficha e as versões novas da biblioteca (classe,
      origem, trilha; o elemento tem chave estável e não versiona). */
-  var CAMPOS_VERSAO = [["classes", "classes", "classe"], ["origens", "origens", "origem"], ["trilhas", "trilhas", "trilha"], ["poderes", "poderes", "poder"]];
+  var CAMPOS_VERSAO = [["classes", "classes", "classe"], ["origens", "origens", "origem"], ["trilhas", "trilhas", "trilha"], ["poderes", "poderes", "poder"], ["poderesClasse", "poderesClasse", "poderClasse"]];
   function trocarChave(bloco, antiga, nova) {
     var novo = JSON.parse(JSON.stringify(bloco).split(antiga).join(nova));
     Object.keys(bloco).forEach(function (k) { delete bloco[k]; });
@@ -529,7 +586,7 @@
     normalizarClasse: normalizarClasse, chaveDaClasse: chaveDaClasse, disponivelNoTrilho: disponivelNoTrilho, faltas: faltas,
     normalizarBloco: normalizarBloco, registrar: registrar, deRegistro: deRegistro, guardarNaFicha: guardarNaFicha,
     previa: previa, modeloDeOficial: modeloDeOficial, circulosPorNex: circulosPorNex, CIRCULOS_DO_OCULTISTA: CIRCULOS_DO_OCULTISTA,
-    NEX_TRILHA: NEX_TRILHA, EFEITOS: EFEITOS, MODOS_ESCOLHA: MODOS_ESCOLHA, escolhaDoPoder: escolhaDoPoder, textoEscolha: textoEscolha, normalizarOrigem: normalizarOrigem, normalizarTrilha: normalizarTrilha, normalizarPoder: normalizarPoder, previaPoder: previaPoder,
+    NEX_TRILHA: NEX_TRILHA, EFEITOS: EFEITOS, MODOS_ESCOLHA: MODOS_ESCOLHA, escolhaDoPoder: escolhaDoPoder, textoEscolha: textoEscolha, normalizarOrigem: normalizarOrigem, normalizarTrilha: normalizarTrilha, normalizarPoder: normalizarPoder, previaPoder: previaPoder, normalizarPoderClasse: normalizarPoderClasse, previaPoderClasse: previaPoderClasse,
     textoEfeito: textoEfeito, previaOrigem: previaOrigem, previaTrilha: previaTrilha, embutir: embutir, tipoDaChave: tipoDaChave,
   };
 })(typeof window !== "undefined" ? window : globalThis);

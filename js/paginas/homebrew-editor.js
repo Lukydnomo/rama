@@ -78,6 +78,7 @@
         }
         if (t.chave === "habilidade" && sistema === "ordem") {
           cartoes.push(cartao("Habilidade / poder", "Poderes e habilidades, com cor e origem.", function () { janela.fechar(); if (o.editarHabilidadeLegada) o.editarHabilidadeLegada(); }));
+          cartoes.push(cartao("Habilidade → Poder de classe", "De uma classe do livro ou só de uma Classe Homebrew sua: requisitos, efeitos e escolha de perícia. Na ficha, entra na vaga de Poder de classe.", function () { janela.fechar(); if (global.RAMAHomebrewOrigemTrilha) global.RAMAHomebrewOrigemTrilha.poderClasse({ aoSalvar: o.aoSalvar }); }));
           cartoes.push(cartao("Habilidade → Poder paranormal", "Elemento, requisito, efeitos e a linha de Afinidade. Na ficha, entra nas vagas de poder paranormal (Transcender e as demais), como os do livro.", function () { janela.fechar(); if (global.RAMAHomebrewOrigemTrilha) global.RAMAHomebrewOrigemTrilha.poder({ aoSalvar: o.aoSalvar }); }));
           cartoes.push(cartao("Habilidade → Ritual", "O editor de rituais: círculo, elemento(s), conjuração e versões. Na ficha, entra na aba Rituais.", function () { janela.fechar(); if (o.editarRitual) o.editarRitual(); }));
           return;
@@ -431,6 +432,10 @@
       pares.push(["Poderes e trilhas", (defC.poderesDe || "só gerais") + " · " + (defC.trilhasDe || "sem trilhas")]);
     }
     /* Origem e Trilha Homebrew de Ordem (v9.9): a prévia pelo módulo da ficha. */
+    if (s === "ordem" && st === "poderClasse" && global.RAMAOrdemHomebrew) {
+      var xpc = global.RAMAOrdemHomebrew.deRegistro(reg);
+      if (xpc && xpc.def) global.RAMAOrdemHomebrew.previaPoderClasse(xpc.def).forEach(function (t, i) { pares.push([i ? "" : "Regras", t]); });
+    }
     if (s === "ordem" && st === "poderParanormal" && global.RAMAOrdemHomebrew) {
       var xpp = global.RAMAOrdemHomebrew.deRegistro(reg);
       if (xpp && xpp.def) global.RAMAOrdemHomebrew.previaPoder(xpp.def).forEach(function (t, i) { pares.push([i ? "" : "Regras", t]); });

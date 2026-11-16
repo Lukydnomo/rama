@@ -866,7 +866,7 @@
       if (typeof v === "string") {
         if (EL.ehHomebrew(v) && EL.def(v)) HO.guardarNaFicha(ordem, "elemento", EL.def(v));
         /* Um poder paranormal Homebrew escolhido (Transcender…) ganha a cópia. */
-        else if (HO.tipoDaChave && HO.tipoDaChave(v) === "poder" && HO.embutir) HO.embutir(ordem, v);
+        else if (HO.tipoDaChave && (HO.tipoDaChave(v) === "poder" || HO.tipoDaChave(v) === "poderClasse") && HO.embutir) HO.embutir(ordem, v);
         return;
       }
       if (typeof v === "object") Object.keys(v).forEach(function (k) { andar(v[k], prof + 1); });

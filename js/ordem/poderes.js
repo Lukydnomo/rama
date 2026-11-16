@@ -2136,6 +2136,8 @@
     if (!e) return "";
     if (e.tipo === "geral" || e.geral) return "geral";
     if (e.tipo !== "classe") return "";
+    /* Poder de classe Homebrew: o grupo que a mesa escolheu. */
+    if (e.homebrew) return e.grupoModular === "combate" ? "combate" : "utilidade";
     var a = ajustes && ajustes[e.chave];
     if (AMBIGUOS[e.chave] && (a === "combate" || a === "utilidade")) return a;
     return GRUPO_MODULAR[e.chave] || "utilidade";
@@ -2149,10 +2151,55 @@
     /* v9.8: uma classe Homebrew usa os poderes da classe oficial que a
        mesa escolheu (ou só os gerais). */
     var CAT = global.RAMAOrdemCatalogo;
+    var original = classe;
     if (CAT && CAT.classeDosPoderes) classe = CAT.classeDosPoderes(classe);
     return PODERES_CLASSE.filter(function (p) {
       return p.classes.indexOf(classe) >= 0 || !!p.geral;
-    }).concat(PODERES_GERAIS);
+    }).concat(poderesClasseHomebrew().filter(function (p) { return poderHomebrewServe(p, original); })).concat(PODERES_GERAIS);
+  }
+
+  /* PODER DE CLASSE Homebrew (chave hbpc-…, versionada): de uma classe
+     oficial (e das Classes Homebrew que usam os poderes dela) ou só de
+     uma Classe Homebrew (o id do registro: vale em qualquer versão). A
+     classe Homebrew também pode escolher poderes Homebrew pelo id. */
+  var PODERES_CLASSE_HOMEBREW = {};
+  function poderesClasseHomebrew() { return Object.keys(PODERES_CLASSE_HOMEBREW).map(function (k) { return PODERES_CLASSE_HOMEBREW[k]; }); }
+  function poderHomebrewServe(p, chaveClasse) {
+    var CAT = global.RAMAOrdemCatalogo;
+    var hb = CAT && CAT.classe ? CAT.classe(chaveClasse) : null;
+    if (p.classeHomebrew) return !!(hb && hb.homebrew && hb.homebrewId === p.classeHomebrew);
+    var cls = CAT && CAT.classeDosPoderes ? CAT.classeDosPoderes(chaveClasse) : chaveClasse;
+    if (cls && p.classes.indexOf(cls) >= 0) return true;
+    return !!(hb && hb.homebrew && p.homebrewId && (hb.poderesHomebrew || []).indexOf(p.homebrewId) >= 0);
+  }
+  function registrarPoderClasseHomebrew(d) {
+    if (!d || !/^hbpc-[a-z0-9-]{3,60}$/.test(String(d.chave || ""))) return null;
+    var efs = Array.isArray(d.efeitos) ? d.efeitos.slice() : [];
+    var extra = {};
+    var esc = d.escolhaHb;
+    if (esc && esc.modo) {
+      extra.opcoes = [{ chave: "pericia", tipo: "pericia", rotulo: "Perícia", entre: esc.entre && esc.entre.length ? esc.entre.slice() : undefined, modo: esc.modo === "treinar" ? "treinar" : undefined }];
+      if (!extra.opcoes[0].entre) delete extra.opcoes[0].entre;
+      if (!extra.opcoes[0].modo) delete extra.opcoes[0].modo;
+      efs.push(esc.modo === "treinar" ? { tipo: "treinar", opcao: "pericia" } : esc.modo === "treinarOuBonus" ? { tipo: "treinarOuBonus", opcao: "pericia", bonus: esc.valor || 2 } : { tipo: "bonusPericia", opcao: "pericia", valor: esc.valor || 2 });
+    }
+    var reqs = [];
+    if (d.requisitoAtributo && d.requisitoAtributo.atributo) reqs.push(req.atr(d.requisitoAtributo.atributo, d.requisitoAtributo.valor));
+    if (d.requisitoPericia) reqs.push(req.trein(d.requisitoPericia));
+    if (d.requisitoNex) reqs.push(req.nex(d.requisitoNex));
+    var e = entrada(Object.assign({
+      chave: d.chave, nome: d.nome, tipo: "classe", classes: d.classe ? [d.classe] : [],
+      fonte: "HOMEBREW", pagina: 0, resumo: d.resumo || "", requisitos: reqs,
+      repetivel: !!d.repetivel, efeitos: efs, automacao: efs.length ? "calculo" : "informacao",
+    }, extra));
+    e.homebrew = true;
+    e.homebrewId = d.homebrewId || "";
+    if (d.classeHomebrew) e.classeHomebrew = d.classeHomebrew;
+    e.grupoModular = d.grupoModular === "combate" ? "combate" : "utilidade";
+    e.defHomebrew = JSON.parse(JSON.stringify(d));
+    POR_CHAVE[e.chave] = e;
+    PODERES_CLASSE_HOMEBREW[e.chave] = e;
+    return e;
   }
 
   /* Se o poder pertence à classe. Um poder geral pertence a todas; um
@@ -2160,6 +2207,7 @@
      dizer de onde veio a permissão. */
   function pertenceAClasse(p, classe) {
     if (!p) return false;
+    if (p.homebrew && p.tipo === "classe") return poderHomebrewServe(p, classe);
     var CAT = global.RAMAOrdemCatalogo;
     if (CAT && CAT.classeDosPoderes) classe = CAT.classeDosPoderes(classe);
     if (p.tipo === "geral") return true;
@@ -2295,6 +2343,9 @@
     habilidadesDaTrilha: habilidadesDaTrilha,
     registrarHabilidadesDeTrilha: registrarHabilidadesDeTrilha,
     registrarParanormalHomebrew: registrarParanormalHomebrew,
+    registrarPoderClasseHomebrew: registrarPoderClasseHomebrew,
+    poderesClasseHomebrew: poderesClasseHomebrew,
+    poderHomebrewServe: poderHomebrewServe,
     paranormaisDisponiveis: paranormaisDisponiveis,
     habilidadesDaTrilhaSobrevivente: habilidadesDaTrilhaSobrevivente,
     treinamento: treinamento,
