@@ -929,6 +929,10 @@ segredo nenhum — ele os lê das Script Properties. Publicá-lo não expõe nad
 
 ### Atualizar o backend
 
+**v9.12.0 — ASTROLÁBIO:** atalhos Por sistema na lateral de Personagens. **Só o
+site muda.** Site: `js/paginas/personagens.js`, `css/personagens.css` e
+`js/versao.js`.
+
 **v9.11.1 — CAMAFEU:** retrato da ficha de Vampiro em tamanho fixo. **Só o
 site muda.** Site: `css/vampiro.css` e `js/versao.js`.
 
@@ -2059,7 +2063,7 @@ Três números diferentes, que não se misturam:
 
 | | Onde | O que é |
 |---|---|---|
-| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v9.11.1 |
+| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v9.12.0 |
 | `schemaVersion` | `js/ficha.js` | o formato da FICHA |
 | `versaoFormato` | `js/config.js` | o formato dos arquivos de importação |
 

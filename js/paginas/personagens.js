@@ -89,7 +89,10 @@
   /* suportada: o servidor manda a organização (v2.26).
      disponivel: as abas existem na planilha (setupRama rodou). */
   var organizacao = { suportada: false, disponivel: false };
-  var estado = { pasta: O.TODOS, busca: "", sistema: "", agrupar: false };
+  /* porSistema (v9.12.0): o atalho de sistema aberto na lateral — com
+     ele, a seleção é Todos filtrada por esse sistema. Só existe com
+     Pastas laterais e Agrupar por sistema ligados. */
+  var estado = { pasta: O.TODOS, busca: "", sistema: "", agrupar: false, porSistema: "" };
   /* v2.44: qual lista está aberta — "meus" ou "recebidos". */
   var contexto = "meus";
   var ocupados = {};
@@ -138,6 +141,7 @@
     estado.pasta = U.parametro("pasta") || O.TODOS;
     estado.sistema = U.parametro("sistema") || "";
     estado.agrupar = U.parametro("agrupar") === "1";
+    estado.porSistema = U.parametro("porSistema") || "";
     contexto = U.parametro("lista") === "recebidos" ? "recebidos" : "meus";
   }
 
@@ -148,6 +152,7 @@
       if (estado.pasta && estado.pasta !== O.TODOS) p.set("pasta", estado.pasta); else p.delete("pasta");
       if (estado.sistema) p.set("sistema", estado.sistema); else p.delete("sistema");
       if (estado.agrupar) p.set("agrupar", "1"); else p.delete("agrupar");
+      if (estado.porSistema) p.set("porSistema", estado.porSistema); else p.delete("porSistema");
       if (contexto === "recebidos") p.set("lista", "recebidos"); else p.delete("lista");
       var q = p.toString();
       global.history.replaceState(null, "", location.pathname + (q ? "?" + q : "") + location.hash);
@@ -222,6 +227,7 @@
     var cursor = null;
     try { cursor = foco && ativo.selectionStart !== undefined ? ativo.selectionStart : null; } catch (e) { cursor = null; }
 
+    conferirAtalhoDeSistema();
     var m = O.montar(registros, organizacao.disponivel ? pastas : [], estado);
     if (m.pasta !== estado.pasta) { estado.pasta = m.pasta; }
     gravarEstadoNaUrl();
@@ -357,7 +363,12 @@
         el("select.r-selecao", {
           "aria-label": "Filtrar por sistema",
           dataset: { foco: "sistema" },
-          onchange: function (ev) { estado.sistema = ev.target.value; desenhar(); },
+          onchange: function (ev) {
+            estado.sistema = ev.target.value;
+            /* No atalho de sistema, o filtro troca o atalho (ou sai dele). */
+            if (estado.porSistema) estado.porSistema = estado.sistema;
+            desenhar();
+          },
         }, [el("option", { value: "", texto: "Todos", selected: !estado.sistema })].concat(
           opcoesDeSistema(m).map(function (o) {
             return el("option", { value: o.sistema.id, texto: o.sistema.nome + " (" + o.n + ")", selected: estado.sistema === o.sistema.id });
@@ -664,6 +675,7 @@
   }
 
   function nomeDaSelecao(pastaId) {
+    if (pastaId === O.TODOS && estado.porSistema) return O.sistemaDe({ sistema: estado.porSistema === "?" ? null : estado.porSistema }).nome;
     if (pastaId === O.TODOS) return "Todos os personagens";
     if (pastaId === O.SEM_PASTA) return "Sem pasta";
     var p = pastaPorId(pastaId);
@@ -1045,7 +1057,7 @@
       var filtrando = !!f;
       var n = filtrando ? (filtrado || 0) : total;
       var ocupada = !!ocupados["pasta:" + id];
-      var aberta = m.pasta === id;
+      var aberta = m.pasta === id && !estado.porSistema;
       var botao = el("button.pasta-lateral", {
         type: "button",
         title: nome,
@@ -1092,12 +1104,69 @@
         el("ul.pastas-laterais__lista.pastas-laterais__fixas", {}, fixas),
         el("div.pastas-laterais__rolagem", { onscroll: function () { posicionarIndicadorLateral(false, true); } }, [
           el("ul.pastas-laterais__lista", {}, daConta),
+          atalhosDeSistema(),
         ]),
       ]),
       registros.length
         ? el("p.t-mini.pastas-laterais__dica", { texto: "Arraste pela alça (⠿) até uma pasta; “Sem pasta” retira. Ou use “Mover para pasta…” no menu." })
         : null,
     ]);
+  }
+
+  /* Atalhos por sistema (v9.12.0): com Pastas laterais e Agrupar por
+     sistema, um atalho para cada sistema que tem personagens — todas as
+     fichas dele, de qualquer pasta. Não é pasta: ninguém muda de lugar
+     e nada se solta neles (não têm data-arrastar-pasta). */
+  function atalhosLigados() { return modoLateral() && estado.agrupar && organizacao.disponivel; }
+
+  /* Fora da lateral com agrupamento, o atalho deixa de existir: sai
+     dele e do filtro que ele pôs. Dentro, ele manda na seleção. */
+  function conferirAtalhoDeSistema() {
+    if (!estado.porSistema) return;
+    if (!atalhosLigados()) { estado.porSistema = ""; estado.sistema = ""; return; }
+    estado.pasta = O.TODOS;
+    estado.sistema = estado.porSistema;
+  }
+
+  function atalhosDeSistema() {
+    if (!atalhosLigados()) return null;
+    var busca = String(estado.busca || "").trim();
+    var achados = busca ? O.filtrar(registros, { busca: busca }) : null;
+    var lista = O.sistemasPresentes(registros).filter(function (s) { return s.n > 0; });
+    if (!lista.length) return null;
+    return el("div.pastas-laterais__secao", {}, [
+      el("h3.pastas-laterais__subtitulo", { id: "pastas-sistema-titulo", texto: "Por sistema" }),
+      el("ul.pastas-laterais__lista", { "aria-labelledby": "pastas-sistema-titulo" }, lista.map(function (s) {
+        var id = s.sistema.id;
+        var n = achados ? O.filtrar(achados, { sistema: id }).length : s.n;
+        var aberta = estado.porSistema === id;
+        var botao = el("button.pasta-lateral.pasta-lateral--sistema", {
+          type: "button",
+          title: s.sistema.nome,
+          "aria-current": aberta ? "true" : null,
+          "aria-label": "Sistema " + s.sistema.nome + ", " + rotuloDeContagem(n, s.n, !!achados) + (aberta ? ", aberto" : ""),
+          dataset: { foco: "sistema-" + id, atalhoSistema: id },
+        }, [
+          el("span.pasta-lateral__icone", { "aria-hidden": "true" }, [UI.simbolo("dado", 14)]),
+          el("span.pasta-lateral__nome", { "aria-hidden": "true", texto: s.sistema.nome }),
+          el("span.pasta-lateral__n", { "aria-hidden": "true", texto: textoDeContagem(n, s.n, !!achados) }),
+        ]);
+        botao.addEventListener("click", function () {
+          if (global.RAMAArrastar && global.RAMAArrastar.arrastando()) return;
+          abrirAtalhoDeSistema(id);
+        });
+        return el("li", {}, [botao]);
+      })),
+    ]);
+  }
+
+  function abrirAtalhoDeSistema(id) {
+    if (estado.porSistema === id) return;
+    estado.porSistema = id;
+    estado.pasta = O.TODOS;
+    estado.sistema = id;
+    animarTrocaDePasta = true;
+    desenhar();
   }
 
   /* Setas, Home e End andam entre as pastas; Enter/Espaço abrem. */
@@ -1158,7 +1227,16 @@
   }
 
   function trocarPastaLateral(id) {
-    if (id === estado.pasta) return;
+    var noAtalho = !!estado.porSistema;
+    if (id === estado.pasta && !noAtalho) {
+      /* Todos com os atalhos à vista também limpa o filtro de sistema. */
+      if (id === O.TODOS && atalhosLigados() && estado.sistema) { estado.sistema = ""; desenhar(); }
+      return;
+    }
+    /* Saindo de um atalho, o filtro que ele pôs sai junto; em Todos,
+       com os atalhos à vista, o filtro de sistema sempre limpa. */
+    if (noAtalho || (id === O.TODOS && atalhosLigados())) estado.sistema = "";
+    estado.porSistema = "";
     estado.pasta = id;
     animarTrocaDePasta = true;
     desenhar();
@@ -1183,15 +1261,23 @@
     return el("section.pp-conteudo", { "aria-labelledby": "pp-pasta-titulo" }, [
       el("div.pp-conteudo__cab", {}, [
         el("div.pp-conteudo__titulo", {}, [
-          p ? el("span.r-rotulo", { texto: "Pasta" }) : null,
+          p ? el("span.r-rotulo", { texto: "Pasta" }) : estado.porSistema ? el("span.r-rotulo", { texto: "Sistema" }) : null,
           el("h2.t-secao", { id: "pp-pasta-titulo", texto: nomeDaSelecao(m.pasta) }),
-          el("span.t-mini", { texto: rotuloDeContagem(m.visiveis.length, m.base.length, m.filtrando) }),
+          el("span.t-mini", { texto: estado.porSistema
+            ? contagemDoAtalho(m)
+            : rotuloDeContagem(m.visiveis.length, m.base.length, m.filtrando) }),
         ]),
         acoes,
       ]),
       registros.length || pastas.length ? filtros(m) : null,
       el("div.lista-personagens", { id: "lista-personagens", role: "tabpanel", "aria-labelledby": "contexto-meus", "aria-live": "polite" }, [resultado(m)]),
     ]);
+  }
+
+  function contagemDoAtalho(m) {
+    var total = O.filtrar(m.base, { sistema: estado.porSistema }).length;
+    var buscando = !!String(estado.busca || "").trim();
+    return (buscando ? m.visiveis.length + " de " + total + " personagem(ns) passam pela busca" : total + " personagem(ns)") + " · de todas as pastas";
   }
 
   /* Durante um arraste, a lista de pastas longa rola sozinha quando o

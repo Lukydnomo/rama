@@ -118,6 +118,16 @@
 
   var CHANGELOG = [
     {
+      versao: "9.12.0",
+      codinome: "ASTROLÁBIO",
+      data: "16/11/2026",
+      mudancas: {
+        "Adicionado": [
+          "Personagens, Pastas laterais: com Agrupar por sistema ligado, a lateral ganha a seção Por sistema — um atalho para cada sistema que tem personagens, com a contagem. Clicar mostra todas as fichas desse sistema, de qualquer pasta ou de Sem pasta; Todos volta para todas as fichas, sem filtro de sistema e mantendo a busca. Os atalhos só navegam: não são pastas, ninguém muda de lugar e nada se solta neles. Desligar o agrupamento esconde os atalhos; no celular e nas abas nada muda.",
+        ],
+      },
+    },
+    {
       versao: "9.11.1",
       codinome: "CAMAFEU",
       data: "16/11/2026",

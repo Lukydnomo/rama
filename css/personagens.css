@@ -138,3 +138,18 @@ html.arrastando .pasta-lateral--nova { opacity: .5; }
 
 :root[data-densidade="compacta"] .pasta-lateral { min-height: calc(var(--alvo-toque) - 14px); }
 :root[data-densidade="compacta"] .pp-conteudo { gap: var(--e2); }
+
+/* Por sistema (v9.12.0): atalhos de navegação abaixo das pastas da
+   conta. Não recebem arraste: recuam durante um. */
+.pastas-laterais__secao { margin-top: 2px; padding-top: 2px; border-top: var(--borda) dashed var(--cor-traco-fraca); }
+.pastas-laterais__subtitulo {
+  margin: var(--e1) 0 1px;
+  padding-left: var(--e3);
+  font-family: var(--fonte-mini);
+  font-size: var(--texto-mini);
+  font-weight: 400;
+  letter-spacing: var(--espaco-letra-titulo);
+  text-transform: uppercase;
+  color: var(--cor-texto-3);
+}
+html.arrastando .pasta-lateral--sistema { opacity: .5; }
