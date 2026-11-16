@@ -34,9 +34,32 @@
     { chave: "", rotulo: "Tudo" },
     { chave: "g:item", rotulo: "Itens" },
     { chave: "g:habilidade", rotulo: "Habilidades" },
+    { chave: "p:poder", rotulo: "Poderes" },
     { chave: "s:ritual", rotulo: "Rituais" },
     { chave: "g:criatura", rotulo: "Criaturas" },
   ];
+  /* Os tipos estruturais (elemento, classe, origem…) ganham um filtro cada,
+     que só aparece quando a biblioteca tem algum. "Poderes" junta os
+     subtipos de poder (o de T20, o paranormal e o de classe de Ordem). */
+  var SUBTIPOS_DE_PODER = ["poder", "poderParanormal", "poderClasse"];
+  var PLURAIS = {
+    elemento: "Elementos", classe: "Classes", origem: "Origens", trilha: "Trilhas", raca: "Raças", divindade: "Divindades",
+    ocupacao: "Ocupações", descritor: "Descritores", arquetipo: "Arquétipos", estilo: "Estilos", papel: "Papéis",
+    motivacao: "Motivações", mazela: "Mazelas", fardo: "Fardos", cla: "Clãs", predador: "Predadores", disciplina: "Disciplinas",
+    vantagem: "Vantagens", perfil: "Perfis", conhecimento: "Fichas de Conhecimento", assassino: "Assassinos", ameaca: "Ameaças",
+    apavoro: "Apavoros", pokepraga: "PokéPragas", receita: "Receitas",
+  };
+  function tiposDoFiltro() {
+    var A = AD();
+    var estruturais = [];
+    if (A) registros.forEach(function (r) {
+      if (A.grupoDe(r) !== "estrutural") return;
+      var st = A.subtipoDe(r);
+      if (estruturais.indexOf(st) < 0) estruturais.push(st);
+    });
+    estruturais.sort(function (a, b) { return (PLURAIS[a] || a).localeCompare(PLURAIS[b] || b, "pt-BR"); });
+    return TIPOS.concat(estruturais.map(function (st) { return { chave: "e:" + st, rotulo: PLURAIS[st] || (st.charAt(0).toUpperCase() + st.slice(1)) }; }));
+  }
   var sistemaFiltro = "";
   function AD() { return global.RAMAHomebrewAdaptadores || null; }
   function casaFiltro(r, chave) {
@@ -44,6 +67,8 @@
     var A = AD();
     if (!A) return r.tipo === chave.slice(2);
     if (chave === "s:ritual") return A.subtipoDe(r) === "ritual";
+    if (chave === "p:poder") return A.grupoDe(r) === "habilidade" && SUBTIPOS_DE_PODER.indexOf(A.subtipoDe(r)) >= 0;
+    if (chave.indexOf("e:") === 0) return A.grupoDe(r) === "estrutural" && A.subtipoDe(r) === chave.slice(2);
     return A.grupoDe(r) === chave.slice(2);
   }
   function sistemaDoRegistro(r) { return AD() ? AD().sistemaDe(r) : "universal"; }
@@ -220,7 +245,9 @@
     }, [el("option", { value: "", texto: "Todos os sistemas" })].concat(global.RAMASistemas.lista().filter(function (s) { return sistemasPresentes[s.id]; }).map(function (s) {
       return el("option", { value: s.id, texto: s.nome, selected: s.id === sistemaFiltro });
     })));
-    chips = TIPOS.filter(function (t) { return !t.chave || contar(t.chave); }).map(function (t) {
+    var tipos = tiposDoFiltro();
+    if (tipoFiltro && !tipos.some(function (t) { return t.chave === tipoFiltro && contar(t.chave); })) tipoFiltro = "";
+    chips = tipos.filter(function (t) { return !t.chave || contar(t.chave); }).map(function (t) {
       return el("button.filtro", {
         type: "button", dataset: { tipo: t.chave },
         "aria-pressed": String(tipoFiltro === t.chave),

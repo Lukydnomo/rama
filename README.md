@@ -929,6 +929,9 @@ segredo nenhum — ele os lê das Script Properties. Publicá-lo não expõe nad
 
 ### Atualizar o backend
 
+**v9.10.1 — CRIVO:** filtros da biblioteca Homebrew para todos os tipos.
+**Só o site muda.** Site: `js/paginas/homebrew.js` e `js/versao.js`.
+
 **v9.10.0 — BRASÃO:** Poder de classe Homebrew de Ordem, exclusivo de uma
 Classe Homebrew ou de uma classe do livro, e a classe escolhe os seus.
 **Só o site muda.** Site: `js/ordem/poderes.js`, `js/ordem/homebrew-ordem.js`,
@@ -2044,7 +2047,7 @@ Três números diferentes, que não se misturam:
 
 | | Onde | O que é |
 |---|---|---|
-| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v9.10.0 |
+| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v9.10.1 |
 | `schemaVersion` | `js/ficha.js` | o formato da FICHA |
 | `versaoFormato` | `js/config.js` | o formato dos arquivos de importação |
 

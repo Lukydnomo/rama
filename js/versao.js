@@ -118,6 +118,16 @@
 
   var CHANGELOG = [
     {
+      versao: "9.10.1",
+      codinome: "CRIVO",
+      data: "15/11/2026",
+      mudancas: {
+        "Corrigido": [
+          "Homebrew: os filtros da biblioteca só tinham Itens, Habilidades, Rituais e Criaturas. Elementos, classes, origens, trilhas, raças e os demais tipos estruturais ficavam sem filtro. Agora cada tipo que existe na biblioteca ganha o seu, e há um filtro de Poderes (o de Tormenta20, o paranormal e o de classe de Ordem).",
+        ],
+      },
+    },
+    {
       versao: "9.10.0",
       codinome: "BRASÃO",
       data: "15/11/2026",
