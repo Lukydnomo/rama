@@ -69,6 +69,8 @@
     /* Pacotes de Homebrew (v9.6): leituras (o código vai no corpo, nunca no endereço). */
     "listar_pacotes",
     "ler_pacote",
+    "ler_imagens_pacote",
+    "ler_miniaturas_homebrew",
     "abrir_pacote_codigo",
     "ler_capas_pacotes",
 
@@ -706,9 +708,16 @@
 
   function lerImagemCriatura(id) { return post({ acao: "ler_imagem_criatura", criaturaId: id }); }
 
-  function salvarImagemCriatura(id, imagem) {
-    return post({ acao: "salvar_imagem_criatura", criaturaId: id, imagem: imagem });
+  /* v9.14: a imagem de qualquer criação do Homebrew (o nome ficou por
+     compatibilidade). `miniatura`: a versão pequena das listas. Imagem
+     vazia remove. */
+  function salvarImagemCriatura(id, imagem, miniatura) {
+    var corpo = { acao: "salvar_imagem_criatura", criaturaId: id, imagem: imagem };
+    if (miniatura) corpo.miniatura = miniatura;
+    return post(corpo);
   }
+  /* As miniaturas da biblioteca em lote (até 40): volta só quem tem imagem. */
+  function lerMiniaturasHomebrew(ids) { return post({ acao: "ler_miniaturas_homebrew", ids: ids }); }
 
   /* =================================================================
      CAMPANHA — PARTICIPANTES E PERSONAGENS
@@ -874,6 +883,11 @@
   /* Pacotes de Homebrew (v9.6). `codigo` só na memória da página de quem
      abriu: vai no corpo de cada leitura/importação e o servidor confere. */
   function listarPacotes(escopo) { return post({ acao: "listar_pacotes", escopo: escopo || "meus" }); }
+  /* v9.14: as imagens guardadas nas entradas do pacote (miniaturas, ou
+     a inteira com `completa`). */
+  function lerImagensPacote(pacoteId, codigo, entradas, completa) {
+    return post({ acao: "ler_imagens_pacote", pacoteId: pacoteId, codigo: codigo || undefined, entradas: entradas, completa: !!completa });
+  }
   function lerPacote(pacoteId, codigo) { return post({ acao: "ler_pacote", pacoteId: pacoteId, codigo: codigo || undefined }); }
   function abrirPacoteComCodigo(codigo) { return post({ acao: "abrir_pacote_codigo", codigo: codigo }); }
   function lerCapasPacotes(pacoteIds, codigo) { return post({ acao: "ler_capas_pacotes", pacoteIds: pacoteIds, codigo: codigo || undefined }, { segundoPlano: true }); }
@@ -1301,6 +1315,8 @@
     lerHomebrew: lerHomebrew,
     lerImagemCriatura: lerImagemCriatura,
     salvarImagemCriatura: salvarImagemCriatura,
+    lerMiniaturasHomebrew: lerMiniaturasHomebrew,
+    lerImagensPacote: lerImagensPacote,
 
     listarUsuarios: listarUsuarios,
     salvarParticipantes: salvarParticipantes,

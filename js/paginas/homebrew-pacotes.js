@@ -360,12 +360,15 @@
                 type: "checkbox", id: id, checked: !!sel[e.id], disabled: e.importada, dataset: { foco: id },
                 onchange: function (ev) { if (ev.target.checked) sel[e.id] = true; else delete sel[e.id]; pintarDetalhe(); },
               }),
+              /* v9.14: a miniatura guardada NESTA versão do pacote. */
+              global.RAMAHomebrewImagem && e.temImagem ? global.RAMAHomebrewImagem.miniatura(Object.assign({}, e.dados || {}, { tipo: e.tipo, nome: e.nome }),
+                { fonte: { pacote: { id: p.id, codigo: codigos[p.id] }, entradaId: e.id }, classe: "pc-entrada__imagem" }) : null,
               el(p.meu ? "span.pc-entrada__nome" : "label.pc-entrada__nome", p.meu ? { texto: e.nome } : { for: id, texto: e.nome }),
               el("span.t-mini.pc-entrada__resumo", { texto: resumoDaEntrada(e) }),
               e.importada ? el("span.r-etiqueta", { texto: "Já na sua biblioteca" }) : null,
               p.meu && e.origemMudou ? el("span.r-etiqueta.t-aviso", { texto: "Original mudou" }) : null,
               p.meu && !e.origemExiste ? el("span.r-etiqueta", { texto: "Original apagado" }) : null,
-              el("button.r-botao.r-botao--mini.r-botao--fantasma", { type: "button", texto: "Consultar", "aria-label": "Consultar " + e.nome, onclick: function () { consultar(e); } }),
+              el("button.r-botao.r-botao--mini.r-botao--fantasma", { type: "button", texto: "Consultar", "aria-label": "Consultar " + e.nome, onclick: function () { consultar(e, p); } }),
             ]);
           })),
         ]);
@@ -446,9 +449,11 @@
     if (e.tipo === "ritual") return t + [d.circulo, d.elemento].filter(Boolean).map(function (x) { return " · " + x; }).join("");
     return t;
   }
-  function consultar(e) {
+  function consultar(e, p) {
     var dados = Object.assign({}, e.dados || {}, { id: e.id, tipo: e.tipo, nome: e.nome, meu: false, visibilidade: "privado" });
-    if (global.RAMAHomebrew && global.RAMAHomebrew.consultar) global.RAMAHomebrew.consultar(dados, { semRegistro: true });
+    /* v9.14: a imagem é a da entrada (a cópia do pacote), nunca a original. */
+    var imagemPacote = p && e.temImagem ? { pacote: { id: p.id, codigo: codigos[p.id] }, entradaId: e.id } : null;
+    if (global.RAMAHomebrew && global.RAMAHomebrew.consultar) global.RAMAHomebrew.consultar(dados, { semRegistro: true, imagemPacote: imagemPacote });
   }
 
   function resultadoDaImportacao(d) {

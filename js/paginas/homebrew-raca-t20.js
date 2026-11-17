@@ -41,6 +41,8 @@
     d.variantes = (d.variantes || []).map(function (v) { return { nome: v.nome || "", atributos: v.atributos || { fixo: {} }, habilidades: (v.habilidades || []).filter(function (k) { return k !== "corpo"; }) }; });
     if (!d.habilidades.length) d.habilidades.push({ nome: "", resumo: "", efeitos: [], escolhas: [] });
     var r = { nome: reg ? reg.nome : "", descricao: reg ? reg.descricao || "" : "", visibilidade: reg ? reg.visibilidade || "privado" : "privado", passo: 1, sujo: false };
+    /* v9.14: a ilustração opcional da raça (js/homebrew-imagem.js). */
+    var imagem = global.RAMAHomebrewImagem ? global.RAMAHomebrewImagem.campo({ registro: reg, sistema: "tormenta20", grupo: "estrutural", subtipo: "raca", aoMudar: function () { r.sujo = true; } }) : null;
     var form = el("div.hbe-form"), lado = el("aside.hbe-lado", { "aria-label": "Revisão" });
     var janela = UI.modal({
       titulo: (reg ? "Editar raça" : "Nova raça") + " · Tormenta20", largo: true, classe: "hbe-janela hbc-janela",
@@ -201,7 +203,7 @@
         lista("Automático", au.automatico),
         lista("Escolha de quem joga", au.escolha),
         lista("Decisão da mesa", au.mesa),
-        [el("div.r-campo", {}, [el("span.r-rotulo", { texto: "Visibilidade" }), el("div.filtros__grupo", { role: "group", "aria-label": "Visibilidade" }, [["privado", "Privada"], ["publico", "Pública"]].map(function (x) {
+        [imagem ? imagem.el : null, el("div.r-campo", {}, [el("span.r-rotulo", { texto: "Visibilidade" }), el("div.filtros__grupo", { role: "group", "aria-label": "Visibilidade" }, [["privado", "Privada"], ["publico", "Pública"]].map(function (x) {
           return el("button.filtro", { type: "button", "aria-pressed": String(r.visibilidade === x[0]), texto: x[1], onclick: function () { r.visibilidade = x[0]; mudou(true); } });
         }))])]
       ));
@@ -224,6 +226,7 @@
       if (!g.ok) { UI.avisoErro(g.erro); return; }
       var resp = await global.RAMAApi.salvarHomebrew(g.registro);
       if (!resp.ok) { UI.avisoDeFalha(resp, "gravação da raça"); return; }
+      if (imagem) await imagem.salvarEm((resp.dados && resp.dados.id) || (reg && reg.id));
       r.sujo = false;
       fechar();
       if (H()) H().carregarBiblioteca(true);

@@ -432,6 +432,72 @@
   ORDEM.habilidade = { subtipos: [{ chave: "habilidade", rotulo: "Habilidade / poder", campos: [] }, { chave: "poderParanormal", rotulo: "Poder paranormal", campos: [] }, { chave: "poderClasse", rotulo: "Poder de classe", campos: [] }, { chave: "ritual", rotulo: "Ritual", campos: [] }] };
   UNIVERSAL.habilidade = { subtipos: [{ chave: "habilidade", rotulo: "Habilidade", campos: [] }, { chave: "poder", rotulo: "Poder", campos: [] }, { chave: "tecnica", rotulo: "Técnica", campos: [] }, { chave: "magia", rotulo: "Magia", campos: [] }] };
 
+  /* =================================================================
+     IMAGEM OPCIONAL (v9.14)
+     -----------------------------------------------------------------
+     Toda criação pode ter UMA imagem, da criação inteira — nunca um
+     campo de regra. A FORMA vem do sistema, do grupo e do subtipo:
+       retrato     criatura, inimigo, ameaça, antagonista, assassino
+       ilustracao  todo item; classe, raça, origem, trilha, perfil…
+       simbolo     ritual, magia, poder, habilidade, elemento… (o desenho
+                   inteiro, com transparência)
+       escolha     o modelo Universal "Em branco": quem cria escolhe
+                   ilustração ou ícone (registro.imagemForma)
+     A imagem mora fora dos dados (CRIATURAS_IMAGENS, pela id) e não
+     muda nenhuma regra da ficha.
+     ================================================================= */
+  var IMAGEM_ESTRUTURAL = {
+    ordem: { classe: "ilustracao", origem: "ilustracao", trilha: "ilustracao", elemento: "simbolo" },
+    ordem2: { perfil: "ilustracao", ocupacao: "ilustracao" },
+    tormenta20: { raca: "ilustracao", origem: "ilustracao", divindade: "ilustracao", classe: "ilustracao" },
+    vampiro: { cla: "ilustracao", predador: "ilustracao", conhecimento: "ilustracao", disciplina: "simbolo", vantagem: "simbolo" },
+    goblins: { ocupacao: "ilustracao", pokepraga: "retrato", receita: "ilustracao", descritor: "simbolo" },
+    oblivio: { papel: "ilustracao", motivacao: "simbolo", mazela: "simbolo", fardo: "simbolo" },
+    brutal: { arquetipo: "ilustracao", assassino: "retrato", ameaca: "retrato", estilo: "simbolo", apavoro: "simbolo" },
+  };
+  var ROTULO_IMAGEM = { retrato: "Retrato", ilustracao: "Ilustração", simbolo: "Símbolo", escolha: "Imagem", icone: "Ícone" };
+  function imagemDe(sistema, grupo, subtipo, extra) {
+    var x = obj(extra);
+    var forma = null;
+    if (grupo === "criatura") forma = "retrato";
+    else if (grupo === "item") forma = sistema === "universal" && x.modeloUniversal === "branco" ? "escolha" : "ilustracao";
+    else if (grupo === "habilidade") forma = sistema === "universal" && x.modeloUniversal === "arquetipo" ? "ilustracao" : "simbolo";
+    else if (grupo === "estrutural") forma = obj(IMAGEM_ESTRUTURAL[sistema])[subtipo] || null;
+    if (!forma) return null;
+    var efetiva = forma === "escolha" ? (x.imagemForma === "icone" ? "simbolo" : "ilustracao") : forma;
+    return { forma: forma, efetiva: efetiva, rotulo: forma === "escolha" ? (x.imagemForma === "icone" ? ROTULO_IMAGEM.icone : ROTULO_IMAGEM.ilustracao) : ROTULO_IMAGEM[forma] };
+  }
+  /* O modelo Universal de um registro (arquetipo | elemento | branco | ""). */
+  function modeloUniversalDe(r) {
+    var u = obj(obj(r).universal);
+    if (u.modelo) return u.modelo;
+    if (u.rotuloTipo === "Arquétipo") return "arquetipo";
+    if (u.rotuloTipo === "Elemento / Condição") return "elemento";
+    return "";
+  }
+  function imagemDoRegistro(r) {
+    var x = obj(r);
+    return imagemDe(sistemaDe(x), grupoDe(x), subtipoDe(x), { modeloUniversal: modeloUniversalDe(x), imagemForma: x.imagemForma });
+  }
+  /* A cobertura inteira (testes e o registro): cada tipo de cada sistema. */
+  function coberturaDeImagens() {
+    var saida = [];
+    Object.keys(SISTEMAS).forEach(function (s) {
+      ["item", "habilidade", "estrutural"].forEach(function (g) {
+        subtipos(s, g).forEach(function (sp) { saida.push({ sistema: s, grupo: g, subtipo: sp.chave, rotulo: sp.rotulo, imagem: imagemDe(s, g, sp.chave) }); });
+      });
+      saida.push({ sistema: s, grupo: "criatura", subtipo: "criatura", rotulo: "Criatura", imagem: imagemDe(s, "criatura", "criatura") });
+    });
+    if (SISTEMAS.universal) {
+      saida.push({ sistema: "universal", grupo: "habilidade", subtipo: "ritual", rotulo: "Ritual", imagem: imagemDe("universal", "habilidade", "ritual") });
+      ["arquetipo", "elemento", "branco"].forEach(function (m) {
+        var g = m === "branco" ? "item" : "habilidade";
+        saida.push({ sistema: "universal", grupo: g, subtipo: m, rotulo: "Modelo " + m, imagem: imagemDe("universal", g, g === "item" ? "outro" : "habilidade", { modeloUniversal: m }) });
+      });
+    }
+    return saida;
+  }
+
   function adaptador(id) { return SISTEMAS[id] || null; }
   function subtipos(sistema, grupo) { var a = adaptador(sistema); return a && a[grupo] ? a[grupo].subtipos : []; }
   function especDoSubtipo(sistema, grupo, subtipo) { return subtipos(sistema, grupo).filter(function (s) { return s.chave === subtipo; })[0] || null; }
@@ -526,6 +592,8 @@
       if (["origem", "trilha", "raca", "divindade", "classe", "ocupacao", "descritor", "arquetipo", "estilo", "papel", "motivacao", "mazela", "fardo", "cla", "predador", "disciplina", "vantagem", "perfil", "conhecimento", "assassino", "ameaca", "apavoro"].indexOf(subtipo) >= 0 && r.def) reg.modelo.def = r.def;
     }
     if (r.universal && sistema === "universal") reg.universal = normalizarUniversal(r.universal);
+    /* v9.14: a forma da imagem do modelo "Em branco" (ilustração ou ícone). */
+    if (r.imagemForma === "icone" || r.imagemForma === "ilustracao") reg.imagemForma = r.imagemForma;
     if (r.id) reg.id = r.id;
     if (r.visibilidade) reg.visibilidade = r.visibilidade;
     return { ok: true, registro: reg };
@@ -794,6 +862,8 @@
     var valores = {};
     campos.forEach(function (c) { var v = normalizarValor(c, obj(x.valores)[c.chave]); if (v !== null && v !== "" && !(Array.isArray(v) && !v.length)) valores[c.chave] = v; });
     var saida = { versao: VERSAO, rotuloTipo: texto(x.rotuloTipo, 40), campos: campos, valores: valores, acoes: lista(x.acoes).slice(0, 12).map(normalizarAcao) };
+    /* v9.14: o modelo de onde veio (a imagem do "Em branco" é escolhida). */
+    if (["arquetipo", "elemento", "branco"].indexOf(x.modelo) >= 0) saida.modelo = x.modelo;
     /* O que a FICHA guarda de uso (cargas gastas): só no item da ficha. */
     if (x.estado && typeof x.estado === "object") {
       var est = { usos: {} };
@@ -956,7 +1026,7 @@
       defImportada = { grupoT20: pz.grupo, nivelMinimo: pz.nivelMinimo, efeitos: pz.efeitos };
       if (pz.acao) defImportada.acao = pz.acao;
     }
-    var r = guardar(m.sistema, g, m.subtipo, { nome: x.nome, descricao: x.descricao || x.texto, origem: x.origem, valores: m.def, universal: x.universal, etiqueta: x.etiqueta, modeloAnterior: m, classe: classeImportada, def: defImportada });
+    var r = guardar(m.sistema, g, m.subtipo, { nome: x.nome, descricao: x.descricao || x.texto, origem: x.origem, valores: m.def, universal: x.universal, etiqueta: x.etiqueta, imagemForma: x.imagemForma, modeloAnterior: m, classe: classeImportada, def: defImportada });
     if (r.ok) { delete r.registro.id; r.registro.visibilidade = "privado"; }
     return r;
   }
@@ -971,5 +1041,6 @@
     chaveDe: chaveDe, normalizarUniversal: normalizarUniversal, normalizarAcao: normalizarAcao,
     executarAcao: executarAcao, recuperarUsos: recuperarUsos, usosRestantes: usosRestantes, previaDaAcao: previaDaAcao,
     compativelComPacote: compativelComPacote,
+    imagemDe: imagemDe, imagemDoRegistro: imagemDoRegistro, modeloUniversalDe: modeloUniversalDe, coberturaDeImagens: coberturaDeImagens,
   };
 })(typeof window !== "undefined" ? window : globalThis);

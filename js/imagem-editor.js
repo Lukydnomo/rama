@@ -72,6 +72,18 @@
     },
     /* Precisa ser legível: vai inteira por padrão; recorte livre se a
        pessoa quiser. Nunca um quadrado forçado. */
+    /* v9.14 — Homebrew. Ilustração de item, classe, raça, origem…: vai
+       inteira por padrão (proporção livre), reduzida para caber em 640 px.
+       Símbolo de ritual, magia, poder, elemento…: o desenho inteiro, com a
+       transparência preservada (nunca JPEG com fundo preto), em 512 px. */
+    ilustracao: {
+      titulo: "Ilustração da criação", livre: true, inteiraPorPadrao: true, lado: function () { return 640; },
+      explicacao: "Por padrão a ilustração vai inteira, na proporção do arquivo. Em “Recortar”, escolha a área. A lista mostra uma miniatura; a consulta, a imagem maior.",
+    },
+    simbolo: {
+      titulo: "Símbolo da criação", livre: true, inteiraPorPadrao: true, lado: function () { return 512; },
+      explicacao: "O símbolo vai inteiro, na proporção do desenho e com o fundo transparente preservado. Em “Recortar”, escolha a área se quiser.",
+    },
     documento: {
       titulo: "Imagem do documento", livre: true, inteiraPorPadrao: true, lado: function () { return 1024; },
       explicacao: "Por padrão a imagem vai inteira, reduzida para caber em 1024 px. Em “Recortar”, escolha a área livremente.",

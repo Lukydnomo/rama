@@ -97,6 +97,10 @@
   /* A moldura comum: janela, etapas, rodapé, lado, salvar. */
   function moldura(cfg) {
     var r = cfg.r;
+    /* v9.14: a imagem opcional da criação (js/homebrew-imagem.js), na
+       etapa da visibilidade; sobe depois que o registro foi gravado. */
+    var HI = global.RAMAHomebrewImagem;
+    var imagem = HI ? HI.campo({ registro: cfg.reg, sistema: cfg.sistema || "tormenta20", grupo: cfg.grupo || "estrutural", subtipo: cfg.subtipo, aoMudar: function () { r.sujo = true; } }) : null;
     var form = el("div.hbe-form"), lado = el("aside.hbe-lado", { "aria-label": "Revisão" });
     var janela = UI.modal({
       titulo: cfg.titulo, largo: true, classe: "hbe-janela hbc-janela",
@@ -133,6 +137,7 @@
       if (!g.ok) { UI.avisoErro(g.erro); return; }
       var resp = await global.RAMAApi.salvarHomebrew(g.registro);
       if (!resp.ok) { UI.avisoDeFalha(resp, "gravação da " + cfg.rotulo); return; }
+      if (imagem) await imagem.salvarEm((resp.dados && resp.dados.id) || (cfg.reg && cfg.reg.id));
       r.sujo = false;
       fechar();
       if (cfg.recarregar) cfg.recarregar(); else if (H()) H().carregarBiblioteca(true);
@@ -140,9 +145,10 @@
       if (cfg.aoSalvar) cfg.aoSalvar(resp.dados && resp.dados.id);
     }
     function visibilidade() {
-      return el("div.r-campo", {}, [el("span.r-rotulo", { texto: "Visibilidade" }), el("div.filtros__grupo", { role: "group", "aria-label": "Visibilidade" }, [["privado", "Privada"], ["publico", "Pública"]].map(function (x) {
+      var vis = el("div.r-campo", {}, [el("span.r-rotulo", { texto: "Visibilidade" }), el("div.filtros__grupo", { role: "group", "aria-label": "Visibilidade" }, [["privado", "Privada"], ["publico", "Pública"]].map(function (x) {
         return el("button.filtro", { type: "button", "aria-pressed": String(r.visibilidade === x[0]), texto: x[1], onclick: function () { r.visibilidade = x[0]; r.sujo = true; pintar(); } });
       }))]);
+      return imagem ? el("div.pilha--curta", { class: "pilha" }, [imagem.el, vis]) : vis;
     }
     function lista(rotulo, itens) { return itens.length ? [el("p.t-rotulo", { texto: rotulo }), el("ul.hbe-mini", {}, itens.map(function (t) { return el("li", { texto: t }); }))] : []; }
     return { pintar: pintar, pintarLado: pintarLado, janela: janela, visibilidade: visibilidade, lista: lista };

@@ -468,7 +468,11 @@
     var circulo = U.texto(ritual.circulo).trim();
     if (circulo) marcas.push(el("span.r-etiqueta.ritual-marca", { texto: /[a-zà-ú]/i.test(circulo) ? circulo : rotulos.circulo + " " + circulo }));
     elementosDoRitual(ritual).forEach(function (x) {
-      marcas.push(el("span.r-etiqueta.ritual-marca" + (x.chave ? ".bib-elemento.bib-elemento--" + x.chave : ""), { texto: x.nome }));
+      var marca = el("span.r-etiqueta.ritual-marca" + (x.chave ? ".bib-elemento.bib-elemento--" + x.chave : ""), { texto: x.nome });
+      /* v9.14: um elemento Homebrew com a cor da cópia que o ritual leva. */
+      var ELm = global.RAMAOrdemElementos;
+      if (x.chave === "homebrew" && ELm && ELm.pintarFaixa) ELm.pintarFaixa(marca, x.real, (ritual.ordem || {}).elementosHomebrew || ritual.elementosHomebrew);
+      marcas.push(marca);
     });
     return marcas.length ? el("span.ritual-marcas", {}, marcas) : null;
   }
@@ -480,7 +484,7 @@
        elementos), com a marca visual "homebrew" — nunca com a de um oficial. */
     function porChave(k) {
       var e = lista.filter(function (x) { return x.chave === k; })[0];
-      return { chave: e ? k : "homebrew", nome: e ? e.nome : (RT() && RT().nomeDoElemento ? RT().nomeDoElemento(k) : k) };
+      return { chave: e ? k : "homebrew", real: k, nome: e ? e.nome : (RT() && RT().nomeDoElemento ? RT().nomeDoElemento(k) : k) };
     }
     if (o.todosOsElementos && Array.isArray(o.elementos) && o.elementos.length) {
       return o.elementos.map(porChave);

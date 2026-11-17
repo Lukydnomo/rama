@@ -300,6 +300,8 @@
       }));
     var form = FORMS[sistema](c[sistema]);
     var previa = el("div.hb-sistema__previa");
+    /* v9.14: o retrato opcional (js/homebrew-imagem.js), como nas de Ordem. */
+    var imagem = global.RAMAHomebrewImagem ? global.RAMAHomebrewImagem.campo({ registro: c.id ? Object.assign({}, c, { tipo: "criatura" }) : null, sistema: sistema, grupo: "criatura", subtipo: "criatura" }) : null;
     function verPrevia() {
       var r = form.ler();
       if (!r.ok) { UI.avisoAtencao(r.motivo); return; }
@@ -312,6 +314,7 @@
       largo: true,
       conteudo: [el("div.pilha.hb-sistema", {}, [
         grade([nome, categoria]),
+        imagem ? imagem.el : null,
         el("div.r-campo", {}, [el("span.t-rotulo", { texto: "Visibilidade" }), seletorVis]),
       ].concat(form.nos).concat([descricao,
         el("div.faixa", {}, [el("button.r-botao.r-botao--mini", { type: "button", texto: "Ver como fica", onclick: verPrevia })]),
@@ -329,6 +332,7 @@
           if (problemas.length) { UI.avisoErro("Confira antes de salvar: " + problemas.slice(0, 3).join("; ") + "."); return; }
           var s = await global.RAMAApi.salvarHomebrew(pronta);
           if (!s.ok) { UI.avisoDeFalha(s, "gravação da criatura"); return; }
+          if (imagem) await imagem.salvarEm((s.dados && s.dados.id) || c.id);
           fechar();
           if (aoSalvar) aoSalvar();
         } },

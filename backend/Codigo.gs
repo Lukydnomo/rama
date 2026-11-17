@@ -392,6 +392,8 @@ function rotasDoNucleo() {
 
   ler_imagem_criatura:   { publica: false, fn: acaoLerImagemCriatura },
   salvar_imagem_criatura:{ publica: false, fn: acaoSalvarImagemCriatura },
+  /* v9.14: as miniaturas da biblioteca, em lote (qualquer criação). */
+  ler_miniaturas_homebrew: { publica: false, fn: acaoLerMiniaturasHomebrew },
 
   ler_perfil:            { publica: false, fn: acaoLerPerfil },
   salvar_perfil:         { publica: false, fn: acaoSalvarPerfil },
@@ -552,6 +554,7 @@ function acoesDeLote() {
     listar_homebrew: true,
     ler_homebrew: true,
     ler_imagem_criatura: true,
+    ler_miniaturas_homebrew: true,
     ler_perfil: true,
     listar_campanhas: true,
     ler_campanha: true,
@@ -3732,6 +3735,10 @@ function resumoDeCriatura(d) {
     var nomesHb = {};
     r.elementos.forEach(function (e) { if (hbEl[e] && hbEl[e].nome) nomesHb[e] = String(hbEl[e].nome).slice(0, 40); });
     if (Object.keys(nomesHb).length) r.nomesDeElementos = nomesHb;
+    /* v9.14: e a cor copiada (a faixa da etiqueta na lista). */
+    var coresHb = {};
+    r.elementos.forEach(function (e) { if (hbEl[e] && /^#[0-9a-fA-F]{6}$/.test(String(hbEl[e].cor || '')) && hbEl[e].corDefinida !== false) coresHb[e] = String(hbEl[e].cor).toLowerCase(); });
+    if (Object.keys(coresHb).length) r.coresDeElementos = coresHb;
     r.tamanho = String(ordem.tamanho || '').slice(0, 30);
     r.tipo = String(ordem.tipo || '').slice(0, 40);
   }
@@ -3891,11 +3898,20 @@ function acaoLerImagemCriatura(corpo, usuario) {
   return { ok: true, dados: { imagem: imagemDe(imagem, 'imagem') } };
 }
 
+/* v9.14: vale para a imagem de qualquer criação do Homebrew (retrato,
+   ilustração ou símbolo) — a permissão é a do registro: só o dono grava.
+   `miniatura` (opcional) é a versão pequena das listas; imagem vazia
+   REMOVE a linha. Uma miniatura sem a coluna (setupRama não rodou) é só
+   ignorada: a lista cai na imagem inteira, como os retratos antigos. */
+var MAX_MINIATURA_HOMEBREW = 16000;
+
 function acaoSalvarImagemCriatura(corpo, usuario) {
   var imagem = String(corpo.imagem || '');
+  var miniatura = String(corpo.miniatura || '');
 
   if (imagem && imagem.indexOf('data:image/') !== 0) return { ok: false, erro: 'dados_invalidos' };
   if (imagem.length > MAX_IMAGEM) return { ok: false, erro: 'dados_grandes' };
+  if (miniatura && (miniatura.indexOf('data:image/') !== 0 || miniatura.length > MAX_MINIATURA_HOMEBREW)) return { ok: false, erro: 'dados_invalidos' };
 
   return comTrava(function () {
     var registro = meuRegistro(ABAS.HOMEBREW, corpo.criaturaId, usuario);
@@ -3903,21 +3919,54 @@ function acaoSalvarImagemCriatura(corpo, usuario) {
 
     var agora = new Date().toISOString();
     var existente = linhaLeve(ABAS.CRIATURAS_IMAGENS, 'criaturaId', corpo.criaturaId);
+    var comMiniatura = temColuna(ABAS.CRIATURAS_IMAGENS, 'miniatura');
+
+    if (!imagem) {
+      if (existente) apagarLinha(ABAS.CRIATURAS_IMAGENS, existente._linha);
+      return { ok: true, dados: { removida: true } };
+    }
 
     if (existente) {
       existente.ownerId = usuario.id;
       existente.atualizadoEm = agora;
       var colunasCriatura = aplicarImagem(ABAS.CRIATURAS_IMAGENS, existente, 'imagem', imagem);
       if (!colunasCriatura) return { ok: false, erro: 'instalacao_incompleta', detalhe: 'imagemCont' };
+      if (comMiniatura) { existente.miniatura = miniatura; colunasCriatura = colunasCriatura.concat(['miniatura']); }
       atualizarCampos(ABAS.CRIATURAS_IMAGENS, existente, ['ownerId', 'atualizadoEm'].concat(colunasCriatura));
     } else {
       var novaImagem = { criaturaId: corpo.criaturaId, ownerId: usuario.id, atualizadoEm: agora };
       if (!aplicarImagem(ABAS.CRIATURAS_IMAGENS, novaImagem, 'imagem', imagem)) return { ok: false, erro: 'instalacao_incompleta', detalhe: 'imagemCont' };
+      if (comMiniatura) novaImagem.miniatura = miniatura;
       inserir(ABAS.CRIATURAS_IMAGENS, novaImagem);
     }
 
-    return { ok: true };
+    return { ok: true, dados: { atualizadoEm: agora } };
   });
+}
+
+/* As miniaturas de várias criações numa viagem (v9.14): só as que a conta
+   alcança (as dela e as públicas — a mesma regra de ler o registro); quem
+   não tem imagem, ou não pode ser visto, simplesmente não volta. Um
+   retrato antigo, sem miniatura gravada, volta com a imagem inteira. */
+function acaoLerMiniaturasHomebrew(corpo, usuario) {
+  var ids = Array.isArray(corpo.ids) ? corpo.ids.map(String) : [];
+  if (!ids.length || ids.length > MAX_IMAGENS_POR_PEDIDO) return { ok: false, erro: 'dados_invalidos' };
+  var pedidos = {};
+  ids.forEach(function (id) { pedidos[id] = true; });
+  var permitidos = {};
+  lerLeves(ABAS.HOMEBREW).forEach(function (h) { if (pedidos[String(h.id)] && homebrewAlcancavel(h, usuario)) permitidos[String(h.id)] = true; });
+  var linhas = lerLeves(ABAS.CRIATURAS_IMAGENS).filter(function (l) { return permitidos[String(l.criaturaId)]; });
+  var saida = {};
+  if (!linhas.length) return { ok: true, dados: saida };
+  var minis = temColuna(ABAS.CRIATURAS_IMAGENS, 'miniatura') ? lerCelulas(ABAS.CRIATURAS_IMAGENS, linhas, 'miniatura') : {};
+  var semMini = linhas.filter(function (l) { return !minis[l._linha]; });
+  var inteiras = semMini.length ? imagensDasLinhas(ABAS.CRIATURAS_IMAGENS, semMini, 'imagem') : {};
+  var datas = lerCelulas(ABAS.CRIATURAS_IMAGENS, linhas, 'atualizadoEm');
+  linhas.forEach(function (l) {
+    var m = String(minis[l._linha] || inteiras[l._linha] || '');
+    if (m) saida[String(l.criaturaId)] = { miniatura: m, versao: String(datas[l._linha] || '') };
+  });
+  return { ok: true, dados: saida };
 }
 
 

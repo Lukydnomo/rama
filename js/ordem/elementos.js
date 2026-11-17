@@ -66,24 +66,38 @@
   function normalizar(bruto) {
     var b = obj(bruto);
     var chave = ehHomebrew(b.chave) ? b.chave : chaveNova(b.nome, b.homebrewId);
-    var c = /^#[0-9a-fA-F]{6}$/.test(String(b.cor || "")) ? String(b.cor).toLowerCase() : "#5c7c8a";
+    var corOk = /^#[0-9a-fA-F]{6}$/.test(String(b.cor || ""));
+    var c = corOk ? String(b.cor).toLowerCase() : "#5c7c8a";
     var lista = function (v) { return (Array.isArray(v) ? v : []).map(String).filter(function (k, i, l) { return aceito(k) && k !== chave && l.indexOf(k) === i; }).slice(0, 10); };
     return {
       chave: chave, nome: texto(b.nome, 40).trim() || "Elemento", descricao: texto(b.descricao, 1200), cor: c,
       simbolo: texto(b.simbolo, 4), forteContra: lista(b.forteContra), fracoContra: lista(b.fracoContra),
       permiteAfinidade: b.permiteAfinidade === true, homebrewId: texto(b.homebrewId, 80), homebrew: true,
+      /* v9.14: a cor veio mesmo da definição (não é o padrão de quem não
+         escolheu): só então ela pinta a faixa. */
+      corDefinida: corOk && b.corDefinida !== false,
     };
   }
-  function registrar(d) {
+  /* opcoes.biblioteca (v9.14): a definição veio da biblioteca da conta —
+     ela vale nos seletores desta página, e uma CÓPIA antiga que chega
+     com uma criatura ou ritual não a substitui (a cópia continua valendo
+     para a própria criatura ou ritual, pelo mapa dela). */
+  function registrar(d, opcoes) {
     if (!d || !ehHomebrew(d.chave)) return null;
     var n = normalizar(d);
+    if (opcoes && opcoes.biblioteca) Object.defineProperty(n, "_biblioteca", { value: true, enumerable: false });
     registro[n.chave] = n;
     return n;
   }
   /* Um mapa { chave: def } (o que viaja copiado num ritual, criatura ou ficha). */
   function registrarMapa(m) {
     var saida = {};
-    Object.keys(obj(m)).forEach(function (k) { if (ehHomebrew(k)) { var n = registrar(Object.assign({}, m[k], { chave: k })); if (n) saida[k] = n; } });
+    Object.keys(obj(m)).forEach(function (k) {
+      if (!ehHomebrew(k)) return;
+      if (registro[k] && registro[k]._biblioteca) { saida[k] = registro[k]; return; }
+      var n = registrar(Object.assign({}, m[k], { chave: k }));
+      if (n) saida[k] = n;
+    });
     return saida;
   }
   /* As cópias das definições que uma lista de chaves usa (para guardar
@@ -111,7 +125,31 @@
     return "";
   }
 
+  /* v9.14: a FAIXA de um elemento numa etiqueta, seletor ou lista. Os
+     oficiais, pela classe de sempre; um Homebrew, pela cor da definição
+     DAQUELE contexto — a cópia que viaja com a criatura, o ritual ou o
+     item (mapa), e só então o registro da página. Sem definição ou sem cor
+     válida, a cor neutra (tracejada). */
+  function corDaFaixa(k, mapa) {
+    if (!ehHomebrew(k)) return "";
+    var daCopia = obj(mapa)[k];
+    if (daCopia && typeof daCopia === "object") {
+      return /^#[0-9a-fA-F]{6}$/.test(String(daCopia.cor || "")) && daCopia.corDefinida !== false ? String(daCopia.cor).toLowerCase() : "";
+    }
+    var d = registro[k];
+    return d && d.corDefinida ? d.cor : "";
+  }
+  function classeDaFaixa(k) { return "bib-elemento--" + (oficial(k) || k === "transmissao" || k === "varia" ? k : "homebrew"); }
+  function pintarFaixa(no, k, mapa) {
+    if (!no) return no;
+    var c = corDaFaixa(k, mapa);
+    if (c) { no.style.setProperty("--cor-elemento-hb", c); no.classList.add("bib-elemento--com-cor"); }
+    else { no.style.removeProperty("--cor-elemento-hb"); no.classList.remove("bib-elemento--com-cor"); }
+    return no;
+  }
+
   global.RAMAOrdemElementos = {
+    corDaFaixa: corDaFaixa, classeDaFaixa: classeDaFaixa, pintarFaixa: pintarFaixa,
     OFICIAIS: OFICIAIS, CHAVES_OFICIAIS: CHAVES_OFICIAIS,
     oficial: oficial, aceito: aceito, ehHomebrew: ehHomebrew, pendente: pendente, def: def, nome: nome, cor: cor,
     chaveNova: chaveNova, normalizar: normalizar, registrar: registrar, registrarMapa: registrarMapa, copiasPara: copiasPara,

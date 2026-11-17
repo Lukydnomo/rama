@@ -62,6 +62,7 @@
     var raiz = el("div.pilha.criatura-painel.criatura-nativa", {}, [
       el("div.pilha--curta.criatura-cabeca", { class: "pilha" }, [
         el("div.criatura-painel__topo", {}, [
+          retratoProprio(o, nome, null),
           el("p.t-secao", { texto: nome }),
           el("span.r-etiqueta", { texto: o.rotulo || "Criatura" }),
         ]),
@@ -126,6 +127,7 @@
 
     var corpo = el("div.pilha.criatura-painel", {}, [
       el("div.criatura-painel__topo", {}, [
+        retratoProprio(o, nome, null),
         el("p.t-secao", { texto: nome }),
         el("span.r-etiqueta", { texto: o.rotulo || "Criatura" }),
       ]),
@@ -391,7 +393,7 @@
       ].filter(Boolean));
       return el("div.pilha--curta.criatura-cabeca", { class: "pilha" }, [
         el("div.criatura-painel__topo", {}, [
-          imagens ? retratoComCorpo(imagens, nome) : null,
+          o.imagem ? retratoProprio(o, nome, imagens) : (imagens ? retratoComCorpo(imagens, nome) : null),
           el("p.t-secao", { texto: nome + (v.formaAtiva ? " · " + v.formaAtiva.nome : "") }),
           el("span.r-etiqueta", { texto: o.rotulo || (od.aliada ? "Aliado" : "Criatura") }),
         ]),
@@ -402,7 +404,10 @@
              (elementosHomebrew), nunca a chave hbe-… crua. */
           var ELp = global.RAMAOrdemElementos;
           if (!NOMES_ELEMENTO[e] && ELp && od.elementosHomebrew) ELp.registrarMapa(od.elementosHomebrew);
-          return el("span.r-etiqueta.bib-elemento.bib-elemento--" + (NOMES_ELEMENTO[e] ? e : "homebrew"), { texto: NOMES_ELEMENTO[e] || (ELp ? ELp.nome(e) : e) });
+          var etiquetaEl = el("span.r-etiqueta.bib-elemento.bib-elemento--" + (NOMES_ELEMENTO[e] ? e : "homebrew"), { texto: NOMES_ELEMENTO[e] || (ELp ? ELp.nome(e) : e) });
+          /* v9.14: a faixa com a cor da cópia que a criatura leva. */
+          if (!NOMES_ELEMENTO[e] && ELp && ELp.pintarFaixa) ELp.pintarFaixa(etiquetaEl, e, od.elementosHomebrew);
+          return etiquetaEl;
         }).concat(od.elementos.length ? [] : [el("span.r-etiqueta", { texto: v.natureza === "paranormal" ? "Sem elemento" : "Realidade" })])),
         el("p.t-mini", { texto: origemTexto + (od.variante ? " · " + (od.variante.rotulo || "Variante") : "") }),
         el("p.t-mini", {
@@ -1016,6 +1021,30 @@
     img.addEventListener("error", function () { botao.hidden = true; });
     botao.appendChild(img);
     return botao;
+  }
+
+  /* v9.14: o retrato salvo da criação (o.imagem → Promise<dataURL>), com
+     prioridade sobre a arte do catálogo. Enquanto ele não chega (ou se
+     não houver), fica a arte do livro — e o corpo inteiro do livro
+     continua a um clique. Sem nenhum dos dois, o espaço some. */
+  function retratoProprio(o, nome, imagens) {
+    if (!o.imagem) return null;
+    var caixa = el("span.criatura-retrato__caixa", {}, imagens ? [retratoComCorpo(imagens, nome)] : []);
+    caixa.hidden = !imagens;
+    Promise.resolve(o.imagem()).then(function (src) {
+      if (!src || !caixa.isConnected && !caixa.parentNode) return;
+      var botao = el("button.criatura-retrato.criatura-retrato--proprio", {
+        type: "button", title: "Ver o retrato", "aria-label": "Ver o retrato de " + nome,
+        onclick: function () {
+          var partes = [el("div.criatura-corpo__caixa", {}, [el("img.criatura-corpo", { src: src, alt: "Retrato de " + nome })])];
+          if (imagens) partes.push(el("button.r-botao.r-botao--mini", { type: "button", texto: "Ver o corpo inteiro (arte do livro)", onclick: function () { verCorpoInteiro(imagens, nome); } }));
+          UI.modal({ titulo: nome, largo: true, conteudo: partes, botoes: [{ rotulo: "Fechar" }] });
+        },
+      }, [el("img", { src: src, alt: "", width: 64, height: 64 })]);
+      U.trocar(caixa, [botao]);
+      caixa.hidden = false;
+    }, function () {});
+    return caixa;
   }
 
   function verCorpoInteiro(imagens, nome) {

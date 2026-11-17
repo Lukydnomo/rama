@@ -47,6 +47,19 @@
     if (achado) return achado.nomesDeElementos[e];
     return global.RAMAOrdemElementos ? global.RAMAOrdemElementos.nome(e) : e;
   }
+  /* v9.14: a faixa de um elemento Homebrew com a cor da cópia que veio
+     no resumo da criatura (coresDeElementos); sem ela, o registro. */
+  function faixaDe(e) { return NOMES_ELEMENTO[e] ? "bib-elemento--" + e : "bib-elemento--homebrew"; }
+  function mapaDeCores(x, lista) {
+    var m = {};
+    [x].concat(lista || []).forEach(function (y) { if (y && y.coresDeElementos) Object.keys(y.coresDeElementos).forEach(function (k) { if (!m[k]) m[k] = { cor: y.coresDeElementos[k] }; }); });
+    return m;
+  }
+  function pintarFaixaDe(no, e, mapa) {
+    var EL = global.RAMAOrdemElementos;
+    if (no && EL && EL.pintarFaixa && !NOMES_ELEMENTO[e]) EL.pintarFaixa(no, e, mapa && mapa[e] ? mapa : null);
+    return no;
+  }
   var NATUREZAS = [{ v: "", r: "Todas" }, { v: "paranormal", r: "Paranormais" }, { v: "humana", r: "Pessoas" }, { v: "animal", r: "Animais" }];
 
   var lembrado = { aba: "oficial" };
@@ -127,7 +140,7 @@
         id: h.id, nome: h.nome, meu: !!h.meu, visibilidade: h.visibilidade,
         chave: U.chaveDeBusca(h.nome + " " + (r.categoria || "")),
         sistema: r.sistema, natureza: r.natureza || "", vd: typeof r.vd === "number" ? r.vd : null, nivel: r.nivel || "",
-        elementos: r.elementos || [], nomesDeElementos: r.nomesDeElementos || null, manifestacao: r.manifestacao || "", tamanho: r.tamanho || "", tipo: r.tipo || "", pv: r.pv, livro: "",
+        elementos: r.elementos || [], nomesDeElementos: r.nomesDeElementos || null, coresDeElementos: r.coresDeElementos || null, manifestacao: r.manifestacao || "", tamanho: r.tamanho || "", tipo: r.tipo || "", pv: r.pv, livro: "",
         categoria: r.categoria || "",
       };
     }
@@ -145,11 +158,12 @@
       }
 
       var grupoElementos = el("div.r-abas.biblioteca-abas", { role: "group", "aria-label": "Elementos" }, elementosDoFiltro(estado.aba === "homebrew" ? estado.homebrew : null).map(function (e) {
-        return chip(nomeDoElemento(e, null, estado.homebrew), estado.elementos.indexOf(e) >= 0, function () {
+        var botaoEl = chip(nomeDoElemento(e, null, estado.homebrew), estado.elementos.indexOf(e) >= 0, function () {
           var i = estado.elementos.indexOf(e);
           if (i >= 0) estado.elementos.splice(i, 1); else estado.elementos.push(e);
           pintar();
-        }, "bib-elemento.bib-elemento--" + e);
+        }, "bib-elemento." + faixaDe(e));
+        return pintarFaixaDe(botaoEl, e, mapaDeCores(null, estado.homebrew));
       }).concat(estado.elementos.length > 1 ? [
         chip(estado.modo === "todos" ? "Com todos os marcados" : "Com qualquer um dos marcados", estado.modo === "todos", function () {
           estado.modo = estado.modo === "todos" ? "qualquer" : "todos";
@@ -310,7 +324,7 @@
       var marcas = el("span.bib-item__marcas", {}, (x.manifestacao === "transmissao"
         ? [el("span.r-etiqueta.bib-elemento.bib-elemento--transmissao", { texto: "Transmissão", title: "Conhecimento e Energia ao mesmo tempo (Arquivos Secretos 5, p. 46)" })]
         : []).concat((x.elementos || []).map(function (e) {
-        return el("span.r-etiqueta.bib-elemento.bib-elemento--" + (NOMES_ELEMENTO[e] ? e : "homebrew"), { texto: nomeDoElemento(e, x, estado.homebrew) });
+        return pintarFaixaDe(el("span.r-etiqueta.bib-elemento.bib-elemento--" + (NOMES_ELEMENTO[e] ? e : "homebrew"), { texto: nomeDoElemento(e, x, estado.homebrew) }), e, mapaDeCores(x, null));
       })).concat([
         x.livro ? el("span.r-etiqueta.bib-fonte", { texto: OC().referencia(x.livro, x.pagina), title: OC().FONTES[x.livro].nome }) : null,
         estado.aba === "homebrew" ? el("span.r-etiqueta", { texto: x.meu ? (x.visibilidade === "publico" ? "Sua · pública" : "Sua") : "Pública" }) : null,

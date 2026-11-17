@@ -533,7 +533,7 @@
       ((r && r.ok && r.dados) || []).forEach(function (reg) {
         var x = deRegistro(reg);
         if (!x || !x.def) return;
-        if (x.tipo === "elemento") { if (EL()) EL().registrar(x.def); saida.elementos.push(x.def); }
+        if (x.tipo === "elemento") { if (EL()) EL().registrar(x.def, { biblioteca: true }); saida.elementos.push(x.def); }
         if (x.tipo === "classe") saida.classes.push(Object.assign({ meu: reg.meu !== false }, x.def));
         /* Origens e trilhas entram no catálogo (chave versionada: nunca
            colidem) — as listas da criação, da troca de origem e da vaga de

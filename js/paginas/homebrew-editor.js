@@ -108,7 +108,7 @@
           cartoes.push(cartao(m.rotulo, m.ajuda, function () {
             janela.fechar();
             var campos = (m.campos || []).map(function (c) { return { rotulo: c[1], tipo: c[2], chave: c[0] }; });
-            editor({ sistema: "universal", grupo: m.grupo, aoSalvar: o.aoSalvar, universal: { rotuloTipo: m.chave === "branco" ? "" : m.rotulo.split(" (")[0], campos: campos, valores: {}, acoes: [] }, avancadoAberto: m.chave === "branco" });
+            editor({ sistema: "universal", grupo: m.grupo, aoSalvar: o.aoSalvar, universal: { rotuloTipo: m.chave === "branco" ? "" : m.rotulo.split(" (")[0], modelo: m.chave, campos: campos, valores: {}, acoes: [] }, avancadoAberto: m.chave === "branco" });
           }));
         });
       }
@@ -167,6 +167,11 @@
 
     var form = el("div.hbe-form");
     var lado = el("aside.hbe-lado", { "aria-label": "Resumo" });
+    /* v9.14: a imagem opcional da criação (retrato, ilustração ou símbolo,
+       conforme o tipo). Sobe depois do registro; falhar mantém a anterior. */
+    var HI = global.RAMAHomebrewImagem;
+    var imagem = HI ? HI.campo({ registro: reg, sistema: sistema, grupo: grupo, subtipo: r.subtipo,
+      modeloUniversal: r.universal ? A().modeloUniversalDe({ universal: r.universal }) : "", aoMudar: function () { r.sujo = true; } }) : null;
     var titulo = (reg ? "Editar " : "Novo · ") + (grupo === "item" ? "item" : grupo === "estrutural" ? subs[0].rotulo.toLowerCase() : "habilidade") + " · " + nome(sistema);
     var janela = UI.modal({
       titulo: titulo, largo: true, classe: "hbe-janela",
@@ -204,6 +209,7 @@
         el("div.r-campo", {}, [el("label", { for: "hbe-desc", texto: grupo === "habilidade" ? "Texto" : (sistema === "brutal" ? "O que este item significa" : "Descrição") }),
           (function () { var t = el("textarea.r-area", { id: "hbe-desc", rows: 4, maxlength: 2000, oninput: function (ev) { r.descricao = ev.target.value; mudou(); } }); t.value = r.descricao; return t; })()]),
         r.universal ? blocoUniversal() : null,
+        imagem ? imagem.el : null,
         el("div.r-campo", {}, [el("span.r-rotulo", { texto: "Visibilidade" }), el("div.filtros__grupo", { role: "group", "aria-label": "Visibilidade" }, [["privado", "Privado"], ["publico", "Público"]].map(function (x) {
           return el("button.filtro", { type: "button", id: "hbe-vis-" + x[0], "aria-pressed": String(r.visibilidade === x[0]), texto: x[1], onclick: function () { r.visibilidade = x[0]; mudou(true); } });
         })), el("p.r-ajuda", { texto: "Público: outras contas acham e copiam. Publicar não coloca nada nas fichas de ninguém." })]),
@@ -227,7 +233,7 @@
         var marcados = Array.isArray(v) ? v : [];
         var proprio = r.valores && r.valores.chave;
         return el("fieldset.r-campo.hbe-elementos", {}, [el("legend.r-rotulo", { texto: c.rotulo })].concat((EL ? EL.paraSelecao() : []).filter(function (e) { return e.chave !== proprio; }).map(function (e) {
-          return el("label.r-marca", {}, [el("input", { type: "checkbox", checked: marcados.indexOf(e.chave) >= 0, onchange: function (ev) { var l = (Array.isArray(r.valores[c.chave]) ? r.valores[c.chave] : []).filter(function (k) { return k !== e.chave; }); if (ev.target.checked) l.push(e.chave); ao(l); } }), el("span", { texto: e.nome })]);
+          return (EL && EL.pintarFaixa ? EL.pintarFaixa : function (n) { return n; })(el("label.r-marca.hbe-elemento-op.bib-elemento." + (EL && EL.classeDaFaixa ? EL.classeDaFaixa(e.chave) : "bib-elemento--homebrew"), {}, [el("input", { type: "checkbox", checked: marcados.indexOf(e.chave) >= 0, onchange: function (ev) { var l = (Array.isArray(r.valores[c.chave]) ? r.valores[c.chave] : []).filter(function (k) { return k !== e.chave; }); if (ev.target.checked) l.push(e.chave); ao(l); } }), el("span", { texto: e.nome })]), e.chave);
         })).concat([c.ajuda ? el("p.r-ajuda", { texto: c.ajuda }) : null]));
       } else if (c.tipo === "selecao") {
         entrada = el("select.r-selecao", { id: id, onchange: function (ev) { var op = c.opcoes.filter(function (x) { return String(x.valor) === ev.target.value; })[0]; ao(op ? op.valor : ev.target.value); } },
@@ -390,14 +396,15 @@
     }
 
     async function salvar(fechar) {
-      var g = A().guardar(sistema, grupo, r.subtipo, { id: reg ? reg.id : undefined, nome: r.nome, descricao: r.descricao, origem: r.origem, valores: r.valores, universal: r.universal, visibilidade: r.visibilidade, etiqueta: reg ? reg.etiqueta : undefined, modeloAnterior: reg ? reg.modelo : null });
+      var g = A().guardar(sistema, grupo, r.subtipo, { id: reg ? reg.id : undefined, nome: r.nome, descricao: r.descricao, origem: r.origem, valores: r.valores, universal: r.universal, visibilidade: r.visibilidade, imagemForma: imagem ? imagem.imagemForma() : undefined, etiqueta: reg ? reg.etiqueta : undefined, modeloAnterior: reg ? reg.modelo : null });
       if (!g.ok) { r.erros = g.campos || {}; pintar(); var p = form.querySelector(".r-ajuda--erro"); if (p && p.previousElementSibling) (p.parentNode.querySelector("input, select, textarea") || p).focus(); UI.avisoErro(g.erro); return; }
       var resp = await global.RAMAApi.salvarHomebrew(g.registro);
       /* Falhou: o rascunho continua aberto, igual. */
       if (!resp.ok) { UI.avisoDeFalha(resp, "gravação na biblioteca"); return; }
+      if (imagem) await imagem.salvarEm((resp.dados && resp.dados.id) || (reg && reg.id));
       r.sujo = false;
       /* Um elemento novo já vale nos seletores desta página. */
-      if (grupo === "estrutural" && r.subtipo === "elemento" && global.RAMAOrdemElementos) global.RAMAOrdemElementos.registrar(Object.assign({}, g.registro.modelo.def, { nome: g.registro.nome, descricao: g.registro.descricao, homebrewId: resp.dados && resp.dados.id }));
+      if (grupo === "estrutural" && r.subtipo === "elemento" && global.RAMAOrdemElementos) global.RAMAOrdemElementos.registrar(Object.assign({}, g.registro.modelo.def, { nome: g.registro.nome, descricao: g.registro.descricao, homebrewId: resp.dados && resp.dados.id }), { biblioteca: true });
       fechar();
       UI.avisoOk(reg ? "Registro atualizado." : "Criado em Minhas criações.");
       if (o.aoSalvar) o.aoSalvar(resp.dados && resp.dados.id);

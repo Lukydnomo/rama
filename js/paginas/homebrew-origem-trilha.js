@@ -44,6 +44,9 @@
     /* Concordância: "o poder", "a origem", "a trilha". */
     var g = masc ? { a: "o", A: "O", da: "do", nova: "Novo", salva: "salvo" } : { a: "a", A: "A", da: "da", nova: "Nova", salva: "salva" };
     var r = { nome: reg ? reg.nome : "", descricao: reg ? reg.descricao || "" : (d.resumo && !ehOrigem ? d.resumo : ""), visibilidade: reg ? reg.visibilidade || "privado" : "privado", passo: 1, sujo: false };
+    /* v9.14: a imagem opcional (ilustração da origem/trilha; símbolo do poder). */
+    var imagem = global.RAMAHomebrewImagem ? global.RAMAHomebrewImagem.campo({ registro: reg, sistema: "ordem", grupo: ehPoder || ehPC ? "habilidade" : "estrutural",
+      subtipo: ehPoder ? "poderParanormal" : ehPC ? "poderClasse" : tipo, aoMudar: function () { r.sujo = true; } }) : null;
     var pref = ehOrigem ? "hbo" : ehPoder ? "hbpp" : ehPC ? "hbpc" : "hbt";
     /* As classes Homebrew (para uma trilha exclusiva de uma delas). */
     var classesHb = null;
@@ -261,6 +264,7 @@
         el("ul.hbe-mini", {}, auto.filter(Boolean).map(function (t) { return el("li", { texto: t }); })),
         el("p.t-rotulo", { texto: "Decisão de quem joga / da mesa" }),
         el("ul.hbe-mini", {}, manual.filter(Boolean).map(function (t) { return el("li", { texto: t }); })),
+        imagem ? imagem.el : null,
         el("div.r-campo", {}, [el("span.r-rotulo", { texto: "Visibilidade" }), el("div.filtros__grupo", { role: "group", "aria-label": "Visibilidade" }, [["privado", "Privada"], ["publico", "Pública"]].map(function (x) {
           return el("button.filtro", { type: "button", "aria-pressed": String(r.visibilidade === x[0]), texto: x[1], onclick: function () { r.visibilidade = x[0]; mudou(true); } });
         }))]),
@@ -287,6 +291,7 @@
       if (!gd.ok) { UI.avisoErro(gd.erro); return; }
       var resp = await global.RAMAApi.salvarHomebrew(gd.registro);
       if (!resp.ok) { UI.avisoDeFalha(resp, "gravação " + g.da + " " + rotulo); return; }
+      if (imagem) await imagem.salvarEm((resp.dados && resp.dados.id) || (reg && reg.id));
       r.sujo = false;
       fechar();
       if (H()) H().carregarBiblioteca(true);

@@ -176,5 +176,37 @@ const fichaVolta = V.importado(JSON.parse(JSON.stringify(V.exportar("personagem"
 const kitVolta = fichaVolta.ok && fichaVolta.dados.inventario.itens.find((i) => i.nome === "Kit de Cura");
 t.ok("ficha exportada e importada: o Kit de Cura volta com 1 carga gasta", kitVolta && kitVolta.universal.estado.usos.curar === 1, JSON.stringify(fichaVolta.ok ? (kitVolta || {}).universal : fichaVolta));
 
+t.grupo("Imagem opcional (v9.14): a matriz de cobertura");
+const cob = A.coberturaDeImagens();
+const semImagem = cob.filter((x) => !x.imagem).map((x) => x.sistema + "/" + x.grupo + "/" + x.subtipo);
+t.ok("todo tipo de todo sistema aceita uma imagem (" + cob.length + " combinações)", !semImagem.length, semImagem.join(", "));
+const forma = (s, g, st, extra) => (A.imagemDe(s, g, st, extra) || {}).forma;
+const ilustracoes = [["ordem", "estrutural", "classe"], ["ordem", "estrutural", "origem"], ["ordem", "estrutural", "trilha"], ["ordem2", "estrutural", "perfil"], ["ordem2", "estrutural", "ocupacao"],
+  ["tormenta20", "estrutural", "raca"], ["tormenta20", "estrutural", "classe"], ["tormenta20", "estrutural", "origem"], ["tormenta20", "estrutural", "divindade"],
+  ["vampiro", "estrutural", "cla"], ["vampiro", "estrutural", "predador"], ["vampiro", "estrutural", "conhecimento"], ["goblins", "estrutural", "ocupacao"], ["goblins", "estrutural", "receita"],
+  ["oblivio", "estrutural", "papel"], ["brutal", "estrutural", "arquetipo"], ["brutal", "item", "apego"]];
+t.ok("ilustração: classe, origem, trilha, perfil, ocupação, raça, divindade, clã, predador, conhecimento, receita, papel, arquétipo, apego",
+  ilustracoes.every((x) => forma(x[0], x[1], x[2]) === "ilustracao"), ilustracoes.filter((x) => forma(x[0], x[1], x[2]) !== "ilustracao").join(" | "));
+const retratos = [["goblins", "estrutural", "pokepraga"], ["brutal", "estrutural", "assassino"], ["brutal", "estrutural", "ameaca"]].concat(Object.keys(A.SISTEMAS).map((s) => [s, "criatura", "criatura"]));
+t.ok("retrato: toda criatura/ameaça/inimigo/antagonista, PokéPraga, Assassino e Ameaça de BRUTAL", retratos.every((x) => forma(x[0], x[1], x[2]) === "retrato"));
+const simbolos = [["ordem", "habilidade", "ritual"], ["ordem", "habilidade", "poderParanormal"], ["ordem", "habilidade", "poderClasse"], ["ordem", "habilidade", "habilidade"], ["ordem", "estrutural", "elemento"],
+  ["ordem2", "habilidade", "ritual"], ["ordem2", "habilidade", "poder"], ["ordem2", "habilidade", "habilidade"], ["tormenta20", "habilidade", "magia"], ["tormenta20", "habilidade", "poder"], ["tormenta20", "habilidade", "habilidade"],
+  ["vampiro", "estrutural", "disciplina"], ["vampiro", "habilidade", "disciplina"], ["vampiro", "habilidade", "habilidade"], ["vampiro", "estrutural", "vantagem"],
+  ["goblins", "habilidade", "magia"], ["goblins", "habilidade", "tecnica"], ["goblins", "habilidade", "habilidade"], ["goblins", "estrutural", "descritor"],
+  ["oblivio", "habilidade", "habilidade"], ["oblivio", "estrutural", "motivacao"], ["oblivio", "estrutural", "mazela"], ["oblivio", "estrutural", "fardo"],
+  ["brutal", "estrutural", "estilo"], ["brutal", "habilidade", "vantagem"], ["brutal", "estrutural", "apavoro"],
+  ["universal", "habilidade", "ritual"], ["universal", "habilidade", "magia"], ["universal", "habilidade", "poder"], ["universal", "habilidade", "tecnica"], ["universal", "habilidade", "habilidade"]];
+t.ok("símbolo: rituais, magias, poderes, técnicas, habilidades, elemento, disciplina, vantagem/defeito, descritor, motivação, mazela, fardo, estilo, apavoro",
+  simbolos.every((x) => forma(x[0], x[1], x[2]) === "simbolo"), simbolos.filter((x) => forma(x[0], x[1], x[2]) !== "simbolo").join(" | "));
+const todosItens = Object.keys(A.SISTEMAS).every((s) => A.subtipos(s, "item").every((st) => forma(s, "item", st.chave) === "ilustracao"));
+t.ok("todo subtipo de Item de todo sistema aceita ilustração", todosItens);
+t.ok("Universal: Arquétipo é ilustração, Elemento/Condição é símbolo", forma("universal", "habilidade", "habilidade", { modeloUniversal: "arquetipo" }) === "ilustracao" && forma("universal", "habilidade", "habilidade", { modeloUniversal: "elemento" }) === "simbolo");
+const branco = A.imagemDe("universal", "item", "outro", { modeloUniversal: "branco", imagemForma: "icone" });
+t.ok("Universal Em branco: quem cria escolhe (ícone vira símbolo; ilustração, ilustração)", branco.forma === "escolha" && branco.efetiva === "simbolo" && A.imagemDe("universal", "item", "outro", { modeloUniversal: "branco" }).efetiva === "ilustracao");
+const gBranco = A.guardar("universal", "item", "outro", { nome: "Talismã", valores: {}, universal: { rotuloTipo: "", modelo: "branco", campos: [], valores: {}, acoes: [] }, imagemForma: "icone" });
+t.ok("  o modelo e a forma ficam no registro (e voltam pela leitura)", gBranco.ok && gBranco.registro.universal.modelo === "branco" && gBranco.registro.imagemForma === "icone" && A.imagemDoRegistro(gBranco.registro).efetiva === "simbolo");
+const antigoCriatura = A.imagemDoRegistro({ tipo: "criatura", sistema: "ordem", ordem: { vd: 10 } });
+t.ok("criatura antiga (sem modelo) aceita retrato", antigoCriatura && antigoCriatura.forma === "retrato");
+
 console.log(`\n${FORTE}${passaram} ok${FIM}, ${falharam ? VERMELHO : ""}${falharam} falha(s)${FIM}.`);
 if (falharam) Deno.exit(1);

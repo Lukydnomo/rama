@@ -166,7 +166,7 @@ Na ficha, um item do inventário pode trazer `universal`, com
 |---|---|
 | `PACOTES_HOMEBREW` | Metadados leves: `id, ownerId, sistema, nome, visibilidade, estado, rev, qtd, tiposJson, temCapa, codigoHash, codigoEm, opCriacao, criadoEm, atualizadoEm`. As pesadas são `descricao` e `opsJson`. `codigoHash` é só o hash do código. `estado` = `montando` enquanto uma gravação troca as entradas. |
 | `PACOTES_HOMEBREW_ENTRADAS` | Uma linha por entrada: `id, pacoteId, ownerId, tipo, nome, ordem, origemId, copiadoEm, origemAtualizadaEm, dadosJson` (a cópia). |
-| `PACOTES_HOMEBREW_IMAGENS` | A imagem copiada de uma criatura (`imagem` + `imagemCont`). |
+| `PACOTES_HOMEBREW_IMAGENS` | A imagem copiada da criação (`imagem` + `imagemCont` + `miniatura`; de qualquer tipo desde a v9.14), lida por `ler_imagens_pacote` pela entrada — nunca pela original. |
 | `PACOTES_HOMEBREW_CAPAS` | A capa 320 × 480 (`imagem` + `imagemCont`). |
 | `PACOTES_HOMEBREW_IMPORTACOES` | Recibos: `id, pacoteId, entradaId, userId, homebrewId, opId, criadoEm`. |
 
@@ -1220,10 +1220,17 @@ campanha apaga a linha.
 
 ### CRIATURAS_IMAGENS
 
-`criaturaId · ownerId · imagem · atualizadoEm`
+`criaturaId · ownerId · imagem · atualizadoEm · imagemCont · miniatura`
 
 Mesma razão da foto de personagem: imagem fora do JSON que é reenviado a cada
-edição.
+edição. Desde a v9.14 guarda a imagem de **qualquer** criação do Homebrew
+(retrato, ilustração ou símbolo — a forma vem de
+`RAMAHomebrewAdaptadores.imagemDe`), pela id do registro; o nome ficou por
+compatibilidade. `miniatura` (até ~14 mil caracteres, gerada no navegador) é o
+que as listas pedem em lote (`ler_miniaturas_homebrew`, até 40 ids, só as que a
+conta alcança); um retrato antigo sem ela devolve a imagem inteira. Gravar e
+remover (`salvar_imagem_criatura`, imagem vazia remove) é do dono do registro;
+ler, de quem lê o registro.
 
 ---
 

@@ -35,7 +35,8 @@
    ---------------------------------------------------------------------
      PACOTES_HOMEBREW            metadados leves (+ descrição e opIds)
      PACOTES_HOMEBREW_ENTRADAS   uma linha por entrada (dadosJson)
-     PACOTES_HOMEBREW_IMAGENS    a imagem copiada de uma criatura
+     PACOTES_HOMEBREW_IMAGENS    a imagem copiada da criação (v9.14: de
+                                 qualquer tipo, com a miniatura)
      PACOTES_HOMEBREW_CAPAS      a capa recortada (320 × 480), em até
                                  duas células
      PACOTES_HOMEBREW_IMPORTACOES  quem já copiou qual entrada, e para
@@ -76,6 +77,7 @@ function rotasDosPacotes() {
     excluir_pacote:       { publica: false, fn: acaoExcluirPacote },
     codigo_pacote:        { publica: false, fn: acaoCodigoPacote },
     importar_pacote:      { publica: false, fn: acaoImportarPacote },
+    ler_imagens_pacote:   { publica: false, fn: acaoLerImagensPacote },
   };
 }
 
@@ -492,16 +494,45 @@ function acaoSalvarPacote(corpo, usuario) {
   });
 }
 
-/* A imagem de uma criatura vai junto (cópia, não vínculo). */
+/* A imagem da criação vai junto (cópia, não vínculo) — de qualquer tipo
+   desde a v9.14, com a miniatura. A entrada mostra a imagem DAQUELA
+   versão do pacote, mesmo que a original mude ou suma. */
 function copiarImagemParaEntrada(cp, entradaId, pacoteId, usuario, agora) {
   var velha = linhaLeve(ABAS.PACOTES_HOMEBREW_IMAGENS, 'entradaId', entradaId);
   if (velha) apagarLinha(ABAS.PACOTES_HOMEBREW_IMAGENS, velha._linha);
-  if (String(cp.dados.tipo) !== 'criatura') return;
   var origem = acharPor(ABAS.CRIATURAS_IMAGENS, 'criaturaId', String(cp.origem.id));
   var imagem = imagemDe(origem, 'imagem');
   if (!imagem) return;
   var reg = { entradaId: entradaId, pacoteId: pacoteId, atualizadoEm: agora };
+  if (temColuna(ABAS.PACOTES_HOMEBREW_IMAGENS, 'miniatura')) reg.miniatura = String((origem && origem.miniatura) || '');
   if (aplicarImagem(ABAS.PACOTES_HOMEBREW_IMAGENS, reg, 'imagem', imagem)) inserir(ABAS.PACOTES_HOMEBREW_IMAGENS, reg);
+}
+
+/* As imagens das entradas de um pacote (v9.14): a mesma porta de ler o
+   pacote (dono, público pronto ou o código). Por padrão, as miniaturas;
+   com `completa`, a imagem inteira (a consulta). Nunca pela criação
+   original: só a cópia guardada no pacote. */
+function acaoLerImagensPacote(corpo, usuario) {
+  var pedidas = listaDeIds(corpo.entradas, LIMITE_ENTRADAS_PACOTE);
+  if (!pedidas || !pedidas.length) return { ok: false, erro: 'dados_invalidos' };
+  if (!pacotesProntos()) return instalacaoDePacotes();
+  var alc = pacoteAlcancavel(corpo.pacoteId, usuario, corpo.codigo);
+  if (!alc) return { ok: false, erro: 'nao_encontrado' };
+  var dele = {};
+  entradasDoPacote(alc.pacote.id).forEach(function (e) { dele[String(e.id)] = true; });
+  var quer = {};
+  pedidas.forEach(function (id) { if (dele[id]) quer[id] = true; });
+  var linhas = lerLeves(ABAS.PACOTES_HOMEBREW_IMAGENS).filter(function (l) { return quer[String(l.entradaId)] && String(l.pacoteId) === String(alc.pacote.id); });
+  var saida = {};
+  if (!linhas.length) return { ok: true, dados: saida };
+  var minis = !corpo.completa && temColuna(ABAS.PACOTES_HOMEBREW_IMAGENS, 'miniatura') ? lerCelulas(ABAS.PACOTES_HOMEBREW_IMAGENS, linhas, 'miniatura') : {};
+  var precisam = linhas.filter(function (l) { return !minis[l._linha]; });
+  var inteiras = precisam.length ? imagensDasLinhas(ABAS.PACOTES_HOMEBREW_IMAGENS, precisam, 'imagem') : {};
+  linhas.forEach(function (l) {
+    var v = String(minis[l._linha] || inteiras[l._linha] || '');
+    if (v) saida[String(l.entradaId)] = v;
+  });
+  return { ok: true, dados: saida };
 }
 
 /* ---------------------------------------------------------------------
@@ -651,13 +682,13 @@ function acaoImportarPacote(corpo, usuario) {
           id: hid, ownerId: usuario.id, tipo: tipo, nome: String(dados.nome || e.nome || 'Criação').trim().slice(0, 120) || 'Criação',
           visibilidade: VIS_PRIVADO, criadoEm: agora, atualizadoEm: agora, rev: 1, dadosJson: json,
         });
-        if (tipo === 'criatura') {
-          var imgEntrada = acharPor(ABAS.PACOTES_HOMEBREW_IMAGENS, 'entradaId', eid);
-          var imagem = imagemDe(imgEntrada, 'imagem');
-          if (imagem) {
-            var reg = { criaturaId: hid, ownerId: usuario.id, atualizadoEm: agora };
-            if (aplicarImagem(ABAS.CRIATURAS_IMAGENS, reg, 'imagem', imagem)) inserir(ABAS.CRIATURAS_IMAGENS, reg);
-          }
+        /* v9.14: a imagem de qualquer tipo vai junto, com a miniatura. */
+        var imgEntrada = acharPor(ABAS.PACOTES_HOMEBREW_IMAGENS, 'entradaId', eid);
+        var imagem = imagemDe(imgEntrada, 'imagem');
+        if (imagem) {
+          var reg = { criaturaId: hid, ownerId: usuario.id, atualizadoEm: agora };
+          if (temColuna(ABAS.CRIATURAS_IMAGENS, 'miniatura')) reg.miniatura = String((imgEntrada && imgEntrada.miniatura) || '');
+          if (aplicarImagem(ABAS.CRIATURAS_IMAGENS, reg, 'imagem', imagem)) inserir(ABAS.CRIATURAS_IMAGENS, reg);
         }
         inserir(ABAS.PACOTES_HOMEBREW_IMPORTACOES, {
           id: novoId(), pacoteId: String(p.id), entradaId: eid, userId: String(usuario.id), homebrewId: hid, opId: String(corpo.opId), criadoEm: agora,

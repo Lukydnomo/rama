@@ -42,6 +42,7 @@
     if (!criando && original.id) c.id = original.id;
 
     var imagem = o.imagem || "";
+    var imagemMudou = false;
 
     var nome = UI.campo({ rotulo: "Nome", valor: c.nome, limite: 120 });
     var categoria = UI.campo({ rotulo: "Categoria", valor: c.categoria || "", limite: 60 });
@@ -112,8 +113,14 @@
               var img = await global.RAMAEditorImagem.escolher(o.destinoImagem || "criatura");
               if (!img.ok) return;
               imagem = img.imagem;
+              imagemMudou = true;
               U.trocar(previa, [el("img", { src: imagem, alt: "" })]);
             },
+          }),
+          /* v9.14: remover sai ao salvar; cancelar a escolha mantém a anterior. */
+          el("button.r-botao.r-botao--fantasma", {
+            type: "button", texto: "Remover imagem",
+            onclick: function () { imagem = ""; imagemMudou = true; U.trocar(previa, ["?"]); },
           }),
         ]),
 
@@ -164,9 +171,11 @@
 
             var id = (r.dados && r.dados.id) || c.id;
 
-            if (imagem && id) {
-              var ri = await global.RAMAApi.salvarImagemCriatura(id, imagem);
-              if (!ri.ok) UI.avisoAtencao("A criatura foi salva, mas a imagem não subiu.");
+            /* v9.14: só sobe o que mudou, com a miniatura das listas. Falhar
+               mantém a imagem anterior no servidor. */
+            if (id && imagemMudou) {
+              var ri = global.RAMAHomebrewImagem ? await global.RAMAHomebrewImagem.enviar(id, imagem) : await global.RAMAApi.salvarImagemCriatura(id, imagem);
+              if (!ri.ok) UI.avisoAtencao("A criatura foi salva, mas a imagem não " + (imagem ? "subiu" : "foi removida") + ": a anterior continua.");
             }
 
             fechar();
@@ -506,6 +515,7 @@
     if (!o.salvar) delete c.instancia;
     var od = c.ordem;
     var imagem = o.imagem || "";
+    var imagemMudou = false;
     var visibilidade = c.visibilidade;
 
     var vida = U.porId(c.status, C.ID_VIDA);
@@ -541,7 +551,7 @@
     if (ELc) ELc.paraSelecao().forEach(function (e) { if (!e.oficial && chavesEl.indexOf(e.chave) < 0) chavesEl.push(e.chave); });
     od.elementos.forEach(function (e) { if (chavesEl.indexOf(e) < 0) chavesEl.push(e); });
     var elementos = el("div.r-abas.criatura-elementos", { role: "group", "aria-label": "Elementos" }, chavesEl.map(function (e) {
-      return el("button.r-aba.bib-elemento.bib-elemento--" + (NOMES_ELEMENTO[e] ? e : "homebrew"), {
+      var botaoEl = el("button.r-aba.bib-elemento.bib-elemento--" + (NOMES_ELEMENTO[e] ? e : "homebrew"), {
         type: "button", "aria-pressed": String(od.elementos.indexOf(e) >= 0), texto: NOMES_ELEMENTO[e] || (ELc ? ELc.nome(e) : e),
         onclick: function (ev) {
           var i = od.elementos.indexOf(e);
@@ -549,6 +559,10 @@
           ev.currentTarget.setAttribute("aria-pressed", String(i < 0));
         },
       });
+      /* v9.14: a faixa com a cor da definição (a da biblioteca, ou a cópia
+         que a criatura já levava); o indicador de seleção não muda. */
+      if (!NOMES_ELEMENTO[e] && ELc && ELc.pintarFaixa) ELc.pintarFaixa(botaoEl, e, ELc.def(e) ? null : od.elementosHomebrew);
+      return botaoEl;
     }));
 
     if (!od.presenca) od.presenca = { dt: null, dano: "", imune: "" };
@@ -597,8 +611,14 @@
               var img = await global.RAMAEditorImagem.escolher(o.destinoImagem || "criatura");
               if (!img.ok) return;
               imagem = img.imagem;
+              imagemMudou = true;
               U.trocar(previa, [el("img", { src: imagem, alt: "" })]);
             },
+          }),
+          /* v9.14: remover sai ao salvar; cancelar a escolha mantém a anterior. */
+          el("button.r-botao.r-botao--fantasma", {
+            type: "button", texto: "Remover imagem",
+            onclick: function () { imagem = ""; imagemMudou = true; U.trocar(previa, ["?"]); },
           }),
         ]),
         nome,
@@ -741,9 +761,11 @@
             var r = await global.RAMAApi.salvarHomebrew(pronta);
             if (!r.ok) { UI.avisoDeFalha(r, "gravação da criatura"); return; }
             var id = (r.dados && r.dados.id) || c.id;
-            if (imagem && id) {
-              var ri = await global.RAMAApi.salvarImagemCriatura(id, imagem);
-              if (!ri.ok) UI.avisoAtencao("A criatura foi salva, mas a imagem não subiu.");
+            /* v9.14: só sobe o que mudou, com a miniatura das listas. Falhar
+               mantém a imagem anterior no servidor. */
+            if (id && imagemMudou) {
+              var ri = global.RAMAHomebrewImagem ? await global.RAMAHomebrewImagem.enviar(id, imagem) : await global.RAMAApi.salvarImagemCriatura(id, imagem);
+              if (!ri.ok) UI.avisoAtencao("A criatura foi salva, mas a imagem não " + (imagem ? "subiu" : "foi removida") + ": a anterior continua.");
             }
             fechar();
             if (aoSalvar) aoSalvar();

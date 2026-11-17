@@ -2745,7 +2745,10 @@
 .bib-elemento--morte { border-left-color: var(--cor-elemento-morte); }
 .bib-elemento--conhecimento { border-left-color: var(--cor-elemento-conhecimento); }
 /* v9.8: elemento Homebrew de Ordem — tracejado, sem a cor de um oficial. */
-.bib-elemento--homebrew { border-left-style: dashed; border-left-color: var(--cor-traco-forte); }
+.bib-elemento--homebrew { border-left-style: dashed; border-left-color: var(--cor-elemento-hb, var(--cor-traco-forte)); }
+/* v9.14: com a cor da definição (RAMAOrdemElementos.pintarFaixa), a faixa
+   é a cor dele, cheia; tracejada só sem definição ou sem cor válida. */
+.bib-elemento--homebrew.bib-elemento--com-cor { border-left-style: solid; border-left-color: var(--cor-elemento-hb); }
 .bib-elemento--energia { border-left-color: var(--cor-elemento-energia); }
 .bib-elemento--medo { border-left-color: var(--cor-elemento-medo); }
 /* Transmissão (AS5): Conhecimento e Energia ao mesmo tempo — as duas cores. */
@@ -4409,3 +4412,48 @@ html.arrastando * {
 @media (max-width: 480px) {
   .ritual-simbolo--grande { --ritual-simbolo-lado: 72px; }
 }
+
+/* =====================================================================
+   IMAGEM DAS CRIAÇÕES DO HOMEBREW (v9.14) — js/homebrew-imagem.js
+   Retrato e ilustração cobrem a caixa; símbolo vai inteiro (contain),
+   sobre a placa escura dos símbolos de ritual, com a transparência.
+   ===================================================================== */
+.hb-miniatura {
+  flex: 0 0 auto;
+  display: inline-grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  overflow: hidden;
+  border: var(--borda) solid var(--cor-traco-fraca);
+  background: var(--fundo-superficie-2);
+}
+.hb-miniatura img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.hb-miniatura.hb-imagem--simbolo img, .hb-imagem-grande.hb-imagem--simbolo img, .hb-imagem-campo__previa.hb-imagem--simbolo img { object-fit: contain; }
+.hb-miniatura.hb-imagem--simbolo { background: var(--cor-placa-simbolo); }
+.hb-miniatura:not(.hb-miniatura--propria) { border: 0; background: none; width: auto; height: auto; }
+
+.hb-imagem-grande { margin: 0 0 var(--e3); display: flex; flex-direction: column; align-items: flex-start; gap: var(--e1); }
+.hb-imagem-grande__botao { padding: 0; border: var(--borda) solid var(--cor-traco-media); background: var(--fundo-superficie-2); cursor: zoom-in; max-width: 100%; }
+.hb-imagem-grande__botao img { display: block; max-width: min(100%, 320px); max-height: 320px; width: auto; height: auto; object-fit: cover; }
+.hb-imagem-grande.hb-imagem--simbolo .hb-imagem-grande__botao { background: var(--cor-placa-simbolo); padding: var(--e2); }
+.hb-imagem-grande.hb-imagem--simbolo .hb-imagem-grande__botao img { max-width: 160px; max-height: 160px; }
+.hb-imagem-grande__botao:focus-visible { outline: 2px solid var(--cor-foco, currentColor); outline-offset: 2px; }
+.hb-imagem-grande__ampliada { display: grid; place-items: center; }
+.hb-imagem-grande__ampliada img { max-width: 100%; max-height: 75vh; max-height: 75dvh; object-fit: contain; }
+.hb-imagem-grande__ampliada.hb-imagem--simbolo { background: var(--cor-placa-simbolo); padding: var(--e3); }
+
+.hb-imagem-campo__linha { display: flex; align-items: center; gap: var(--e3); flex-wrap: wrap; }
+.hb-imagem-campo__previa {
+  display: grid; place-items: center; width: 96px; height: 96px; flex: none; overflow: hidden;
+  border: var(--borda) solid var(--cor-traco-media); background: var(--fundo-superficie-2); text-align: center;
+}
+.hb-imagem-campo__previa.hb-imagem--simbolo { background: var(--cor-placa-simbolo); }
+.hb-imagem-campo__previa img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.hb-imagem-campo__acoes { flex-wrap: wrap; gap: var(--e1); align-items: center; }
+
+.criatura-retrato__caixa { display: inline-flex; flex: 0 0 auto; }
+.pc-entrada__imagem { width: 32px; height: 32px; }
+/* Seletor de elementos do editor: a faixa como nas etiquetas. */
+.hbe-elemento-op { border-left-width: 3px; border-left-style: solid; padding-left: var(--e1); }
+.hbe-elemento-op.bib-elemento--homebrew:not(.bib-elemento--com-cor) { border-left-style: dashed; }

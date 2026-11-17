@@ -929,6 +929,29 @@ segredo nenhum — ele os lê das Script Properties. Publicá-lo não expõe nad
 
 ### Atualizar o backend
 
+**v9.14.0 — ICONOGRAFIA:** imagem opcional em toda criação do Homebrew e a
+faixa de cor dos elementos Homebrew de Ordem.
+1. Troque **`Dados.gs`**, **`Codigo.gs`** e **`HomebrewPacotes.gs`**. Nenhum
+   arquivo novo.
+2. **Rode `setupRama()`**: ele acrescenta a coluna `miniatura` em
+   `CRIATURAS_IMAGENS` e em `PACOTES_HOMEBREW_IMAGENS` (nenhuma aba nova;
+   nada existente muda de lugar).
+3. Crie uma versão nova da implantação.
+
+Sem o Apps Script novo, as imagens das criaturas continuam como antes e as
+listas ficam sem miniatura (nada quebra); sem `setupRama()`, as miniaturas não
+são gravadas e a lista usa a imagem inteira. Site: `js/homebrew-imagem.js`
+(novo), `js/homebrew-adaptadores.js`, `js/api.js`, `js/imagem-editor.js`,
+`js/criatura-painel.js`, `js/ordem/elementos.js`, `js/ordem/rituais.js`,
+`js/ordem/homebrew-ordem.js`, `js/paginas/homebrew.js`,
+`js/paginas/homebrew-editor.js`, `js/paginas/homebrew-criatura.js`,
+`js/paginas/homebrew-criatura-sistemas.js`, `js/paginas/homebrew-classe.js`,
+`js/paginas/homebrew-origem-trilha.js`, `js/paginas/homebrew-raca-t20.js`,
+`js/paginas/homebrew-origem-divindade-t20.js`, `js/paginas/homebrew-pacotes.js`,
+`js/paginas/criaturas-biblioteca.js`, `js/paginas/ficha-rituais.js`,
+`css/componentes.css`, `css/homebrew.css`, `homebrew/index.html`,
+`ficha/index.html` e `js/versao.js`.
+
 **v9.13.0 — RELICÁRIO:** imagens nas anotações e biblioteca de retratos com
 conjuntos.
 1. Troque **`Dados.gs`** e **`Codigo.gs`**. Nenhum arquivo novo.
@@ -2078,7 +2101,7 @@ Três números diferentes, que não se misturam:
 
 | | Onde | O que é |
 |---|---|---|
-| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v9.13.0 |
+| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v9.14.0 |
 | `schemaVersion` | `js/ficha.js` | o formato da FICHA |
 | `versaoFormato` | `js/config.js` | o formato dos arquivos de importação |
 

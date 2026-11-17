@@ -118,6 +118,26 @@
 
   var CHANGELOG = [
     {
+      versao: "9.14.0",
+      codinome: "ICONOGRAFIA",
+      data: "16/11/2026",
+      mudancas: {
+        "Adicionado": [
+          "Homebrew: toda criação pode ter uma imagem opcional, da criação inteira — retrato (criaturas, ameaças, inimigos, antagonistas, PokéPragas, o Assassino e a Ameaça de BRUTAL), ilustração (todo item; classe, raça, origem, trilha, perfil, ocupação, clã, predador, divindade, receita, papel, arquétipo, apego) ou símbolo (rituais, magias, poderes, técnicas, habilidades, elementos, disciplinas, vantagens e defeitos, descritores, motivações, mazelas, fardos, estilos e apavoros). No modelo Universal Em branco, quem cria escolhe entre ilustração e ícone. A imagem não muda nenhuma regra.",
+          "Editores: Adicionar imagem, Trocar e Remover, com prévia e o editor de recorte do R.A.M.A. Símbolos vão inteiros, na proporção do desenho e com o fundo transparente. Cancelar ou falhar no envio mantém a imagem anterior.",
+          "Biblioteca: miniatura ao lado do nome em Minhas criações e em Públicas (pedidas em lote, só as linhas que aparecem) e a imagem maior em Consultar e Consultar ficha. Sem imagem própria, fica a arte oficial ou o símbolo provisório do ritual.",
+          "A imagem vai junto ao duplicar, ao montar um pacote (a entrada mostra a imagem daquela versão do pacote) e ao importar. Um ritual Homebrew com símbolo próprio mostra o símbolo na ficha.",
+        ],
+        "Corrigido": [
+          "Criaturas: os retratos já salvos agora aparecem na lista e no painel da criatura, sem precisar enviar de novo; o retrato próprio tem prioridade sobre a arte do livro, e o corpo inteiro do livro continua a um clique.",
+          "Elementos Homebrew de Ordem: a faixa lateral usa a cor da definição do elemento (a da criatura, ritual ou item que o leva, ou a da biblioteca), em vez de uma cor genérica — nas etiquetas, nos seletores, nas listas e nas consultas. A cor neutra tracejada fica só para quem não tem cor válida. Uma cópia antiga que vem com uma criatura não substitui mais a definição da sua biblioteca nos seletores.",
+        ],
+        "Técnico": [
+          "CRIATURAS_IMAGENS guarda a imagem de qualquer criação (com a coluna nova `miniatura`); ações novas ler_miniaturas_homebrew e ler_imagens_pacote; salvar_imagem_criatura aceita a miniatura e remove com imagem vazia; o pacote copia e importa a imagem de qualquer tipo. A capacidade de ter imagem vem do sistema, do grupo e do subtipo (RAMAHomebrewAdaptadores.imagemDe), com a matriz de cobertura testada.",
+        ],
+      },
+    },
+    {
       versao: "9.13.0",
       codinome: "RELICÁRIO",
       data: "16/11/2026",

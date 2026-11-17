@@ -48,6 +48,8 @@
     var reg = o.registro || null;
     var d = reg && reg.modelo && reg.modelo.def ? JSON.parse(JSON.stringify(reg.modelo.def)) : vazia();
     var r = { nome: reg ? reg.nome : "", descricao: reg ? reg.descricao || "" : "", visibilidade: reg ? reg.visibilidade || "privado" : "privado", passo: 1, sujo: false };
+    /* v9.14: a ilustração opcional da classe (js/homebrew-imagem.js). */
+    var imagem = global.RAMAHomebrewImagem ? global.RAMAHomebrewImagem.campo({ registro: reg, sistema: "ordem", grupo: "estrutural", subtipo: "classe", aoMudar: function () { r.sujo = true; } }) : null;
     var form = el("div.hbe-form"), lado = el("aside.hbe-lado", { "aria-label": "Revisão" });
     var janela = UI.modal({
       titulo: (reg ? "Editar" : "Nova") + " classe · Ordem Paranormal", largo: true, classe: "hbe-janela hbc-janela",
@@ -261,6 +263,7 @@
         el("ul.hbe-mini", {}, ["PV, PE, SAN e PD pela tabela, em cada marco.", "As vagas de cada marco aparecem na Progressão da ficha e na Ramificação.", (def.poderesDe ? "Poderes de classe: os do " + C().classe(def.poderesDe).nome + " e os gerais" : "Poderes de classe: os gerais") + (def.poderesHomebrew.length ? ", mais " + def.poderesHomebrew.length + " Homebrew escolhido(s)" : "") + "; os feitos só para esta classe entram sempre.", (def.trilhasDe ? "Trilhas: as do " + C().classe(def.trilhasDe).nome : "Trilhas: nenhuma oficial") + (def.trilhasHomebrew.length ? ", mais " + def.trilhasHomebrew.length + " Homebrew escolhida(s)" : "") + "; as trilhas feitas só para esta classe entram sempre."].map(function (t) { return el("li", { texto: t }); })),
         el("p.t-rotulo", { texto: "Decisão da mesa / manual" }),
         el("ul.hbe-mini", {}, ["O efeito mecânico das habilidades escritas nos marcos (o texto aparece; a automação de cada uma é da Etapa 3)."].concat(f.map(function (x) { return "Falta a " + x + ": a classe não será oferecida nesse trilho."; })).map(function (t) { return el("li", { texto: t }); })),
+        imagem ? imagem.el : null,
         el("div.r-campo", {}, [el("span.r-rotulo", { texto: "Visibilidade" }), el("div.filtros__grupo", { role: "group", "aria-label": "Visibilidade" }, [["privado", "Privada"], ["publico", "Pública"]].map(function (x) {
           return el("button.filtro", { type: "button", "aria-pressed": String(r.visibilidade === x[0]), texto: x[1], onclick: function () { r.visibilidade = x[0]; mudou(true); } });
         })), el("p.r-ajuda", { texto: "Publicar não coloca a classe na ficha de ninguém: quem quiser a escolhe na criação do agente." })]),
@@ -286,6 +289,7 @@
       if (!g.ok) { UI.avisoErro(g.erro); return; }
       var resp = await global.RAMAApi.salvarHomebrew(g.registro);
       if (!resp.ok) { UI.avisoDeFalha(resp, "gravação da classe"); return; }
+      if (imagem) await imagem.salvarEm((resp.dados && resp.dados.id) || (reg && reg.id));
       if (H() && H().carregarBiblioteca) H().carregarBiblioteca(true);
       r.sujo = false;
       fechar();

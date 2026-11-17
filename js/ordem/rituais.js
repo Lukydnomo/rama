@@ -100,7 +100,14 @@
       img.removeEventListener("error", trocar);
       if (img.getAttribute("src") !== im.provisorio) img.setAttribute("src", im.provisorio);
     });
-    return u.el("span.ritual-simbolo" + (o.grande ? ".ritual-simbolo--grande" : ""), { "aria-hidden": "true", dataset: { ritual: im.catalogoId || "" } }, [img]);
+    var caixa = u.el("span.ritual-simbolo" + (o.grande ? ".ritual-simbolo--grande" : ""), { "aria-hidden": "true", dataset: { ritual: im.catalogoId || "" } }, [img]);
+    /* v9.14: um ritual que veio da Homebrew com símbolo próprio mostra o
+       dele (a miniatura, pela referência — a imagem não entra na ficha), se
+       a conta alcançar a criação; senão, o oficial ou o provisório. */
+    var hb = alvo && typeof alvo === "object" ? String(alvo.origemHomebrewId || "") : "";
+    var HI = global.RAMAHomebrewImagem;
+    if (hb && HI && HI.paraFicha) HI.paraFicha(hb).then(function (src) { if (src) { img.setAttribute("src", src); caixa.classList.add("ritual-simbolo--proprio"); } });
+    return caixa;
   }
   var PRAZO_CARGA_MS = 20000;
 

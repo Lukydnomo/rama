@@ -250,12 +250,16 @@ var ABAS = {
   },
   CRIATURAS_IMAGENS: {
     /* Mesma razão da foto de personagem: imagem fora do JSON que é
-       reenviado a cada edição. */
+       reenviado a cada edição. v9.14: guarda a imagem de QUALQUER criação
+       do Homebrew (retrato, ilustração ou símbolo), pela id do registro —
+       o nome da aba e da coluna ficam por compatibilidade. `miniatura` é a
+       versão pequena que as listas pedem em lote; um retrato antigo sem
+       ela serve a imagem inteira. */
     nome: 'CRIATURAS_IMAGENS',
-    colunas: ['criaturaId', 'ownerId', 'imagem', 'atualizadoEm', 'imagemCont'],
+    colunas: ['criaturaId', 'ownerId', 'imagem', 'atualizadoEm', 'imagemCont', 'miniatura'],
     chave: 'criaturaId',
     leves: 2,
-    pesadas: ['imagem', 'imagemCont'],
+    pesadas: ['imagem', 'imagemCont', 'miniatura'],
     somenteTexto: ['imagemCont'],
   },
   PACOTES_HOMEBREW: {
@@ -289,10 +293,10 @@ var ABAS = {
     /* A imagem de uma criatura que entrou num pacote — cópia da
        CRIATURAS_IMAGENS daquele momento, para a importação levar junto. */
     nome: 'PACOTES_HOMEBREW_IMAGENS',
-    colunas: ['entradaId', 'pacoteId', 'imagem', 'atualizadoEm', 'imagemCont'],
+    colunas: ['entradaId', 'pacoteId', 'imagem', 'atualizadoEm', 'imagemCont', 'miniatura'],
     chave: 'entradaId',
     leves: 2,
-    pesadas: ['imagem', 'imagemCont'],
+    pesadas: ['imagem', 'imagemCont', 'miniatura'],
     somenteTexto: ['imagemCont'],
   },
   PACOTES_HOMEBREW_CAPAS: {

@@ -428,8 +428,18 @@
       UI.etiquetaColorida(registro.etiqueta),
     ].filter(Boolean);
     var simb = registro.tipo === "ritual" && RT() && RT().simbolo ? RT().simbolo(registro) : null;
-    return el("article.hb-linha", { role: "listitem", class: "hb-linha--" + registro.tipo + (simb ? " hb-linha--com-simbolo" : "") }, [
-      simb ? el("div.hb-linha__simbolo", {}, [simb]) : null,
+    /* v9.14: a miniatura da imagem própria ao lado do nome (pedida só
+       quando a linha aparece); sem ela, o símbolo oficial/provisório do
+       ritual, como antes. A coluna só existe quando há o que mostrar. */
+    var artigo;
+    var caixaMini = el("div.hb-linha__simbolo", { hidden: !simb });
+    var mini = global.RAMAHomebrewImagem && registro.id ? global.RAMAHomebrewImagem.miniatura(registro, {
+      reserva: simb,
+      aoPintar: function (visivel) { caixaMini.hidden = !visivel; if (artigo) artigo.classList.toggle("hb-linha--com-simbolo", visivel); },
+    }) : simb;
+    if (mini) caixaMini.appendChild(mini);
+    artigo = el("article.hb-linha", { role: "listitem", class: "hb-linha--" + registro.tipo + (simb ? " hb-linha--com-simbolo" : "") }, [
+      mini ? caixaMini : null,
       el("div.hb-linha__principal", {}, [
         el("button.hb-linha__nome", {
           type: "button", texto: registro.nome, title: "Consultar " + registro.nome,
@@ -444,17 +454,34 @@
       marcas.length ? el("div.hb-linha__marcas", {}, marcas) : null,
       el("div.hb-linha__menu", {}, [UI.menu(opcoesDe(registro), { rotulo: "Opções de " + registro.nome, icone: "tresPontos" })]),
     ]);
+    return artigo;
   }
 
   /* A consulta: criatura pela ficha inteira (o painel de sempre); o resto
      com os detalhes, a descrição longa e o código do registro. */
+  /* v9.14: a imagem maior da consulta. Uma entrada de pacote mostra a
+     cópia guardada NAQUELA versão do pacote (imagemPacote) — nunca busca a
+     criação original pelo id da entrada. */
+  function fonteDaImagem(registro, opcoesConsulta) {
+    var oc = opcoesConsulta || {};
+    if (oc.imagemPacote) return oc.imagemPacote;
+    if (oc.semRegistro) return null;
+    return { id: registro.id };
+  }
+  function imagemDaConsulta(registro, opcoesConsulta, reserva) {
+    var HI = global.RAMAHomebrewImagem;
+    var fonte = fonteDaImagem(registro, opcoesConsulta);
+    if (!HI || !fonte || (!fonte.id && !fonte.pacote)) return reserva || null;
+    return HI.grande(registro, { fonte: fonte, reserva: reserva });
+  }
+
   function consultar(registro, opcoesConsulta) {
     var semRegistro = !!(opcoesConsulta && opcoesConsulta.semRegistro);
     if (registro.modelo && global.RAMAHomebrewEditor) {
-      UI.modal({ titulo: registro.nome, largo: true, conteudo: [global.RAMAHomebrewEditor.consulta(registro), semRegistro ? null : rodapeDoRegistro(registro)], botoes: [{ rotulo: "Fechar", classe: "r-botao--fantasma" }] });
+      UI.modal({ titulo: registro.nome, largo: true, conteudo: [imagemDaConsulta(registro, opcoesConsulta), global.RAMAHomebrewEditor.consulta(registro), semRegistro ? null : rodapeDoRegistro(registro)], botoes: [{ rotulo: "Fechar", classe: "r-botao--fantasma" }] });
       return;
     }
-    if (registro.tipo === "criatura") { consultarCriatura(registro, semRegistro); return; }
+    if (registro.tipo === "criatura") { consultarCriatura(registro, semRegistro, opcoesConsulta); return; }
     var meu = registro.meu !== false;
     UI.modal({
       titulo: registro.nome,
@@ -465,6 +492,7 @@
           registro.visibilidade === "publico" ? el("span.r-etiqueta", { texto: "Pública" }) : null,
           !meu ? el("span.r-etiqueta.r-etiqueta--para", { texto: "De outra conta" }) : null,
         ]),
+        imagemDaConsulta(registro, opcoesConsulta),
         registro.tipo === "ritual" ? detalhesDoRitual(registro)
           : registro.tipo === "habilidade" ? detalhesDaHabilidade(registro) : detalhes(registro),
         registro.tipo !== "ritual" && registro.descricao ? el("p.item__descricao", { texto: registro.descricao }) : null,
@@ -488,8 +516,13 @@
   }
 
   /* A ficha inteira de uma criatura, só para leitura. */
-  function consultarCriatura(registro, semRegistro) {
-    var painelC = global.RAMACriaturaPainel.criar(registro, { consulta: true, rotulo: semRegistro ? "Pacote" : "Homebrew" });
+  function consultarCriatura(registro, semRegistro, opcoesConsulta) {
+    /* v9.14: o retrato salvo (o de antes também, sem novo envio) tem
+       prioridade sobre a arte do catálogo; o corpo inteiro do livro fica. */
+    var HI = global.RAMAHomebrewImagem;
+    var fonte = fonteDaImagem(registro, opcoesConsulta);
+    var imagem = HI && fonte ? HI.fonteGrande(registro, { fonte: fonte.pacote ? fonte : null }) : null;
+    var painelC = global.RAMACriaturaPainel.criar(registro, { consulta: true, rotulo: semRegistro ? "Pacote" : "Homebrew", imagem: imagem });
     UI.modal({ titulo: registro.nome, largo: true, conteudo: [painelC.raiz, semRegistro ? null : rodapeDoRegistro(registro)], botoes: [{ rotulo: "Fechar" }] });
   }
 
@@ -501,6 +534,15 @@
     if (tipo === "habilidade") return "Habilidade";
     if (tipo === "ritual") return "Ritual";
     return F.rotuloDoTipo(tipo);
+  }
+
+  /* v9.14: o campo de imagem dos editores antigos (habilidade, ritual e
+     item sem `modelo`). */
+  function campoImagem(registro, extra) {
+    return global.RAMAHomebrewImagem ? global.RAMAHomebrewImagem.campo(Object.assign({ registro: registro && registro.id ? registro : null }, extra)) : null;
+  }
+  async function subirImagem(campoImg, r, registro) {
+    if (campoImg) await campoImg.salvarEm((r.dados && r.dados.id) || (registro && registro.id));
   }
 
   /* Editor de habilidade avulsa. Reusa o mesmo modelo da ficha, para
@@ -517,6 +559,7 @@
     var nome = UI.campo({ rotulo: "Nome", valor: h.nome, limite: 120 });
     var origem = UI.campo({ rotulo: "Origem", valor: h.origem, limite: 60 });
     var texto = UI.campo({ rotulo: "Texto", tipo: "area", valor: h.texto, linhas: 6, limite: 8000 });
+    var imgHab = campoImagem(registro, { sistema: "universal", grupo: "habilidade", subtipo: "habilidade" });
 
     var seletorVis = el("div.filtros__grupo", { role: "group", "aria-label": "Visibilidade" },
       [{ v: "privado", r: "Privada" }, { v: "publico", r: "Pública" }].map(function (op) {
@@ -547,6 +590,7 @@
           el("span", { texto: "Texto em negrito" }),
         ]),
         UI.seletorDeCor({ valor: cor, aoMudar: function (v) { cor = v; } }),
+        imgHab ? imgHab.el : null,
         el("div.r-campo", {}, [
           el("span.r-rotulo", { texto: "Visibilidade" }),
           seletorVis,
@@ -571,6 +615,7 @@
 
             var r = await global.RAMAApi.salvarHomebrew(pronta);
             if (!r.ok) { UI.avisoDeFalha(r, "gravação"); return; }
+            await subirImagem(imgHab, r, registro);
 
             fechar();
             await carregar();
@@ -644,10 +689,13 @@
       })
     );
 
+    /* v9.14: o símbolo próprio do ritual; sem ele, o oficial ou o provisório. */
+    var imgRit = campoImagem(registro, { sistema: "ordem", grupo: "habilidade", subtipo: "ritual" });
     UI.modal({
       titulo: criando ? "Novo ritual" : "Editar ritual",
       largo: true,
       conteudo: el("div.pilha", {}, campos.elementos.concat([
+        imgRit ? imgRit.el : null,
         el("div.r-campo", {}, [
           el("span.r-rotulo", { texto: "Visibilidade" }),
           seletorVis,
@@ -672,6 +720,7 @@
 
             var r = await global.RAMAApi.salvarHomebrew(pronto);
             if (!r.ok) { UI.avisoDeFalha(r, "gravação"); return; }
+            await subirImagem(imgRit, r, registro);
 
             fechar();
             await carregar();
@@ -953,6 +1002,9 @@
     }
 
     campos.push(descricao);
+    /* v9.14: a ilustração do item. */
+    var imgItem = campoImagem(registro, { sistema: "universal", grupo: "item", subtipo: "equipamento" });
+    if (imgItem) campos.push(imgItem.el);
 
     UI.modal({
       titulo: (criando ? "Nova " : "Editar ") + F.rotuloDoTipo(tipo).toLowerCase(),
@@ -968,6 +1020,7 @@
 
             var r = await global.RAMAApi.salvarHomebrew(montado);
             if (!r.ok) { UI.avisoDeFalha(r, "gravação na biblioteca"); return; }
+            await subirImagem(imgItem, r, registro);
 
             fechar();
             await carregar();
@@ -1066,6 +1119,11 @@
 
     var r = await global.RAMAApi.salvarHomebrew(copia);
     if (!r.ok) { UI.avisoDeFalha(r, "duplicação"); return; }
+    /* v9.14: a imagem vai junto (um arquivo da cópia, independente). */
+    if (global.RAMAHomebrewImagem && registro.id && r.dados && r.dados.id) {
+      var ri = await global.RAMAHomebrewImagem.copiar(registro.id, r.dados.id);
+      if (ri && !ri.ok) UI.avisoAtencao("A cópia foi criada, mas a imagem não foi copiada. Adicione-a pelo editor.");
+    }
 
     /* Copiar de Públicas: a cópia é sua e mora em Minhas criações. */
     if (escopo !== "meus") { delete contagens.meus; UI.avisoOk("Cópia criada em Minhas criações."); return; }
