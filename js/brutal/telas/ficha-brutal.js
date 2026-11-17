@@ -152,7 +152,8 @@
     function campoLivre(rotulo, chave, limite) {
       return UI().campo({ rotulo: rotulo, valor: b[chave], limite: limite, desabilitado: !edita, aoMudar: function (v) { b[chave] = String(v).slice(0, limite); ctx.alterou(); } });
     }
-    var foto = geral && geral.foto && ctx.foto ? geral.foto(ctx) : (x.a && x.a.homebrew ? el("span.brt-avatar.brt-avatar--vazio", { "aria-hidden": "true", texto: x.a.nome.charAt(0) }) : x.a ? el("img.brt-avatar", { src: global.RAMABrutalCriar ? global.RAMABrutalCriar.imagem(b.arquetipo) : "", alt: "" }) : el("span.brt-avatar.brt-avatar--vazio", { "aria-hidden": "true", texto: "?" }));
+    /* v9.13: com foto, conjunto de retratos ou no modo edição (para abrir Retratos), a foto da ficha; senão, o Arquétipo. */
+    var foto = geral && geral.foto && (ctx.foto || ctx.ficha.retratos || (edita && ctx.emEdicao())) ? geral.foto(ctx) : (x.a && x.a.homebrew ? el("span.brt-avatar.brt-avatar--vazio", { "aria-hidden": "true", texto: x.a.nome.charAt(0) }) : x.a ? el("img.brt-avatar", { src: global.RAMABrutalCriar ? global.RAMABrutalCriar.imagem(b.arquetipo) : "", alt: "" }) : el("span.brt-avatar.brt-avatar--vazio", { "aria-hidden": "true", texto: "?" }));
     return el("section.brt-cartao.brt-identidade", { "aria-label": "Identidade" }, [
       el("div.brt-identidade__foto", {}, [foto]),
       el("div.brt-identidade__campos", {}, [

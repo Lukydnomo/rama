@@ -73,6 +73,12 @@
     "ler_capas_pacotes",
 
     "salvar_foto",
+    /* Imagens da ficha (v9.13): ler e listar; salvar SUBSTITUI pela ref
+       que a tela escolheu, e excluir uma ref que já saiu não é erro. */
+    "listar_imagens_personagem",
+    "ler_imagens_personagem",
+    "salvar_imagem_personagem",
+    "excluir_imagem_personagem",
     "salvar_perfil",
     "salvar_imagem_criatura",
     "salvar_imagem_documento",
@@ -584,6 +590,22 @@
     return post({ acao: "salvar_foto", personagemId: id, imagem: imagem });
   }
 
+  /* Imagens da ficha (v9.13): retratos e anotações, fora do fichaJson.
+     A ficha guarda as refs; a imagem vem por ref, quando aparece. */
+  function listarImagensPersonagem(id, tipo) {
+    return post({ acao: "listar_imagens_personagem", personagemId: id, tipo: tipo || "" });
+  }
+  function lerImagensPersonagem(id, refs) {
+    return post({ acao: "ler_imagens_personagem", personagemId: id, refs: refs });
+  }
+  /* dados: { ref, tipo, nome, alvo, imagem? } — sem imagem, só renomeia. */
+  function salvarImagemPersonagem(id, dados) {
+    return post(Object.assign({ acao: "salvar_imagem_personagem", personagemId: id }, dados));
+  }
+  function excluirImagemPersonagem(id, refs) {
+    return post({ acao: "excluir_imagem_personagem", personagemId: id, refs: [].concat(refs) });
+  }
+
   /* =================================================================
      HOMEBREW
      ================================================================= */
@@ -1078,6 +1100,11 @@
       texto: "A planilha não confirmou esta versão. A versão anterior continua guardada e intacta, e o que você fez continua " +
              "neste aparelho — a gravação é repetida sozinha.",
     },
+    /* v9.13: o teto de imagens da ficha (retratos ou anotações). */
+    limite: {
+      titulo: "LIMITE DE IMAGENS ATINGIDO",
+      texto: "Esta ficha já tem o máximo de imagens deste tipo. Exclua alguma da biblioteca ou da nota para enviar outra; as que já estão guardadas continuam intactas.",
+    },
     codigo_invalido: {
       titulo: "CÓDIGO NÃO RECONHECIDO",
       texto: "Confira o código: espaços, hífens e maiúsculas não importam.",
@@ -1246,6 +1273,10 @@
     lerCapas: lerCapas,
 
     salvarFoto: salvarFoto,
+    listarImagensPersonagem: listarImagensPersonagem,
+    lerImagensPersonagem: lerImagensPersonagem,
+    salvarImagemPersonagem: salvarImagemPersonagem,
+    excluirImagemPersonagem: excluirImagemPersonagem,
 
     listarHomebrew: listarHomebrew,
     salvarHomebrew: salvarHomebrew,

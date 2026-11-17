@@ -62,9 +62,30 @@
       t.ok("ficha universal antiga não ganha bloco de Oblívio", !S.normalizarFicha({ schemaVersion: 23, nome: "Antiga" }).oblivio);
     }
 
+    t.grupo("Imagens da ficha · schema 36 (v9.13)");
+    (function () {
+      var antiga = S.normalizarFicha({ schemaVersion: 35, nome: "Antiga", anotacoes: { pastas: [], soltas: [{ id: "n-0001-aaaa", titulo: "Pista", conteudo: "só texto" }] } });
+      t.ok("nota antiga de texto puro abre igual, com imagens vazias", antiga.anotacoes.soltas[0].conteudo === "só texto" && Array.isArray(antiga.anotacoes.soltas[0].imagens) && !antiga.anotacoes.soltas[0].imagens.length);
+      t.igual("ficha antiga não ganha conjunto de retratos", antiga.retratos, null);
+      t.igual("ficha nova também não (a foto de sempre)", S.criarFicha({ nome: "Nova" }).retratos, null);
+      var n = S.normalizarFicha({ nome: "Com imagens", anotacoes: { pastas: [], soltas: [{ id: "n-0002-aaaa", titulo: "x", imagens: [
+        { ref: "img-0001-aaaa", legenda: "Mapa" }, { ref: "img-0001-aaaa", legenda: "repetida" }, { ref: "../fora" }, { ref: "img-0002-aaaa" }] }] } });
+      t.iguais("refs válidas, sem repetir, com a legenda", n.anotacoes.soltas[0].imagens, [{ ref: "img-0001-aaaa", legenda: "Mapa" }, { ref: "img-0002-aaaa", legenda: "" }]);
+      var muitas = []; for (var i = 0; i < 20; i++) muitas.push({ ref: "img-lim-" + (1000 + i) });
+      t.igual("no máximo 12 imagens por nota", S.normalizarImagensDaNota(muitas).length, 12);
+      var r = S.normalizarRetratos({ ativo: "nao-existe", modo: "outro", fixo: "xyz", conjuntos: [
+        { id: "conj-civil-01", nome: "Civil", posicoes: { normal: "ret-0001-aaaa", machucado: "<script>", enlouquecendo: "" } },
+        { id: "conj-civil-01", nome: "Repetido" }, { id: "conj-missao-1", nome: "Em missão", posicoes: { normal: "ret-0001-aaaa" } }] });
+      t.ok("conjuntos: id repetido sai, ativo inválido vira o primeiro, modo e posição fixa conferidos",
+        r.conjuntos.length === 2 && r.ativo === "conj-civil-01" && r.modo === "auto" && r.fixo === "normal");
+      t.ok("  ref inválida numa posição fica vazia; a mesma imagem em dois conjuntos é a mesma ref",
+        r.conjuntos[0].posicoes.machucado === "" && r.conjuntos[0].posicoes.normal === r.conjuntos[1].posicoes.normal);
+      t.igual("sem conjunto nenhum, null", S.normalizarRetratos({ conjuntos: [] }), null);
+    })();
+
     t.grupo("Tema da ficha · schema 16 (v2.36)");
     var TEMA16 = { nome: "Roxo", base: "escuro", valores: { fundo: { tipo: "radial", forma: "circulo", x: 20, y: 30, pontos: [{ cor: "#08080a", pos: 0 }, { cor: "#3a1030", alfa: 0.8, pos: 100 }] } } };
-    t.igual("o schema subiu para 35 (Ordem II, v9.0)", S.VERSAO_SCHEMA, 35);
+    t.igual("o schema subiu para 36 (imagens da ficha, v9.13)", S.VERSAO_SCHEMA, 36);
     t.iguais("ficha nova usa o tema da conta", S.criarFicha({ nome: "Nova" }).aparencia, { v: 1, modo: "conta" });
     t.iguais("ficha antiga (sem o campo) também", S.normalizarFicha({ schemaVersion: 15, nome: "Legado" }).aparencia, { v: 1, modo: "conta" });
     ["ordem", "universal"].forEach(function (tipo) {
@@ -5157,7 +5178,7 @@
     remoto.pericias[0].bonus = 5;
     var m = S.mesclar(base, local, remoto, S.ESQUEMA_FICHA);
     t.ok("sincronizar: a fórmula daqui e o bônus de lá", m.estado.pericias[0].formula === "@STR d8" && m.estado.pericias[0].bonus === 5 && !m.conflitos.length);
-    t.igual("o schema da ficha é o atual (35)", n.schemaVersion, 35);
+    t.igual("o schema da ficha é o atual (36)", n.schemaVersion, 36);
 
     t.grupo("v7.1 · fórmulas nos atributos da ficha universal");
     var fa = F.criarFicha({ nome: "Atributos com fórmula", tipoFicha: "universal" });
@@ -5233,7 +5254,7 @@
     var m = S.mesclar(base, local, remoto, S.ESQUEMA_FICHA);
     t.ok("sincronizar: o modo daqui e o bônus de lá, sem conflito",
       m.estado.organizacao.pericias.modo === "maior" && m.estado.pericias[1].bonus === 4 && !m.conflitos.length);
-    t.igual("o schema da ficha é o atual (35)", n.schemaVersion, 35);
+    t.igual("o schema da ficha é o atual (36)", n.schemaVersion, 36);
   }
 
   /* =================================================================
@@ -5379,7 +5400,7 @@
     t.ok("exportar e importar leva pendentes (com o dado já rolado) e resolvidas", volta.ok &&
       volta.dados.ordem.barganhaInsana.pendentes[0].d4 === 2 && volta.dados.ordem.barganhaInsana.resolvidas.length === 1);
     t.ok("  mesmo sem o ritual na lista de conhecidos", volta.dados.rituais.itens.length === 0);
-    t.igual("o schema da ficha é o atual (35)", F.normalizarFicha(ficha).schemaVersion, 35);
+    t.igual("o schema da ficha é o atual (36)", F.normalizarFicha(ficha).schemaVersion, 36);
   }
 
   /* =================================================================
@@ -5420,7 +5441,7 @@
     t.iguais("  um tema de dados que este navegador não conhece também fica (a tela usa a reserva)", MT.normalizarAparencia({ dados: { id: "tema-do-futuro" } }).dados, { id: "tema-do-futuro" });
     var ficha = F.normalizarFicha(F.criarFicha({ nome: "Lia", tipoFicha: "universal", aparencia: { v: 1, modo: "conta", dados: { id: "sigilo-violeta" } } }));
     t.iguais("a ficha normalizada mantém a escolha", ficha.aparencia.dados, { id: "sigilo-violeta" });
-    t.igual("o schema da ficha é o atual (35)", ficha.schemaVersion, 35);
+    t.igual("o schema da ficha é o atual (36)", ficha.schemaVersion, 36);
     var pacote = V.exportar("personagem", ficha);
     t.ok("exportar leva a escolha sem `id` (atravessa como `tema`)", pacote.dados.aparencia.dados.tema === "sigilo-violeta" && JSON.stringify(pacote).indexOf('"id"') < 0);
     var volta = V.importado(JSON.parse(JSON.stringify(pacote)));

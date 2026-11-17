@@ -303,6 +303,8 @@
         if (somenteLeitura()) { desfazerNaLeitura(); return; }
         estado.ficha.atualizadoEm = U.agoraISO();
         if (estado.salvador) estado.salvador.alterou();
+        /* v9.13: o retrato em uso acompanha o estado (dano, cura, condição). */
+        if (global.RAMARetratos) global.RAMARetratos.conferir(ctx);
       },
 
       /* v2.46: as seções pedem o bloco, a tira e a seção; cabeçalho e

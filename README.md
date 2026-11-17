@@ -929,6 +929,21 @@ segredo nenhum — ele os lê das Script Properties. Publicá-lo não expõe nad
 
 ### Atualizar o backend
 
+**v9.13.0 — RELICÁRIO:** imagens nas anotações e biblioteca de retratos com
+conjuntos.
+1. Troque **`Dados.gs`** e **`Codigo.gs`**. Nenhum arquivo novo.
+2. **Rode `setupRama()`**: ele cria a aba `PERSONAGENS_IMAGENS`.
+3. Crie uma versão nova da implantação.
+
+Sem a aba (setupRama não rodou), as ações respondem `instalacao_incompleta`: a
+nota avisa ao inserir imagem, e Retratos oferece trocar só a foto, como antes.
+Site: `js/imagens-ficha.js` e `js/retratos.js` (novos), `js/api.js`,
+`js/ficha.js`, `js/paginas/ficha.js`, `js/paginas/ficha-geral.js`,
+`js/paginas/ficha-anotacoes.js`, `js/ordem/telas/ficha-ordem.js`,
+`js/brutal/telas/ficha-brutal.js`, `css/ficha.css`, `ficha/index.html` e
+`js/versao.js`. A ficha sobe para o schema 36: publique o site junto com o
+backend.
+
 **v9.12.0 — ASTROLÁBIO:** atalhos Por sistema na lateral de Personagens. **Só o
 site muda.** Site: `js/paginas/personagens.js`, `css/personagens.css` e
 `js/versao.js`.
@@ -2063,7 +2078,7 @@ Três números diferentes, que não se misturam:
 
 | | Onde | O que é |
 |---|---|---|
-| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v9.12.0 |
+| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v9.13.0 |
 | `schemaVersion` | `js/ficha.js` | o formato da FICHA |
 | `versaoFormato` | `js/config.js` | o formato dos arquivos de importação |
 

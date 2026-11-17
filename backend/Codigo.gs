@@ -378,6 +378,12 @@ function rotasDoNucleo() {
   ler_fotos:             { publica: false, fn: acaoLerFotos },
   ler_avatares:          { publica: false, fn: acaoLerAvatares },
   salvar_foto:           { publica: false, fn: acaoSalvarFoto },
+  /* Imagens da ficha (v9.13): biblioteca de retratos e imagens das
+     anotações. Ler segue a leitura da ficha; gravar, a edição. */
+  listar_imagens_personagem:  { publica: false, fn: acaoListarImagensPersonagem },
+  ler_imagens_personagem:     { publica: false, fn: acaoLerImagensPersonagem },
+  salvar_imagem_personagem:   { publica: false, fn: acaoSalvarImagemPersonagem },
+  excluir_imagem_personagem:  { publica: false, fn: acaoExcluirImagemPersonagem },
 
   listar_homebrew:       { publica: false, fn: acaoListarHomebrew },
   ler_homebrew:          { publica: false, fn: acaoLerHomebrew },
@@ -2985,6 +2991,12 @@ function acaoExcluirPersonagem(corpo, usuario) {
       apagarLinha(ABAS.PERSONAGENS_FOTOS, foto._linha);
     }
 
+    /* As imagens da ficha (v9.13) — retratos e anotações — saem junto. */
+    if (imagensDoPersonagemProntas()) {
+      var imagensDaFicha = linhasDeImagensDoPersonagem(registro.id);
+      if (imagensDaFicha.length) apagarLinhas(ABAS.PERSONAGENS_IMAGENS, imagensDaFicha.map(function (l) { return l._linha; }));
+    }
+
     /* A linha do índice sai junto; a pasta continua (pode ter outros). */
     if (organizacaoPronta()) {
       var ind = linhaLeve(ABAS.PERSONAGENS_ORGANIZACAO, 'personagemId', registro.id);
@@ -3089,6 +3101,23 @@ function criarCopiaDoPersonagem(registro, usuario, o) {
       if (aplicarImagem(ABAS.PERSONAGENS_FOTOS, copiaFoto, 'imagem', imagem)) {
         inserir(ABAS.PERSONAGENS_FOTOS, copiaFoto);
       }
+    }
+  }
+
+  /* As imagens da ficha (v9.13) vão com a cópia, com as MESMAS refs —
+     a ficha copiada aponta para elas sem reescrever nada. Quem copia já
+     lia a ficha inteira, imagens incluídas. */
+  if (imagensDoPersonagemProntas()) {
+    var origemImagens = linhasDeImagensDoPersonagem(registro.id);
+    if (origemImagens.length) {
+      var conteudos = imagensDasLinhas(ABAS.PERSONAGENS_IMAGENS, origemImagens, 'imagem');
+      var novasImagens = [];
+      origemImagens.forEach(function (l) {
+        var n = { id: novoId(), personagemId: id, ref: String(l.ref), ownerId: usuario.id, tipo: String(l.tipo), nome: String(l.nome || ''),
+          alvo: String(l.alvo || ''), criadoEm: textoDeData(l.criadoEm) || agora, atualizadoEm: agora };
+        if (conteudos[l._linha] && aplicarImagem(ABAS.PERSONAGENS_IMAGENS, n, 'imagem', conteudos[l._linha])) novasImagens.push(n);
+      });
+      if (novasImagens.length) inserirLinhas(ABAS.PERSONAGENS_IMAGENS, novasImagens);
     }
   }
 
@@ -3417,6 +3446,157 @@ function acaoSalvarFoto(corpo, usuario) {
     avisarMesas([acesso.personagem.campanhaId], ['personagens']);
 
     return { ok: true };
+  });
+}
+
+/* =====================================================================
+   IMAGENS DA FICHA (v9.13)
+   ---------------------------------------------------------------------
+   A biblioteca de retratos do personagem e as imagens das anotações,
+   numa aba própria (PERSONAGENS_IMAGENS). A ficha guarda só as
+   referências; as imagens vêm sob demanda, por ref.
+
+   PERMISSÃO
+   As imagens são da ficha e seguem a ficha, exatamente: ler pede a
+   leitura do personagem (dono, mestre da mesa, Editor ou Leitor); gravar
+   e excluir, a edição. Conhecer a ref não basta — todo pedido vem com o
+   personagem e é conferido por ele, e uma ref de outra ficha não é
+   achada. Anotação não tem permissão própria: quem lê a ficha lê as
+   notas, e é essa a regra das imagens delas.
+
+   LIMITES
+   30 retratos e 60 imagens de anotação por personagem (12 por nota). A
+   tela mostra o limite antes de enviar; o servidor recusa com `limite`
+   e não toca no que já existe.
+   ===================================================================== */
+
+var LIMITES_IMAGENS_PERSONAGEM = { retrato: 30, anotacao: 60, porNota: 12 };
+var REF_IMAGEM_PERSONAGEM = /^[A-Za-z0-9_-]{6,64}$/;
+var MAX_REFS_POR_PEDIDO = 40;
+
+function imagensDoPersonagemProntas() {
+  var e = exec();
+  if (e.imagensDoPersonagemProntas !== undefined) return e.imagensDoPersonagemProntas;
+  if (abaJaLida(ABAS.PERSONAGENS_IMAGENS)) { e.imagensDoPersonagemProntas = true; return true; }
+  try { aba(ABAS.PERSONAGENS_IMAGENS); e.imagensDoPersonagemProntas = true; } catch (erro) { e.imagensDoPersonagemProntas = false; }
+  return e.imagensDoPersonagemProntas;
+}
+
+function linhasDeImagensDoPersonagem(personagemId) {
+  var alvo = String(personagemId);
+  return lerLeves(ABAS.PERSONAGENS_IMAGENS).filter(function (l) { return String(l.personagemId) === alvo; });
+}
+
+function textoDeData(v) {
+  if (!v) return '';
+  if (Object.prototype.toString.call(v) === '[object Date]') return isNaN(v.getTime()) ? '' : v.toISOString();
+  return String(v);
+}
+
+function descreverImagemDoPersonagem(l) {
+  return { ref: String(l.ref), tipo: String(l.tipo), nome: String(l.nome || ''), alvo: String(l.alvo || ''),
+    criadoEm: textoDeData(l.criadoEm), atualizadoEm: textoDeData(l.atualizadoEm) };
+}
+
+/* Os metadados (sem imagem): a biblioteca lista, a tela decide o que pedir. */
+function acaoListarImagensPersonagem(corpo, usuario) {
+  if (!imagensDoPersonagemProntas()) return { ok: false, erro: 'instalacao_incompleta', detalhe: 'PERSONAGENS_IMAGENS' };
+  var acesso = personagemAcessivel(corpo.personagemId, usuario, { leitura: true, leve: true });
+  if (!acesso.ok) return acesso;
+  var tipo = corpo.tipo ? String(corpo.tipo) : '';
+  var lista = linhasDeImagensDoPersonagem(acesso.personagem.id)
+    .filter(function (l) { return !tipo || String(l.tipo) === tipo; })
+    .map(descreverImagemDoPersonagem)
+    .sort(function (a, b) { return a.criadoEm < b.criadoEm ? -1 : a.criadoEm > b.criadoEm ? 1 : 0; });
+  return { ok: true, dados: { imagens: lista, limites: LIMITES_IMAGENS_PERSONAGEM } };
+}
+
+/* As imagens pedidas, por ref. Uma ref que não é desta ficha não volta. */
+function acaoLerImagensPersonagem(corpo, usuario) {
+  if (!imagensDoPersonagemProntas()) return { ok: false, erro: 'instalacao_incompleta', detalhe: 'PERSONAGENS_IMAGENS' };
+  var refs = Array.isArray(corpo.refs) ? corpo.refs.map(String) : [];
+  if (!refs.length || refs.length > MAX_REFS_POR_PEDIDO) return { ok: false, erro: 'dados_invalidos' };
+  var acesso = personagemAcessivel(corpo.personagemId, usuario, { leitura: true, leve: true });
+  if (!acesso.ok) return acesso;
+  var pedidas = {};
+  refs.forEach(function (r) { pedidas[r] = true; });
+  var linhas = linhasDeImagensDoPersonagem(acesso.personagem.id).filter(function (l) { return pedidas[String(l.ref)]; });
+  var conteudos = linhas.length ? imagensDasLinhas(ABAS.PERSONAGENS_IMAGENS, linhas, 'imagem') : {};
+  var imagens = {};
+  linhas.forEach(function (l) { if (conteudos[l._linha]) imagens[String(l.ref)] = conteudos[l._linha]; });
+  return { ok: true, dados: { imagens: imagens } };
+}
+
+/* Cria (com imagem) ou atualiza (nome, nota e, se vier, a imagem) uma
+   imagem da ficha, pela ref que a tela escolheu — repetir o mesmo
+   pedido deixa a mesma linha. */
+function acaoSalvarImagemPersonagem(corpo, usuario) {
+  if (!imagensDoPersonagemProntas()) return { ok: false, erro: 'instalacao_incompleta', detalhe: 'PERSONAGENS_IMAGENS' };
+  var ref = String(corpo.ref || '');
+  var tipo = String(corpo.tipo || '');
+  if (!REF_IMAGEM_PERSONAGEM.test(ref) || !LIMITES_IMAGENS_PERSONAGEM[tipo] || tipo === 'porNota') return { ok: false, erro: 'dados_invalidos' };
+  var temImagem = corpo.imagem !== undefined && corpo.imagem !== null && corpo.imagem !== '';
+  var imagem = temImagem ? String(corpo.imagem) : '';
+  if (temImagem && imagem.indexOf('data:image/') !== 0) return { ok: false, erro: 'dados_invalidos' };
+  if (imagem.length > MAX_IMAGEM) return { ok: false, erro: 'dados_grandes' };
+  var nome = String(corpo.nome || '').trim().slice(0, 80);
+  var alvo = String(corpo.alvo || '').slice(0, 64);
+  if (tipo === 'anotacao' && !REF_IMAGEM_PERSONAGEM.test(alvo)) return { ok: false, erro: 'dados_invalidos' };
+
+  return comTrava(function () {
+    var acesso = personagemAcessivel(corpo.personagemId, usuario, { leve: true });
+    if (!acesso.ok) return acesso;
+    var personagemId = String(acesso.personagem.id);
+    var agora = new Date().toISOString();
+    var linhas = linhasDeImagensDoPersonagem(personagemId);
+    var existente = null;
+    for (var i = 0; i < linhas.length; i++) if (String(linhas[i].ref) === ref) { existente = linhas[i]; break; }
+
+    if (existente) {
+      if (String(existente.tipo) !== tipo) return { ok: false, erro: 'dados_invalidos' };
+      existente.nome = nome;
+      existente.alvo = alvo;
+      existente.atualizadoEm = agora;
+      var campos = ['nome', 'alvo', 'atualizadoEm'];
+      if (temImagem) {
+        var colunas = aplicarImagem(ABAS.PERSONAGENS_IMAGENS, existente, 'imagem', imagem);
+        if (!colunas) return { ok: false, erro: 'instalacao_incompleta', detalhe: 'imagemCont' };
+        campos = campos.concat(colunas);
+      }
+      atualizarCampos(ABAS.PERSONAGENS_IMAGENS, existente, campos);
+      return { ok: true, dados: descreverImagemDoPersonagem(existente) };
+    }
+
+    if (!temImagem) return { ok: false, erro: 'dados_invalidos' };
+    var doTipo = linhas.filter(function (l) { return String(l.tipo) === tipo; });
+    if (doTipo.length >= LIMITES_IMAGENS_PERSONAGEM[tipo]) {
+      return { ok: false, erro: 'limite', detalhe: { tipo: tipo, maximo: LIMITES_IMAGENS_PERSONAGEM[tipo] } };
+    }
+    if (tipo === 'anotacao' && doTipo.filter(function (l) { return String(l.alvo) === alvo; }).length >= LIMITES_IMAGENS_PERSONAGEM.porNota) {
+      return { ok: false, erro: 'limite', detalhe: { tipo: 'porNota', maximo: LIMITES_IMAGENS_PERSONAGEM.porNota } };
+    }
+    var nova = { id: novoId(), personagemId: personagemId, ref: ref, ownerId: acesso.personagem.ownerId, tipo: tipo,
+      nome: nome, alvo: alvo, criadoEm: agora, atualizadoEm: agora };
+    if (!aplicarImagem(ABAS.PERSONAGENS_IMAGENS, nova, 'imagem', imagem)) return { ok: false, erro: 'instalacao_incompleta', detalhe: 'imagemCont' };
+    inserir(ABAS.PERSONAGENS_IMAGENS, nova);
+    return { ok: true, dados: descreverImagemDoPersonagem(nova) };
+  });
+}
+
+/* Exclui uma ou várias refs da ficha. Uma ref que não existe mais não é
+   erro: repetir o pedido dá no mesmo. */
+function acaoExcluirImagemPersonagem(corpo, usuario) {
+  if (!imagensDoPersonagemProntas()) return { ok: false, erro: 'instalacao_incompleta', detalhe: 'PERSONAGENS_IMAGENS' };
+  var refs = Array.isArray(corpo.refs) ? corpo.refs.map(String) : (corpo.ref ? [String(corpo.ref)] : []);
+  if (!refs.length || refs.length > MAX_REFS_POR_PEDIDO) return { ok: false, erro: 'dados_invalidos' };
+  return comTrava(function () {
+    var acesso = personagemAcessivel(corpo.personagemId, usuario, { leve: true });
+    if (!acesso.ok) return acesso;
+    var pedidas = {};
+    refs.forEach(function (r) { pedidas[r] = true; });
+    var linhas = linhasDeImagensDoPersonagem(acesso.personagem.id).filter(function (l) { return pedidas[String(l.ref)]; });
+    if (linhas.length) apagarLinhas(ABAS.PERSONAGENS_IMAGENS, linhas.map(function (l) { return l._linha; }));
+    return { ok: true, dados: { excluidas: linhas.length } };
   });
 }
 

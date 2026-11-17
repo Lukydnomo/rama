@@ -167,6 +167,22 @@ var ABAS = {
     pesadas: ['imagem', 'imagemCont'],
     somenteTexto: ['imagemCont'],
   },
+  PERSONAGENS_IMAGENS: {
+    /* As imagens da ficha (v9.13): a biblioteca de retratos e as imagens
+       das anotações. Fora do fichaJson pela mesma razão da foto — a
+       ficha guarda só as REFERÊNCIAS (`ref`), e cada imagem é pedida
+       quando aparece. `id` é a linha (único); `ref` é o nome da imagem
+       dentro da ficha, e uma cópia do personagem leva as linhas com a
+       mesma ref e outro id. `tipo` "retrato" ou "anotacao"; `alvo` é a
+       nota de uma imagem de anotação. Ler segue a leitura da ficha;
+       gravar, a edição — conferidas pelo personagem em cada pedido. */
+    nome: 'PERSONAGENS_IMAGENS',
+    colunas: ['id', 'personagemId', 'ref', 'ownerId', 'tipo', 'nome', 'alvo', 'criadoEm', 'atualizadoEm', 'imagem', 'imagemCont'],
+    chave: 'id',
+    leves: 9,
+    pesadas: ['imagem', 'imagemCont'],
+    somenteTexto: ['imagemCont'],
+  },
   PERSONAGENS_BLOCOS: {
     /* A ficha em pedaços, cada um abaixo do limite seguro da célula
        (v2.15). Uma linha por bloco; os blocos de uma gravação formam uma

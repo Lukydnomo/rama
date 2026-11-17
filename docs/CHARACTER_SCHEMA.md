@@ -5,6 +5,28 @@ padrão e normaliza o que chega de fora. Onde ela é guardada — inteira em
 `fichaJson` (formato antigo) ou em blocos (v2.15) — é assunto do backend, e não muda
 nada aqui: ver [DATABASE.md](DATABASE.md).
 
+## Imagens da ficha — v9.13 / schema 36
+
+Em todos os sistemas. A nota ganhou `imagens: [{ ref, legenda }]` (até 12, na
+ordem em que aparecem) e a ficha, `retratos`:
+
+```
+retratos: null | {
+  v: 1,
+  ativo: "<id do conjunto>",
+  modo: "auto" | "fixo",
+  fixo: "normal" | "machucado" | "enlouquecendo",
+  conjuntos: [{ id, nome, posicoes: { normal, machucado, enlouquecendo } }]   // até 12
+}
+```
+
+As posições guardam REFS da biblioteca (`PERSONAGENS_IMAGENS`, ver
+[DATABASE.md](DATABASE.md)): a mesma imagem em vários conjuntos é a mesma ref,
+nunca outro arquivo. A posição em uso não é gravada — o automático a calcula na
+tela pelo estado da ficha (`js/retratos.js`). Sem `retratos`, a foto de sempre
+(`PERSONAGENS_FOTOS`), que continua acompanhando o Normal do conjunto ativo para
+as listas e a mesa. Sem conversão: nota antiga abre com `imagens: []`.
+
 ## Ordem Paranormal RPG II — v9.0 / schema 35
 
 `tipoFicha: "ordem2"` e o bloco `ordem2` (`js/ordem2/regras.js`). O formato

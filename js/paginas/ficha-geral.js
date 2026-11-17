@@ -59,23 +59,32 @@
      FOTO
      ================================================================= */
 
+  /* v9.13: a foto é o RETRATO EM USO (js/retratos.js) — o do conjunto
+     ativo, pelo estado da ficha ou fixado —, e a foto de sempre enquanto
+     ele não chega ou quando não há conjunto. No modo edição, clicar na
+     foto abre Retratos do personagem. */
   function foto(ctx) {
-    var caixa = el("div.ficha-foto");
+    var caixa = el("div.ficha-foto", { dataset: { retratoFicha: "1" } });
+    var RT = global.RAMARetratos;
+    var edicao = ctx.emEdicao() && ctx.podeEditar && ctx.podeEditar();
+    var botao = edicao ? el("button.ficha-foto__trocar", {
+      type: "button",
+      texto: RT ? "Retratos" : (ctx.foto ? "Trocar foto" : "Adicionar foto"),
+      "aria-label": RT ? "Retratos do personagem" : null,
+      onclick: function () { if (RT) RT.abrir(ctx); else trocarFoto(ctx); },
+    }) : null;
+    var vazio = function () { return el("div.ficha-foto__vazio", {}, [UI.marca(48)]); };
 
-    if (ctx.foto) {
-      caixa.appendChild(el("img", { src: ctx.foto, alt: "Foto de " + ctx.ficha.nome }));
+    if (RT && global.RAMAImagensFicha) {
+      RT.preencher(ctx, caixa, { vazio: vazio, extras: botao ? [botao] : [] });
     } else {
-      caixa.appendChild(el("div.ficha-foto__vazio", {}, [UI.marca(48)]));
+      caixa.appendChild(ctx.foto ? el("img", { src: ctx.foto, alt: "Foto de " + ctx.ficha.nome }) : vazio());
+      if (botao) caixa.appendChild(botao);
     }
-
-    if (ctx.emEdicao()) {
-      caixa.appendChild(el("button.ficha-foto__trocar", {
-        type: "button",
-        texto: ctx.foto ? "Trocar foto" : "Adicionar foto",
-        onclick: function () { trocarFoto(ctx); },
-      }));
+    if (edicao && RT) {
+      caixa.classList.add("ficha-foto--clicavel");
+      caixa.addEventListener("click", function (ev) { if (ev.target === caixa || ev.target.tagName === "IMG") RT.abrir(ctx); });
     }
-
     return caixa;
   }
 

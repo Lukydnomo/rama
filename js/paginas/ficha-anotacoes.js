@@ -224,7 +224,197 @@
       ]),
       titulo,
       corpo,
+      imagensDaNota(ctx, nota),
     ]);
+  }
+
+  /* =================================================================
+     IMAGENS DA NOTA (v9.13)
+     -----------------------------------------------------------------
+     As imagens moram fora da ficha (PERSONAGENS_IMAGENS); a nota guarda
+     a ref e a legenda de cada uma, na ordem em que aparecem. Quem lê a
+     ficha vê as miniaturas e as abre grandes; quem edita insere, legenda,
+     reordena e remove. Uma imagem só entra na nota DEPOIS que o servidor
+     confirmou — cancelar a escolha ou uma falha de envio não mexe no
+     texto nem nas imagens que já estão lá.
+     ================================================================= */
+
+  var LIMITE_DA_FICHA = 60;
+  var enviando = {};
+
+  function IF() { return global.RAMAImagensFicha; }
+  function imagensDe(nota) { return Array.isArray(nota.imagens) ? nota.imagens : (nota.imagens = []); }
+  function totalNaFicha(ctx) {
+    return F.todasAsNotas(ctx.ficha.anotacoes).reduce(function (s, r) { return s + ((r.nota.imagens || []).length); }, 0);
+  }
+
+  function imagensDaNota(ctx, nota) {
+    if (!IF()) return null;
+    var caixa = el("section.nota-imagens", { "aria-label": "Imagens da nota", dataset: { nota: nota.id } });
+    pintarImagens(ctx, nota, caixa);
+    return caixa;
+  }
+
+  function pintarImagens(ctx, nota, caixa) {
+    var lista = imagensDe(nota);
+    var pode = !!(ctx.podeEditar && ctx.podeEditar());
+    var max = F.MAX_IMAGENS_POR_NOTA || 12;
+    var ocupado = !!enviando[nota.id];
+
+    var grade = el("ol.nota-imagens__grade", {}, lista.map(function (img, i) {
+      var miniatura = el("img.nota-imagens__img", { alt: img.legenda || "Imagem " + (i + 1) + " da nota", src: IF().ja(ctx.personagemId, img.ref) || "" });
+      var botao = el("button.nota-imagens__abrir", {
+        type: "button", "aria-label": "Ampliar " + (img.legenda || "imagem " + (i + 1)), dataset: { ref: img.ref },
+        onclick: function () { ampliarDaNota(ctx, nota, i); },
+      }, [miniatura]);
+      var partes = [botao];
+      if (pode) {
+        partes.push(el("input.r-entrada.nota-imagens__legenda", {
+          type: "text", value: img.legenda || "", maxlength: 140, placeholder: "Legenda (opcional)",
+          "aria-label": "Legenda da imagem " + (i + 1),
+          oninput: function (ev) { img.legenda = U.aparar(ev.target.value, 140); nota.atualizadoEm = U.agoraISO(); ctx.alterou(); },
+        }));
+        partes.push(el("div.faixa.nota-imagens__acoes", {}, [
+          el("button.r-botao.r-botao--mini.r-botao--fantasma", { type: "button", texto: "↑", title: "Mover para antes",
+            "aria-label": "Mover a imagem " + (i + 1) + " para antes", disabled: i === 0,
+            onclick: function () { mover(ctx, nota, caixa, i, -1); } }),
+          el("button.r-botao.r-botao--mini.r-botao--fantasma", { type: "button", texto: "↓", title: "Mover para depois",
+            "aria-label": "Mover a imagem " + (i + 1) + " para depois", disabled: i === lista.length - 1,
+            onclick: function () { mover(ctx, nota, caixa, i, 1); } }),
+          el("button.r-botao.r-botao--mini.r-botao--fantasma", { type: "button", texto: "Remover",
+            "aria-label": "Remover a imagem " + (i + 1) + " da nota",
+            onclick: function () { removerImagem(ctx, nota, caixa, img.ref); } }),
+        ]));
+      } else if (img.legenda) {
+        partes.push(el("p.t-mini.nota-imagens__texto", { texto: img.legenda }));
+      }
+      return el("li.nota-imagens__item", {}, partes);
+    }));
+
+    U.trocar(caixa, [
+      el("div.faixa.faixa--entre", {}, [
+        el("span.r-rotulo", { texto: "Imagens" + (lista.length ? " (" + lista.length + ")" : "") }),
+        pode ? el("button.r-botao.r-botao--mini", {
+          type: "button", disabled: ocupado || lista.length >= max,
+          texto: ocupado ? "Enviando…" : "Inserir imagem",
+          onclick: function () { inserirImagens(ctx, nota, caixa); },
+        }) : null,
+      ]),
+      lista.length ? grade : (pode ? el("p.t-mini", { texto: "Nenhuma imagem. Até " + max + " por nota (e " + LIMITE_DA_FICHA + " na ficha), cada uma reduzida para caber em 1024 px." }) : null),
+      pode && lista.length >= max ? el("p.t-mini", { texto: "Esta nota chegou ao limite de " + max + " imagens." }) : null,
+    ]);
+
+    /* As miniaturas vêm do servidor só agora, e só as que faltam. */
+    var faltam = lista.filter(function (img) { return !IF().ja(ctx.personagemId, img.ref); }).map(function (img) { return img.ref; });
+    if (faltam.length) {
+      IF().obter(ctx.personagemId, faltam).then(function (achadas) {
+        faltam.forEach(function (ref) {
+          var b = caixa.querySelector('.nota-imagens__abrir[data-ref="' + ref + '"]');
+          if (!b) return;
+          var imgEl = b.querySelector("img");
+          if (achadas[ref]) imgEl.src = achadas[ref];
+          else b.classList.add("nota-imagens__abrir--falta");
+        });
+      });
+    }
+  }
+
+  function ampliarDaNota(ctx, nota, indice) {
+    var lista = imagensDe(nota);
+    IF().obter(ctx.personagemId, lista.map(function (i) { return i.ref; })).then(function (achadas) {
+      IF().ampliar(lista.map(function (img) { return { src: achadas[img.ref] || "", legenda: img.legenda }; })
+        .filter(function (x, i) { return x.src || i === indice; }), indice);
+    });
+  }
+
+  function mover(ctx, nota, caixa, i, passo) {
+    var lista = imagensDe(nota);
+    var j = i + passo;
+    if (j < 0 || j >= lista.length) return;
+    var x = lista[i]; lista[i] = lista[j]; lista[j] = x;
+    nota.atualizadoEm = U.agoraISO();
+    ctx.alterou();
+    pintarImagens(ctx, nota, caixa);
+    var botoes = caixa.querySelectorAll(".nota-imagens__item")[j];
+    var alvo = botoes && botoes.querySelector(passo < 0 ? ".nota-imagens__acoes button" : ".nota-imagens__acoes button:nth-child(2)");
+    if (alvo && !alvo.disabled) alvo.focus();
+  }
+
+  async function inserirImagens(ctx, nota, caixa) {
+    if (enviando[nota.id] || !ctx.podeEditar()) return;
+    var max = F.MAX_IMAGENS_POR_NOTA || 12;
+    var cabemNaNota = max - imagensDe(nota).length;
+    var cabemNaFicha = LIMITE_DA_FICHA - totalNaFicha(ctx);
+    var cabem = Math.min(cabemNaNota, cabemNaFicha);
+    if (cabem <= 0) {
+      UI.avisoAtencao(cabemNaNota <= 0 ? "Esta nota já tem " + max + " imagens, o máximo." : "A ficha já tem " + LIMITE_DA_FICHA + " imagens em anotações, o máximo. Remova alguma para inserir outra.");
+      return;
+    }
+    var arquivos = await IF().escolherArquivos({ multiplo: true });
+    if (!arquivos.length) return;   /* cancelou: nada muda */
+    if (arquivos.length > cabem) {
+      UI.avisoAtencao("Cabem mais " + cabem + " imagem(ns) " + (cabem === cabemNaNota ? "nesta nota" : "nas anotações desta ficha") +
+        ". As " + cabem + " primeiras serão enviadas; as outras ficam de fora.", { duracao: 9000 });
+      arquivos = arquivos.slice(0, cabem);
+    }
+
+    enviando[nota.id] = true;
+    pintarImagens(ctx, nota, caixa);
+    var enviadas = 0, falhas = [];
+    try {
+      for (var i = 0; i < arquivos.length; i++) {
+        var pronta = await IF().preparar(arquivos[i]);
+        if (!pronta.ok) { falhas.push((arquivos[i].name || "imagem") + ": " + (pronta.mensagem || "não abriu")); continue; }
+        var ref = IF().novaRef();
+        var r = await global.RAMAApi.salvarImagemPersonagem(ctx.personagemId, {
+          ref: ref, tipo: "anotacao", alvo: nota.id, nome: U.aparar(arquivos[i].name || "", 80), imagem: pronta.imagem,
+        });
+        if (!r.ok) {
+          UI.avisoDeFalha(r, "A imagem “" + (arquivos[i].name || "") + "” não foi enviada");
+          if (r.erro === "limite" || r.erro === "instalacao_incompleta" || r.erro === "sem_permissao") break;
+          continue;
+        }
+        IF().guardar(ctx.personagemId, ref, pronta.imagem);
+        /* A nota pode ter sido reaberta no meio: a imagem entra na nota
+           certa, que é a do envio. */
+        imagensDe(nota).push({ ref: ref, legenda: "" });
+        nota.atualizadoEm = U.agoraISO();
+        ctx.alterou();
+        enviadas++;
+      }
+    } finally {
+      delete enviando[nota.id];
+    }
+    if (caixa.isConnected) pintarImagens(ctx, nota, caixa);
+    if (falhas.length) UI.avisoAtencao(falhas.join(" · "), { duracao: 10000 });
+    if (enviadas) UI.avisoOk(enviadas === 1 ? "Imagem inserida na nota." : enviadas + " imagens inseridas na nota.");
+  }
+
+  async function removerImagem(ctx, nota, caixa, ref) {
+    var certeza = await UI.confirmar({
+      titulo: "Remover esta imagem?",
+      texto: "Ela sai desta nota e é apagada do arquivo. O texto e as outras imagens ficam como estão.",
+      rotuloConfirmar: "Remover", perigo: true,
+    });
+    if (!certeza) return;
+    var r = await global.RAMAApi.excluirImagemPersonagem(ctx.personagemId, [ref]);
+    if (!r.ok) { UI.avisoDeFalha(r, "A imagem não foi removida"); return; }
+    nota.imagens = imagensDe(nota).filter(function (i) { return i.ref !== ref; });
+    IF().esquecer(ctx.personagemId, ref);
+    nota.atualizadoEm = U.agoraISO();
+    ctx.alterou();
+    if (caixa.isConnected) pintarImagens(ctx, nota, caixa);
+  }
+
+  /* Uma nota (ou pasta) apagada leva as imagens dela. Depois da nota:
+     se a limpeza falhar, sobra só arquivo sem uso, nunca nota quebrada. */
+  function apagarImagensDasNotas(ctx, notas) {
+    var refs = [];
+    (notas || []).forEach(function (n) { (n.imagens || []).forEach(function (i) { refs.push(i.ref); }); });
+    if (!refs.length || !global.RAMAApi.excluirImagemPersonagem) return;
+    for (var i = 0; i < refs.length; i += 40) {
+      global.RAMAApi.excluirImagemPersonagem(ctx.personagemId, refs.slice(i, i + 40));
+    }
   }
 
   function opcoesDaNota(ctx, nota, pastaId) {
@@ -341,6 +531,7 @@
         ctx.ficha.anotacoes.soltas = ctx.ficha.anotacoes.soltas.concat(pasta.notas || []);
       }
       remover(ctx, pasta.id);
+      if (escolha === "tudo") apagarImagensDasNotas(ctx, pasta.notas);
     }
   }
 
@@ -353,7 +544,7 @@
   async function excluirNota(ctx, nota, pastaId) {
     var certeza = await UI.confirmar({
       titulo: "Excluir " + nota.titulo + "?",
-      texto: "A anotação será removida da ficha.",
+      texto: "A anotação será removida da ficha" + ((nota.imagens || []).length ? ", com as " + nota.imagens.length + " imagem(ns) dela." : "."),
       detalhe: "Esta ação não pode ser desfeita.",
       rotuloConfirmar: "Excluir", perigo: true,
     });
@@ -369,6 +560,7 @@
     if (notaAberta === nota.id) notaAberta = null;
     ctx.alterou();
     ctx.redesenhar();
+    apagarImagensDasNotas(ctx, [nota]);
   }
 
   function moverNota(ctx, notaId, deId, paraId) {

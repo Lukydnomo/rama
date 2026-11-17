@@ -807,6 +807,28 @@ imagem inteira — e a célula tem limite.
 O `ownerId` é repetido para a conferência de permissão não precisar consultar a
 aba de personagens antes de decidir.
 
+## PERSONAGENS_IMAGENS — retratos e imagens das anotações (v9.13)
+
+| Coluna         | Conteúdo                                                        |
+|----------------|-----------------------------------------------------------------|
+| `id`           | a linha (UUID do servidor)                                      |
+| `personagemId` | de quem é a imagem                                              |
+| `ref`          | o nome da imagem dentro da ficha (a tela escolhe; uma cópia do personagem leva a mesma ref) |
+| `ownerId`      | o dono do personagem                                            |
+| `tipo`         | `retrato` (biblioteca) ou `anotacao`                            |
+| `nome`         | nome na biblioteca, ou o arquivo de origem                      |
+| `alvo`         | a nota, numa imagem de anotação                                 |
+| `criadoEm` / `atualizadoEm` | ISO 8601                                           |
+| `imagem` / `imagemCont` | data URL (até duas células)                            |
+
+A ficha guarda só as refs: `nota.imagens` e os conjuntos de `ficha.retratos`
+(schema 36). Ler (`listar_imagens_personagem`, `ler_imagens_personagem`) pede a
+leitura da ficha; gravar e excluir (`salvar_imagem_personagem`,
+`excluir_imagem_personagem`), a edição — sempre conferidas pelo personagem, e
+uma ref de outra ficha não é achada. Limites: 30 retratos e 60 imagens de
+anotação por personagem (12 por nota); acima, `limite`, sem tocar no que existe.
+Duplicar o personagem copia as linhas; excluir o personagem as apaga.
+
 ## PERSONAGENS_BLOCOS — a ficha em blocos
 
 | Coluna         | Conteúdo                                                      |

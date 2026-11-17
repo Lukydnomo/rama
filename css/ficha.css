@@ -2326,3 +2326,70 @@ body.pagina-ficha--painel .ficha-topo__nome { font-size: var(--texto-medio); }
 .rolagem-livre__rotulo { flex: none; white-space: nowrap; }
 .rolagem-livre__entrada { flex: 1 1 auto; min-width: 0; }
 .rolagem-livre__erro:empty { display: none; }
+
+/* =====================================================================
+   IMAGENS DA FICHA (v9.13) — anotações, retratos e o visualizador
+   ===================================================================== */
+
+.ficha-foto--clicavel { cursor: pointer; }
+
+/* ---- imagens da nota ---- */
+.nota-imagens { display: flex; flex-direction: column; gap: var(--e2); padding-top: var(--e2); border-top: var(--borda) dashed var(--cor-traco-fraca); }
+.nota-imagens__grade { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 9.5rem), 1fr)); gap: var(--e3); }
+.nota-imagens__item { display: flex; flex-direction: column; gap: var(--e1); min-width: 0; }
+.nota-imagens__abrir { display: block; padding: 0; width: 100%; aspect-ratio: 4 / 3; border: var(--borda) solid var(--cor-traco-fraca); background: var(--fundo-superficie-2); cursor: zoom-in; overflow: hidden; }
+.nota-imagens__abrir:focus-visible { outline: 2px solid var(--cor-foco); outline-offset: 2px; }
+.nota-imagens__img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.nota-imagens__img:not([src]), .nota-imagens__img[src=""] { visibility: hidden; }
+.nota-imagens__abrir--falta::after { content: "Imagem indisponível"; display: grid; place-items: center; height: 100%; font-size: var(--texto-mini); color: var(--cor-texto-3); }
+.nota-imagens__legenda { font-size: var(--texto-mini); }
+.nota-imagens__acoes { flex-wrap: wrap; gap: var(--e1); }
+.nota-imagens__texto { margin: 0; overflow-wrap: anywhere; }
+
+/* ---- visualizador ---- */
+.r-modal--imagem { max-width: min(96vw, 1100px); }
+.imagem-ampliada { margin: 0; display: flex; flex-direction: column; align-items: center; gap: var(--e2); }
+.imagem-ampliada__img { max-width: 100%; max-height: 72vh; max-height: 72dvh; object-fit: contain; background: var(--fundo-superficie-2); }
+.imagem-ampliada figcaption { text-align: center; overflow-wrap: anywhere; }
+
+/* ---- retratos ---- */
+.r-modal--retratos { max-width: 960px; }
+.retratos { display: flex; flex-direction: column; gap: var(--e3); }
+.retratos__conjunto { display: flex; flex-direction: column; gap: var(--e1); }
+.retratos__conjunto-linha { flex-wrap: wrap; gap: var(--e2); align-items: center; }
+.retratos__conjunto-linha .r-selecao { min-width: 10rem; flex: 1 1 12rem; max-width: 22rem; }
+.retratos__modo { display: flex; flex-direction: column; gap: var(--e1); }
+.retratos__modo .faixa { flex-wrap: wrap; gap: var(--e2); }
+.retratos__modo p { margin: 0; }
+.retratos__estado { color: var(--cor-texto-2); }
+.retratos__previa { display: flex; gap: var(--e3); align-items: flex-start; padding: var(--e2); border: var(--borda) solid var(--cor-traco); background: var(--fundo-superficie); }
+.retratos__previa p { margin: 0; }
+.retratos__posicoes { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 13rem), 1fr)); gap: var(--e3); }
+.retratos__posicao { display: flex; flex-direction: column; gap: var(--e1); padding: var(--e2); border: var(--borda) solid var(--cor-traco-fraca); min-width: 0; }
+.retratos__posicao--uso { border-color: var(--cor-texto); }
+.retratos__posicao-cab { display: flex; align-items: center; justify-content: space-between; gap: var(--e1); }
+.retratos__posicao p { margin: 0; overflow-wrap: anywhere; }
+.retratos__acoes { flex-wrap: wrap; gap: var(--e1); }
+.retratos__testar, .retratos__pegar { display: block; padding: 0; border: 0; background: none; cursor: pointer; width: 100%; }
+.retratos__testar:focus-visible, .retratos__pegar:focus-visible { outline: 2px solid var(--cor-foco); outline-offset: 2px; }
+.retratos__testar[aria-pressed="true"] .retrato-mini { box-shadow: 0 0 0 2px var(--cor-texto); }
+.retratos__biblioteca-cab { flex-wrap: wrap; gap: var(--e2); padding-top: var(--e2); border-top: var(--borda) dashed var(--cor-traco-fraca); }
+.retratos__biblioteca { display: flex; flex-direction: column; gap: var(--e2); }
+.retratos__grade { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 8.5rem), 1fr)); gap: var(--e3); }
+.retratos__item { display: flex; flex-direction: column; gap: var(--e1); min-width: 0; }
+.retratos__item p { margin: 0; overflow-wrap: anywhere; }
+.retratos__item-nome { font-weight: 700; }
+.retrato-mini { display: grid; place-items: center; width: 100%; aspect-ratio: 1; overflow: hidden; background: var(--fundo-superficie-2); border: var(--borda) solid var(--cor-traco-fraca); }
+.retrato-mini img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.retrato-mini img:not([src]), .retrato-mini img[src=""] { visibility: hidden; }
+.retrato-mini__vazio { font-size: var(--texto-mini); color: var(--cor-texto-3); text-align: center; padding: var(--e1); }
+.retrato-mini--carregando { opacity: .6; }
+.retrato-mini--falta::after { content: "Indisponível"; font-size: var(--texto-mini); color: var(--cor-texto-3); }
+.retrato-mini--grande { width: 7rem; flex: none; }
+
+@media (max-width: 720px) {
+  .retratos__posicoes { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--e2); }
+  .retratos__grade, .nota-imagens__grade { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--e2); }
+  .retratos__previa { flex-direction: column; }
+  .retrato-mini--grande { width: 100%; max-width: 12rem; }
+}

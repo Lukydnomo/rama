@@ -4865,6 +4865,8 @@ const { testarAcessoBackend } = await import("./acesso-backend.js");
 await testarAcessoBackend({ t, preparar, novaConta, comoFn, chamar, ambiente });
 const { testarCompartilhamentoBackend } = await import("./compartilhamento-backend.js");
 testarCompartilhamentoBackend({ t, preparar, novaConta, comoFn });
+const { testarImagensDaFichaBackend } = await import("./imagens-ficha-backend.js");
+testarImagensDaFichaBackend({ t, preparar, novaConta, comoFn });
 const { testarAs5Backend } = await import("./as5-backend.js");
 await testarAs5Backend({ t, preparar, novaConta, comoFn });
 const { testarLoteBackend } = await import("./lote-backend.js");

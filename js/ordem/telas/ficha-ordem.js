@@ -45,6 +45,15 @@
   var D = global.RAMADados;
   var el = U.el;
 
+  /* v9.13: o retrato em uso (js/retratos.js), como na foto da aba. */
+  function fotoDaCabeca(ctx) {
+    var caixa = el("div.ordem-cabeca__foto", { "aria-hidden": "true", dataset: { retratoFicha: "1" } });
+    var vazio = function () { return el("span.ordem-cabeca__sem-foto", {}, [UI.marca(28)]); };
+    if (global.RAMARetratos && global.RAMAImagensFicha) global.RAMARetratos.preencher(ctx, caixa, { vazio: vazio, alt: "" });
+    else caixa.appendChild(ctx.foto ? el("img", { src: ctx.foto, alt: "" }) : vazio());
+    return caixa;
+  }
+
   function ordemDe(ctx) {
     if (!ctx.ficha.ordem) ctx.ficha.ordem = R.fichaVazia();
     return ctx.ficha.ordem;
@@ -295,11 +304,7 @@
       var c = calculo(ctx);
 
       return el("div.ordem-cabeca", {}, [
-        el("div.ordem-cabeca__foto", { "aria-hidden": "true" }, [
-          ctx.foto
-            ? el("img", { src: ctx.foto, alt: "" })
-            : el("span.ordem-cabeca__sem-foto", {}, [UI.marca(28)]),
-        ]),
+        fotoDaCabeca(ctx),
         identidadeCurta(ctx, o, c),
         resumoDeSessao(ctx, o, c),
       ]);

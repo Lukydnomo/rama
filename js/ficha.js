@@ -260,6 +260,15 @@
      um sistema desconhecido; o schema maior faz as ainda mais antigas
      recusarem em vez de gravar.
 
+     35 → 36: imagens da ficha (v9.13). A nota ganhou `imagens`
+     ([{ ref, legenda }], até 12) e a ficha, `retratos` (os conjuntos de
+     retratos: { v, ativo, modo "auto"|"fixo", fixo, conjuntos: [{ id,
+     nome, posicoes: { normal, machucado, enlouquecendo } }] }). As
+     imagens moram em PERSONAGENS_IMAGENS; a ficha guarda só as refs.
+     Sem conversão: sem `retratos`, a foto de sempre. Uma aba antiga
+     descartaria refs e conjuntos ao gravar — com o schema maior ela
+     recusa.
+
      Nenhuma das subidas exige migração: normalizarFicha() cria o que
      falta, vazio, e não toca no que existe. Um ritual gravado na 2 abre
      na 3 com a versão Normal em branco; uma ficha de Ordem gravada na 4
@@ -269,7 +278,7 @@
      os campos novos e os descartaria ao gravar — com o schema maior ela
      recusa abrir a ficha e pede para recarregar.
      Ver docs/CHARACTER_SCHEMA.md. */
-  var VERSAO_SCHEMA = 35;
+  var VERSAO_SCHEMA = 36;
 
   var MODULOS = {
     atributos: "Atributos", status: "Status/recursos", defesa: "Defesa",
@@ -614,6 +623,7 @@
 
       inventario: { limite: 0, itens: [] },
       anotacoes: { pastas: [], soltas: [] },
+      retratos: null,
       camposCustomizados: [],
       aparencia: normalizarAparencia(i.aparencia, tipo),
     };
@@ -1037,6 +1047,7 @@
       id: U.uuid(),
       titulo: U.aparar(titulo, 80) || "Nova anotação",
       conteudo: "",
+      imagens: [],
       criadoEm: agora,
       atualizadoEm: agora,
     };
@@ -1155,6 +1166,10 @@
       pastas: lista(an.pastas).map(normalizarPasta).filter(Boolean),
       soltas: lista(an.soltas).map(normalizarNota).filter(Boolean),
     };
+
+    /* ---- retratos (schema 36) ----
+       Sem o campo, null: a ficha mostra a foto de sempre. */
+    ficha.retratos = normalizarRetratos(b.retratos);
 
     /* ---- os blocos dos sistemas (Ordem, Oblívio…) ----
        Cada bloco é montado quando a ficha É daquele sistema. Mas ele é
@@ -1418,8 +1433,53 @@
       id: n.id || U.uuid(),
       titulo: U.aparar(n.titulo, 120) || "Anotação",
       conteudo: U.aparar(n.conteudo, 20000),
+      /* Schema 36: as imagens da nota, por ref (PERSONAGENS_IMAGENS). */
+      imagens: normalizarImagensDaNota(n.imagens),
       criadoEm: U.paraData(n.criadoEm) ? new Date(n.criadoEm).toISOString() : agora,
       atualizadoEm: U.paraData(n.atualizadoEm) ? new Date(n.atualizadoEm).toISOString() : agora,
+    };
+  }
+
+  /* As refs de imagem são escolhidas pela tela (U.uuid) e conferidas no
+     servidor pelo mesmo formato. */
+  var REF_DE_IMAGEM = /^[A-Za-z0-9_-]{6,64}$/;
+  var MAX_IMAGENS_POR_NOTA = 12;
+  var POSICOES_DE_RETRATO = ["normal", "machucado", "enlouquecendo"];
+  var MAX_CONJUNTOS = 12;
+
+  function refValida(r) { return typeof r === "string" && REF_DE_IMAGEM.test(r) ? r : ""; }
+
+  function normalizarImagensDaNota(v) {
+    var vistas = {};
+    return lista(v).map(function (i) {
+      var ref = refValida(i && i.ref);
+      if (!ref || vistas[ref]) return null;
+      vistas[ref] = true;
+      return { ref: ref, legenda: U.aparar(i.legenda, 140) };
+    }).filter(Boolean).slice(0, MAX_IMAGENS_POR_NOTA);
+  }
+
+  function normalizarRetratos(r) {
+    if (!r || typeof r !== "object") return null;
+    var vistos = {};
+    var conjuntos = lista(r.conjuntos).map(function (c) {
+      if (!c || typeof c !== "object") return null;
+      var id = refValida(c.id) || U.uuid();
+      if (vistos[id]) return null;
+      vistos[id] = true;
+      var p = c.posicoes && typeof c.posicoes === "object" ? c.posicoes : {};
+      var posicoes = {};
+      POSICOES_DE_RETRATO.forEach(function (k) { posicoes[k] = refValida(p[k]); });
+      return { id: id, nome: U.aparar(c.nome, 60) || "Conjunto", posicoes: posicoes };
+    }).filter(Boolean).slice(0, MAX_CONJUNTOS);
+    if (!conjuntos.length) return null;
+    var ativo = conjuntos.some(function (c) { return c.id === r.ativo; }) ? r.ativo : conjuntos[0].id;
+    return {
+      v: 1,
+      ativo: ativo,
+      modo: r.modo === "fixo" ? "fixo" : "auto",
+      fixo: POSICOES_DE_RETRATO.indexOf(r.fixo) >= 0 ? r.fixo : "normal",
+      conjuntos: conjuntos,
     };
   }
 
@@ -1625,6 +1685,12 @@
     criarItem: criarItem,
     criarPasta: criarPasta,
     criarNota: criarNota,
+    normalizarRetratos: normalizarRetratos,
+    normalizarImagensDaNota: normalizarImagensDaNota,
+    refDeImagemValida: refValida,
+    POSICOES_DE_RETRATO: POSICOES_DE_RETRATO,
+    MAX_IMAGENS_POR_NOTA: MAX_IMAGENS_POR_NOTA,
+    MAX_CONJUNTOS_DE_RETRATO: MAX_CONJUNTOS,
     criarCampo: criarCampo,
 
     normalizarFicha: normalizarFicha,

@@ -118,6 +118,24 @@
 
   var CHANGELOG = [
     {
+      versao: "9.13.0",
+      codinome: "RELICÁRIO",
+      data: "16/11/2026",
+      destaque: true,
+      mudancas: {
+        "Adicionado": [
+          "Anotações com imagens, em todos os sistemas: Inserir imagem anexa uma ou várias do aparelho, com legenda opcional, reordenação e remoção uma a uma. As miniaturas abrem em tamanho maior ao clicar ou tocar. Cancelar a escolha ou uma falha no envio não mexe no texto nem nas imagens que já estão na nota.",
+          "Retratos do personagem: no modo edição, clicar na foto abre a biblioteca de retratos do personagem e os conjuntos. A biblioteca guarda várias imagens, em uso ou não; cada uma pode ser renomeada e usada em vários conjuntos sem duplicar o arquivo. Limpar uma posição não apaga a imagem, e excluir da biblioteca avisa antes quais conjuntos perdem a foto.",
+          "Conjuntos de retratos (Civil, Em missão…): cada um com nome, duplicável e ativável, com as posições Normal, Machucado e, em Ordem Paranormal, Enlouquecendo. Testar mostra a prévia de cada posição sem mexer na vida, na sanidade nem nas condições. Uma ficha que já tem foto ganha um conjunto inicial com ela no Normal, sem configurar nada.",
+          "Retrato automático: acompanha o estado real da ficha e volta ao Normal quando a condição termina, com a prioridade Enlouquecendo → Machucado → Normal (posição sem imagem é pulada). Machucado usa o estado de cada sistema: o Machucado de Ordem, a Ferida do Oblívio, a Vitalidade Debilitada de Vampiro, os ferimentos de Goblins, e PV abaixo da metade em Ordem II, Tormenta20 e na ficha Universal (pelo status PV ou Vida). Brutal não guarda as Feridas na ficha: lá a troca é manual. Fixar retrato mantém a foto escolhida até voltar ao automático.",
+        ],
+        "Técnico": [
+          "Aba nova PERSONAGENS_IMAGENS e as ações listar_imagens_personagem, ler_imagens_personagem, salvar_imagem_personagem e excluir_imagem_personagem: ler pede a leitura da ficha, gravar pede a edição, e uma ref de outra ficha não abre nada. Limites de 30 retratos e 60 imagens de anotação por personagem (12 por nota), mostrados antes do envio. Ao abrir a ficha, só o retrato em uso é baixado; as miniaturas vêm quando a biblioteca abre. Duplicar o personagem leva as imagens; excluí-lo as apaga.",
+          "Schema da ficha 36: nota.imagens e ficha.retratos guardam só referências. Uma aba de versão anterior recusa a ficha em vez de descartá-las.",
+        ],
+      },
+    },
+    {
       versao: "9.12.0",
       codinome: "ASTROLÁBIO",
       data: "16/11/2026",
