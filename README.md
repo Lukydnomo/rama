@@ -929,6 +929,12 @@ segredo nenhum — ele os lê das Script Properties. Publicá-lo não expõe nad
 
 ### Atualizar o backend
 
+**v9.15.0 — MOTOCLUBE:** filtro “Todas” na Origem da criação de Ordem e as
+origens Gaudério Abutre, Ginasta e Dublê (Extra · marca-página). **Só o site
+muda.** Site: `js/ordem/catalogo.js`, `js/ordem/regras.js`,
+`js/ordem/telas/ordem-criar.js`, `js/ordem/telas/ficha-origens.js`,
+`js/ordem/telas/ficha-ordem.js`, `js/paginas/catalogo.js` e `js/versao.js`.
+
 **v9.14.0 — ICONOGRAFIA:** imagem opcional em toda criação do Homebrew e a
 faixa de cor dos elementos Homebrew de Ordem.
 1. Troque **`Dados.gs`**, **`Codigo.gs`** e **`HomebrewPacotes.gs`**. Nenhum
@@ -2101,7 +2107,7 @@ Três números diferentes, que não se misturam:
 
 | | Onde | O que é |
 |---|---|---|
-| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v9.14.0 |
+| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v9.15.0 |
 | `schemaVersion` | `js/ficha.js` | o formato da FICHA |
 | `versaoFormato` | `js/config.js` | o formato dos arquivos de importação |
 

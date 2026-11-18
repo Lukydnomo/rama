@@ -1247,6 +1247,38 @@
         { tipo: "limitePe", valor: 1, seEstado: "semAliados", condicao: "sem aliados em alcance curto" },
       ],
       nota: "Os três bônus entram na conta enquanto o cartão da origem marcar \"Sem aliados em alcance curto\" — a ficha não sabe onde os aliados estão. Desmarque quando um aliado chegar a alcance curto. O +1 é no limite de PE por turno, não no total de PE." },
+
+    /* -----------------------------------------------------------------
+       EXTRA · marca-página (v9.15) — Gaudério Abutre, Ginasta e Dublê.
+       Sem livro, edição nem página: o material é "Marca-página".
+       `descricao` é o texto de ambientação da origem, transcrito como
+       veio (o "sofrem" de Ginasta é do original). `resumo` é o texto
+       completo do poder.
+       ----------------------------------------------------------------- */
+
+    { chave: "gauderioAbutre", nome: "Gaudério Abutre", fonte: EXTRA, material: "Marca-página",
+      descricao: "Você fez parte dos valorosos Gaudérios Abutres. Mesmo longe do motoclube, ainda segue o lema ‘A gente morre por quem a gente ama’.",
+      pericias: ["luta", "pilotagem"],
+      poder: "Fraternidade Gaudéria", automacao: "parcial", controles: true,
+      resumo: "Uma vez por rodada, quando um aliado adjacente é alvo de um ataque ou efeito, você pode gastar 1 PE para trocar de lugar com este aliado e se tornar o alvo deste ataque ou efeito. Se fizer isso, em seu próximo turno você recebe +2 em testes de ataque contra o agressor.",
+      nota: "O cartão da origem gasta o 1 PE, registra o uso da rodada e o agressor, e guarda o +2 até o fim do seu próximo turno (contado pelo combate da mesa; sem ele, encerrado por você). Adjacência, troca de lugar e o redirecionamento do ataque são confirmados por quem joga: a ficha não vê o mapa. O +2 entra só no ataque que você disser que é contra o agressor." },
+
+    { chave: "ginasta", nome: "Ginasta", fonte: EXTRA, material: "Marca-página",
+      descricao: "Desde muito jovem, você passou a maior parte de sua vida em ginásios (ou talvez em antigos templos monásticos) praticando as mais difíceis acrobacias. Sua preparação foi árdua e dolorosa, mas aprimorou seu corpo, sua técnica e sua disciplina. Recrutado pela Ordo Realitas, essas se tornaram suas principais ferramentas para enfrentar o Outro Lado. E com elas, você planeja fazer as criaturas paranormais sofrem muito mais do que você sofreu em seus treinos.",
+      pericias: ["acrobacia", "reflexos"],
+      poder: "Mobilidade Acrobática", automacao: "calculo",
+      resumo: "Você recebe +2 na Defesa e seu deslocamento aumenta em +3m.",
+      efeitos: [{ tipo: "defesa", valor: 2 }, { tipo: "deslocamento", valor: 3 }],
+      nota: "O +2 na Defesa e o +3m de deslocamento entram na conta, com a origem identificada na composição." },
+
+    { chave: "duble", nome: "Dublê", fonte: EXTRA, material: "Marca-página",
+      descricao: "Você sempre combinou um gosto por alta velocidade, manobras ousadas e esportes radicais com uma total falta de noção do perigo. Sua busca incessante por adrenalina o fez seguir carreira de dublê, uma profissão que lhe permitiu enfrentar o risco das mais diversas formas. Agora a serviço da Ordem, você enfim enfrentará o Medo verdadeiro e poderá colocar sua coragem — e suas perícias — à prova como nunca.",
+      pericias: ["pilotagem", "reflexos"],
+      poder: "Destemido", automacao: "parcial",
+      resumo: "Quando faz um teste de perícia para o qual uma falha terá como consequência direta dano ou uma condição negativa, você recebe +5 nesse teste.",
+      acoesNoTeste: [{ id: "destemido", rotulo: "Destemido", todas: true, custo: 0, tipo: "bonus", valor: 5,
+        condicao: "Destemido vale quando uma falha neste teste terá como consequência direta dano ou uma condição negativa — a situação narrada decide. Confirma que é o caso?" }],
+      nota: "No resultado de qualquer teste de perícia, o botão Destemido mostra o mesmo teste com +5, depois de você confirmar que a falha causaria diretamente dano ou condição negativa. Sem custo, só naquele teste, uma vez por teste." },
   ];
 
   /* =================================================================

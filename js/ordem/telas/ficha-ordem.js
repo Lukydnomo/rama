@@ -4866,6 +4866,9 @@
         rolarDano: temDano ? function (crit) { SecaoInventarioOrdem.rolarDano(ctx, arma, crit, false, m.modo, { dano: as2.dano || 0, ignoraRd: as2.ignoraRd || 0 }); } : null,
       }) : { acoes: [], notas: [] };
 
+      /* Origem Gaudério Abutre (v9.15): o +2 contra o agressor, por clique. */
+      var orgAtk = global.RAMASecaoOrigens && global.RAMASecaoOrigens.acoesNoAtaque ? global.RAMASecaoOrigens.acoesNoAtaque(ctx, arma, r) : { acoes: [], notas: [] };
+      as9 = { acoes: as9.acoes.concat(orgAtk.acoes), notas: as9.notas.concat(orgAtk.notas) };
       global.RAMARolagens.mostrar(r, {
         nome: arma.nome + " · Ataque (" + ef.periciaNome + ")" + (m.modo === "rajada" ? " · rajada" : m.modo === "doisCanos" ? " · dois canos" : ""),
         critico: critico,

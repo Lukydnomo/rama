@@ -118,6 +118,20 @@
 
   var CHANGELOG = [
     {
+      versao: "9.15.0",
+      codinome: "MOTOCLUBE",
+      data: "18/11/2026",
+      mudancas: {
+        "Adicionado": [
+          "Criação de Ordem, etapa Origem: o filtro “Todas” vem primeiro e já selecionado. Ele reúne as origens dos livros, dos suplementos ligados nesta criação e as Homebrew acessíveis, em ordem alfabética, com a fonte em cada cartão. A busca (nome da origem ou do poder) vale na lista inteira; os filtros por livro, Extra e Homebrew continuam, com as contagens. Trocar de filtro ou pesquisar não desmarca a origem escolhida — o aviso diz quando ela está fora da lista — e busca, filtro e escolha ficam ao avançar e voltar.",
+          "Três origens novas em Extra (marca-página): Gaudério Abutre (Luta e Pilotagem; Fraternidade Gaudéria), Ginasta (Acrobacia e Reflexos; Mobilidade Acrobática) e Dublê (Pilotagem e Reflexos; Destemido), com a descrição e o texto completo do poder — na criação, na troca de origem, na biblioteca e no catálogo.",
+          "Ginasta: +2 na Defesa e +3m de deslocamento entram na conta, com a origem na composição; trocar de origem tira os dois.",
+          "Dublê: no resultado de qualquer teste de perícia, Destemido mostra o mesmo teste com +5 depois de quem joga confirmar que a falha causaria diretamente dano ou condição negativa — só naquele teste, sem custo.",
+          "Gaudério Abutre: o cartão da origem ativa Fraternidade Gaudéria (1 PE, uma vez por rodada), registra o agressor e guarda o +2 até o fim do seu próximo turno; no resultado de um ataque, o +2 entra por clique, confirmando que o ataque é contra o agressor. A mesa confirma adjacência e troca de lugar.",
+        ],
+      },
+    },
+    {
       versao: "9.14.0",
       codinome: "ICONOGRAFIA",
       data: "16/11/2026",

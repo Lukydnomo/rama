@@ -4802,6 +4802,7 @@
     /* v5.1 — REVOLTADO E A FONTE EXTRA */
     if (RRs && global.RAMAOrdemRituais && global.RAMAOrdemRituaisDados && global.RAMAOrdemProgressao && global.RAMAFicha) {
       casosDaV51(t, global.RAMAOrdemCatalogo, RRs, global.RAMAOrdemProgressao, global.RAMAOrdemRituais, global.RAMAFicha, global.RAMAOrdemBiblioteca || null);
+      casosDaV915(t, global.RAMAOrdemCatalogo, RRs);
     }
 
     /* v2.41 — BARGANHA INSANA */
@@ -5261,6 +5262,52 @@
      v2.41 — BARGANHA INSANA
      ================================================================= */
 
+  /* =================================================================
+     v9.15 — ORIGENS EXTRAS DO MARCA-PÁGINA
+     ================================================================= */
+
+  function casosDaV915(t, C, R) {
+    var INV = { itens: [] };
+    function ficha(origem, extra) {
+      return R.normalizar(JSON.parse(JSON.stringify(Object.assign({
+        classe: "combatente", nex: 5, origem: origem, atributos: { agi: 2, for: 1, int: 1, pre: 2, vig: 2 },
+      }, extra || {}))));
+    }
+
+    t.grupo("v9.15 · Gaudério Abutre, Ginasta e Dublê (Extra · marca-página)");
+    var ga = C.origem("gauderioAbutre"), gi = C.origem("ginasta"), du = C.origem("duble");
+    t.ok("as três no catálogo central, fonte Extra, material Marca-página", [ga, gi, du].every(function (o) { return o && o.fonte === "EXTRA" && o.material === "Marca-página" && !o.pagina; }));
+    t.igual("  a referência é o material, sem livro nem página", C.referencia(gi), "Extra · Marca-página");
+    t.ok("  nada duplicado: uma entrada por chave e por nome", ["gauderioAbutre", "ginasta", "duble"].every(function (k) { return C.ORIGENS.filter(function (o) { return o.chave === k; }).length === 1; }) &&
+      ["Gaudério Abutre", "Ginasta", "Dublê"].every(function (n) { return C.ORIGENS.filter(function (o) { return o.nome === n; }).length === 1; }) && !!C.origem("revoltado"));
+    t.iguais("Gaudério Abutre: Luta e Pilotagem", ga.pericias, ["luta", "pilotagem"]);
+    t.iguais("Ginasta: Acrobacia e Reflexos", gi.pericias, ["acrobacia", "reflexos"]);
+    t.iguais("Dublê: Pilotagem e Reflexos", du.pericias, ["pilotagem", "reflexos"]);
+    t.ok("  todas as perícias existem no catálogo", [ga, gi, du].every(function (o) { return o.pericias.every(function (k) { return !!C.pericia(k); }); }));
+    t.ok("poderes e textos completos", ga.poder === "Fraternidade Gaudéria" && /Uma vez por rodada, quando um aliado adjacente é alvo de um ataque ou efeito, você pode gastar 1 PE/.test(ga.resumo) && /\+2 em testes de ataque contra o agressor\.$/.test(ga.resumo) &&
+      gi.poder === "Mobilidade Acrobática" && gi.resumo === "Você recebe +2 na Defesa e seu deslocamento aumenta em +3m." &&
+      du.poder === "Destemido" && /consequência direta dano ou uma condição negativa, você recebe \+5 nesse teste\.$/.test(du.resumo));
+    t.ok("descrições transcritas (o “sofrem” de Ginasta preservado)", /A gente morre por quem a gente ama/.test(ga.descricao) && /fazer as criaturas paranormais sofrem muito mais/.test(gi.descricao) && /colocar sua coragem — e suas perícias — à prova como nunca\.$/.test(du.descricao));
+
+    t.grupo("v9.15 · Mobilidade Acrobática na conta");
+    var base = ficha("academico"), gin = ficha("ginasta");
+    t.igual("+2 na Defesa", R.defesa(gin, INV).total, R.defesa(base, INV).total + 2);
+    t.igual("+3m de deslocamento", R.deslocamento(gin, INV).total, R.deslocamento(base, INV).total + 3);
+    t.ok("  a origem identificada nas duas composições", R.defesa(gin, INV).parcelas.some(function (p) { return p.rotulo === "Mobilidade Acrobática" && /Ginasta/.test(p.origem || ""); }) &&
+      R.deslocamento(gin, INV).parcelas.some(function (p) { return p.rotulo === "Mobilidade Acrobática" && /Ginasta/.test(p.origem || ""); }));
+    var volta = R.normalizar(JSON.parse(JSON.stringify(R.normalizar(JSON.parse(JSON.stringify(gin))))));
+    t.ok("  salvar e reabrir duas vezes não duplica", R.defesa(volta, INV).total === R.defesa(gin, INV).total && R.deslocamento(volta, INV).total === R.deslocamento(gin, INV).total);
+    gin.origem = "duble";
+    t.ok("trocar de origem tira os dois bônus", R.defesa(gin, INV).total === R.defesa(base, INV).total && R.deslocamento(gin, INV).total === R.deslocamento(base, INV).total);
+
+    t.grupo("v9.15 · Destemido e Fraternidade Gaudéria (o que o catálogo declara)");
+    var ac = (du.acoesNoTeste || [])[0];
+    t.ok("Destemido: em qualquer perícia, +5, sem custo, com a confirmação da situação", ac && ac.todas === true && !ac.custo && ac.valor === 5 && ac.tipo === "bonus" && /dano ou uma condição negativa/.test(ac.condicao));
+    t.igual("  e nenhum +5 permanente na conta", R.bonusDePericia(ficha("duble"), "atletismo", INV, false).total, R.bonusDePericia(ficha("academico"), "atletismo", INV, false).total);
+    t.ok("Fraternidade Gaudéria: controles no cartão, nenhum efeito permanente", ga.controles === true && !C.efeitosDaOrigem(ga).length &&
+      R.defesa(ficha("gauderioAbutre"), INV).total === R.defesa(base, INV).total);
+  }
+
   function casosDaV51(t, C, R, E, RS, F, B) {
     var INV = { itens: [] };
     function ficha(extra) {
@@ -5317,7 +5364,7 @@
     if (B) {
       t.grupo("v5.1 · bibliotecas e filtros com Extra");
       var secExtra = B.secoes("origens").filter(function (s) { return s.chave === "origens.EXTRA"; })[0];
-      t.ok("a biblioteca de poderes tem a seção \"Origens · Extra\" com Antes só…", !!secExtra && secExtra.entradas.length === 1 && secExtra.entradas[0].entrada.nome === "Antes só…");
+      t.ok("a biblioteca de poderes tem a seção \"Origens · Extra\" com Antes só… (e, desde a v9.15, os três do marca-página)", !!secExtra && secExtra.entradas.length === 4 && secExtra.entradas.some(function (x) { return x.entrada.nome === "Antes só…"; }) && ["Fraternidade Gaudéria", "Mobilidade Acrobática", "Destemido"].every(function (n) { return secExtra.entradas.some(function (x) { return x.entrada.nome === n; }); }));
       t.igual("  a referência da cópia diz Extra e o material", global.RAMAOrdemPoderes.referencia(secExtra.entradas[0].entrada), "Extra · Marca-página de HQ");
     }
 
@@ -7200,7 +7247,7 @@
       R.resistencias(fbExp, INV).dano.some(function (d) { return d.tipo === "geral"; }) && R.dadosDoTeste(fbExp, "diplomacia").quantos === R.dadosDoTeste(baseFb, "diplomacia").quantos - 1);
     if (B) {
       var todas = B.secoes("origens").reduce(function (l, s) { return l.concat(s.entradas); }, []);
-      t.ok("a aba Origens da biblioteca tem as 60, numa seção por fonte (com AS6, AS7, AS9 e Extra)", todas.length === 60 && B.secoes("origens").length === 9 &&
+      t.ok("a aba Origens da biblioteca tem as 63, numa seção por fonte (com AS6, AS7, AS9 e Extra; v9.15: +3 do marca-página)", todas.length === 63 && B.secoes("origens").length === 9 &&
         B.secoes("origens")[8].titulo === "Origens · Extra" && B.secoes("origens")[7].titulo === "Origens · Arquivos Secretos 9" && B.secoes("origens")[6].titulo === "Origens · Arquivos Secretos 7" && B.secoes("origens")[5].titulo === "Origens · Arquivos Secretos 6");
       t.ok("  busca pelo poder e pela origem", B.filtrar(B.secoes("origens"), "luta ou fuga").some(function (s) { return s.entradas.length; }) &&
         B.filtrar(B.secoes("origens"), "profetizado").some(function (s) { return s.entradas.length; }));

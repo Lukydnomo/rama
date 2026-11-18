@@ -523,8 +523,12 @@
        ================================================================= */
 
     var buscaOrigem;
-    /* Uma aba por livro (v2.32.1). Abre no livro da origem escolhida. */
-    var abaOrigem = "";
+    /* Uma aba por livro (v2.32.1). v9.15: "Todas" vem primeiro e é a de
+       partida — reúne as origens de todos os livros, suplementos ligados e
+       Homebrew acessíveis, em ordem alfabética. O filtro e a busca só
+       mudam o que aparece: a origem escolhida (e as perícias dela) ficam. */
+    var TODAS = "TODAS";
+    var abaOrigem = TODAS;
 
     function etapaOrigem() {
       var termoAntes = buscaOrigem ? buscaOrigem.entrada.value : "";
@@ -533,13 +537,12 @@
       var Hb = global.RAMAOrdemHomebrew;
       if (Hb && !bibliotecaHb) Hb.carregarBiblioteca().then(function (b) { bibliotecaHb = b; if (b.origens && b.origens.length && ETAPAS[etapa] && ETAPAS[etapa].chave === "origem") pintar(); });
       var origens = (C.origensDisponiveis ? C.origensDisponiveis() : C.ORIGENS).filter(function (org) { return liberada(org, d.origem); });
-      var livros = C.LIVROS.concat([{ sigla: "HOMEBREW", curto: "Homebrew" }]).filter(function (l) {
+      var livros = [{ sigla: TODAS, curto: "Todas" }].concat(C.LIVROS.concat([{ sigla: "HOMEBREW", curto: "Homebrew" }]).filter(function (l) {
         return origens.some(function (org) { return (org.fonte || "OPRPG") === l.sigla; });
-      });
-      if (!abaOrigem) {
-        var escolhida = C.origem(d.origem);
-        abaOrigem = escolhida ? (escolhida.fonte || "OPRPG") : livros[0].sigla;
-      }
+      }));
+      /* Um livro que saiu (suplemento desligado): volta para Todas. */
+      if (!livros.some(function (l) { return l.sigla === abaOrigem; })) abaOrigem = TODAS;
+      var porNome = function (a, b) { return String(a.nome).localeCompare(String(b.nome), "pt-BR", { sensitivity: "base" }); };
       var abas = el("div.r-abas.r-abas--rolavel.biblioteca-abas", { role: "group", "aria-label": "Livro das origens" });
       var lista = el("div.criacao-lista", {});
       var dica = el("p.t-mini", { "aria-live": "polite" });
@@ -554,7 +557,7 @@
       function pintarLista() {
         var todas = achadas();
         U.trocar(abas, livros.map(function (l, i) {
-          var n = todas.filter(function (org) { return (org.fonte || "OPRPG") === l.sigla; }).length;
+          var n = l.sigla === TODAS ? todas.length : todas.filter(function (org) { return (org.fonte || "OPRPG") === l.sigla; }).length;
           return el("button.r-aba", {
             type: "button", "aria-pressed": String(l.sigla === abaOrigem), texto: l.curto + " (" + n + ")",
             onclick: function () { abaOrigem = l.sigla; pintarLista(); },
@@ -568,12 +571,22 @@
             },
           });
         }));
-        var doLivro = todas.filter(function (org) { return (org.fonte || "OPRPG") === abaOrigem; });
-        var outras = livros.filter(function (l) { return l.sigla !== abaOrigem && todas.some(function (org) { return (org.fonte || "OPRPG") === l.sigla; }); });
+        var emTodas = abaOrigem === TODAS;
+        var doLivro = emTodas ? todas.slice().sort(porNome) : todas.filter(function (org) { return (org.fonte || "OPRPG") === abaOrigem; });
+        var outras = livros.filter(function (l) { return l.sigla !== TODAS && l.sigla !== abaOrigem && todas.some(function (org) { return (org.fonte || "OPRPG") === l.sigla; }); });
         U.trocar(lista, doLivro.map(cartaoDeOrigem));
-        dica.textContent = !doLivro.length
-          ? (outras.length ? "Nada neste livro. Há resultados em: " + outras.map(function (l) { return l.curto; }).join(", ") + "." : "Nenhuma origem corresponde à busca.")
-          : "";
+        var termo = U.aparar(buscaOrigem.entrada.value);
+        var avisos = [];
+        if (!doLivro.length) {
+          if (emTodas) avisos.push(termo ? "Nenhuma origem corresponde a “" + termo + "” (nome da origem ou do poder)." : "Nenhuma origem disponível com os suplementos desta criação.");
+          else avisos.push(outras.length ? "Nada neste livro" + (termo ? " para “" + termo + "”" : "") + ". Há resultados em: " + outras.map(function (l) { return l.curto; }).join(", ") + " — ou veja em Todas." : (termo ? "Nenhuma origem corresponde a “" + termo + "”." : "Nenhuma origem neste livro."));
+        }
+        /* A escolhida que o filtro ou a busca escondeu continua escolhida. */
+        var esc = C.origem(d.origem);
+        if (esc && !doLivro.some(function (org) { return org.chave === esc.chave; })) {
+          avisos.push("Origem escolhida: " + esc.nome + " (" + (C.referencia(esc) || "Homebrew") + ") — fora da lista atual (filtro ou busca), continua escolhida.");
+        }
+        dica.textContent = avisos.join(" ");
         var ativa = abas.querySelector('[aria-pressed="true"]');
         if (ativa && ativa.scrollIntoView) setTimeout(function () { ativa.scrollIntoView({ block: "nearest", inline: "nearest" }); }, 0);
       }
@@ -652,6 +665,7 @@
       }, [
         el("span.criacao-opcao__nome", { texto: org.nome }),
         el("span.criacao-opcao__meta", { texto: pericias }),
+        org.descricao ? el("span.criacao-opcao__texto.criacao-opcao__descricao", { texto: org.descricao }) : null,
         el("span.criacao-opcao__texto", { texto: org.poder + ". " + org.resumo }),
         etiquetaDeAutomacao(org.automacao),
         el("span.criacao-opcao__fonte", { texto: C.referencia(org) }),

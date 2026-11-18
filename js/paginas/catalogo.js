@@ -252,8 +252,8 @@
             chave: U.chaveDeBusca(busca(o.nome, o.poder, o.resumo, pericias.join(" "))),
             f: { fonte: o.fonte || "OPRPG" },
             detalhes: function () {
-              return corpo(dados([["Perícias treinadas", pericias.length ? pericias.join(", ") : (o.periciasAEscolher ? o.periciasAEscolher + " à escolha" : "")], ["Poder", o.poder], ["Fonte", refOrdem(o.fonte, o.pagina)]]),
-                texto(o.resumo), texto(o.nota, "t-mini"));
+              return corpo(dados([["Perícias treinadas", pericias.length ? pericias.join(", ") : (o.periciasAEscolher ? o.periciasAEscolher + " à escolha" : "")], ["Poder", o.poder], ["Fonte", C().referencia ? C().referencia(o) || refOrdem(o.fonte, o.pagina) : refOrdem(o.fonte, o.pagina)]]),
+                o.descricao ? texto(o.descricao, "t-mini") : null, texto(o.resumo), texto(o.nota, "t-mini"));
             },
           };
         });

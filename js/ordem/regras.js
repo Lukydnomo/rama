@@ -3502,6 +3502,8 @@
     jovemMistico: { numeros: "numeros", adicionar: "bool", cena: "id" },
     profetizado: { peTemporarios: "int", cena: "id" },
     revoltado: { semAliados: "bool" },
+    /* v9.15: Fraternidade Gaudéria — o uso da rodada e o agressor. */
+    gauderioAbutre: { usoAberto: "bool", liberado: "bool", agressor: "texto", cena: "id" },
   };
 
   function normalizarEstadoDasOrigens(bruto) {
@@ -3518,6 +3520,7 @@
         if (tipo === "bool") n[k] = v === true;
         else if (tipo === "int") n[k] = Math.max(0, Math.min(999, inteiro(v, 0)));
         else if (tipo === "id") n[k] = ID_SIMPLES.test(String(v || "")) ? String(v) : "";
+        else if (tipo === "texto") n[k] = String(v === undefined || v === null ? "" : v).trim().slice(0, 80);
         else if (tipo === "lista") n[k] = (Array.isArray(v) ? v : []).map(function (x) { return String(x || "").trim().slice(0, 60); }).filter(Boolean).slice(0, 60);
         else if (tipo === "numeros") {
           n[k] = (Array.isArray(v) ? v : []).map(function (x) { return inteiro(x, 0); })

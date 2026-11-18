@@ -114,7 +114,8 @@
     var saida = acoesDoArquivo(ctx, o, p, r);
     origensComPoder(o).forEach(function (org) {
       (org.acoesNoTeste || []).forEach(function (ac) {
-        if (ac.pericias.indexOf(p.chave) < 0) return;
+        /* `todas` (v9.15, Destemido): qualquer teste de perícia. */
+        if (!ac.todas && (ac.pericias || []).indexOf(p.chave) < 0) return;
         saida.push(acaoDePe(ctx, o, p, r, org, ac));
       });
       (org.substituicoes || []).forEach(function (sub) {
@@ -149,25 +150,30 @@
     if (ac.custoSan) return acaoDeSan(ctx, o, p, r, org, ac);
     var usado = false;
     var sigla = siglaDoGasto(o);
+    /* Sem custo (v9.15, Destemido): só a confirmação da situação, nenhum
+       PE gasto; o bônus vale só neste teste, uma vez. */
+    var semCusto = !ac.custo;
     return {
-      rotulo: ac.rotulo + (ac.tipo === "rerrolar" ? ": rolar de novo" : ": +" + ac.valor) + " (" + ac.custo + " " + sigla + ")",
+      rotulo: ac.rotulo + (ac.tipo === "rerrolar" ? ": rolar de novo" : ": +" + ac.valor) + (semCusto ? "" : " (" + ac.custo + " " + sigla + ")"),
       dica: ac.condicao || "",
       aoClicar: function (cartao, botao) {
         if (usado) return;
         if (!ac.condicao) { usar(botao); return; }
-        UI.confirmar({ titulo: ac.rotulo, texto: ac.condicao + " Gastar " + ac.custo + " " + sigla + "?", rotuloConfirmar: "Gastar" })
+        UI.confirmar({ titulo: ac.rotulo, texto: ac.condicao + (semCusto ? "" : " Gastar " + ac.custo + " " + sigla + "?"), rotuloConfirmar: semCusto ? "Aplicar +" + ac.valor : "Gastar" })
           .then(function (ok) { if (ok) usar(botao); });
       },
     };
 
     function usar(botao) {
         if (usado) return;
-        var g = gastar(ctx, ac.custo);
-        if (!g) return;
+        var g = semCusto ? null : gastar(ctx, ac.custo);
+        if (!semCusto && !g) return;
         usado = true;
         if (botao) botao.disabled = true;
-        salvar(ctx);
-        var nota = "Gastou " + ac.custo + " " + g.qual + " (" + g.antes + " → " + g.depois + ") — " + org.poder + ", origem " + org.nome + ".";
+        if (!semCusto) salvar(ctx);
+        var nota = semCusto
+          ? org.poder + ", origem " + org.nome + ": confirmado por quem joga, só neste teste. Nada foi gasto."
+          : "Gastou " + ac.custo + " " + g.qual + " (" + g.antes + " → " + g.depois + ") — " + org.poder + ", origem " + org.nome + ".";
         if (ac.tipo === "rerrolar") {
           var novo = D().dependente({ expressao: r.expressao, sigla: "", nome: p.nome, bonus: (r.total - (r.natural || 0)), modificadores: [] });
           var melhor = novo && novo.ok && novo.total > r.total ? novo : r;
@@ -179,9 +185,124 @@
         }
         global.RAMARolagens.mostrar(Object.assign({}, r, {
           total: r.total + ac.valor,
-          parcelas: (r.parcelas || []).concat([{ rotulo: ac.rotulo, valor: ac.valor }]),
+          parcelas: (r.parcelas || []).concat([{ rotulo: ac.rotulo + " (origem " + org.nome + ")", valor: ac.valor }]),
         }), { nome: p.nome + " · " + ac.rotulo, notas: ["Mesmo teste, +" + ac.valor + ". " + nota] });
     }
+  }
+
+  /* =================================================================
+     FRATERNIDADE GAUDÉRIA (Gaudério Abutre, Extra · marca-página, v9.15)
+     -----------------------------------------------------------------
+     A ficha não vê o mapa: adjacência, a troca de lugar e o ataque (ou
+     efeito) redirecionado são confirmados por quem joga. O que a ficha
+     controla: o 1 PE (pelo caminho das ações de recurso, uma vez, no
+     clique — recarregar não cobra de novo), o uso da rodada, o agressor e
+     o +2 contra ele, que vale até o fim do seu próximo turno: um efeito
+     de 1 turno, contado no FIM dos seus turnos pelo combate da mesa; sem
+     combate, quem joga encerra. O +2 nunca vale contra outro alvo: ele
+     entra no ataque só por clique, confirmando que é contra o agressor.
+     ================================================================= */
+
+  var MODELO_GAUDERIO = "origem:gauderioAbutre";
+
+  /* O efeito é achado pela fonte (o normalizador de efeitos só guarda
+     modelos de condição e de ritual). */
+  var FONTE_GAUDERIO = "Fraternidade Gaudéria (Gaudério Abutre)";
+  function ehGauderio(x) { return !!x && (x.modelo === MODELO_GAUDERIO || !!(x.origem && x.origem.nome === FONTE_GAUDERIO)); }
+  function efeitoGauderio(o) {
+    return (o.condicoes && o.condicoes.efeitos || []).filter(function (x) { return ehGauderio(x) && EF() && EF().ativa(x); })[0] || null;
+  }
+  function encerrarGauderio(o, motivo) {
+    if (!EF()) return;
+    (o.condicoes.efeitos || []).forEach(function (x) { if (ehGauderio(x) && EF().ativa(x)) EF().encerrar(o.condicoes, x.id, motivo || "manual", ""); });
+  }
+
+  /* O uso "da rodada" fica preso enquanto o +2 dura (até o fim do seu
+     próximo turno — ao menos uma rodada depois, então a rodada já virou
+     quando ele termina) ou até quem joga liberar na rodada nova. */
+  function usoDaRodadaPreso(o, e) {
+    return !!(e.usoAberto && !e.liberado && efeitoGauderio(o));
+  }
+
+  function usarFraternidade(ctx, o, org, e) {
+    var sigla = siglaDoGasto(o);
+    UI.pedirTexto({ titulo: "Fraternidade Gaudéria", rotulo: "Quem é o agressor (quem atacou ou lançou o efeito)?", valor: "", limite: 80 }).then(function (agressor) {
+      agressor = U.aparar(agressor || "", 80);
+      if (!agressor) { if (agressor === "") UI.avisoAtencao("Informe o agressor: o +2 vale só contra ele."); return; }
+      UI.confirmar({
+        titulo: "Fraternidade Gaudéria",
+        texto: "Confirme o que a mesa decide: um aliado adjacente é alvo de um ataque ou efeito de " + agressor + ", você troca de lugar com ele e se torna o alvo. A ficha não verifica posições.",
+        detalhe: "Gasta 1 " + sigla + ". Em seu próximo turno, +2 em testes de ataque contra " + agressor + ". Uma vez por rodada.",
+        rotuloConfirmar: "Gastar 1 " + sigla,
+      }).then(function (ok) {
+        if (!ok) return;
+        if (usoDaRodadaPreso(o, e)) { UI.avisoAtencao("Fraternidade Gaudéria já foi usada nesta rodada."); return; }
+        var g = gastar(ctx, 1);
+        if (!g) return;
+        /* Um +2 anterior (outra rodada, outro agressor) dá lugar ao novo. */
+        encerrarGauderio(o, "manual");
+        var r = aplicarEfeito(ctx, org, {
+          modelo: MODELO_GAUDERIO, nome: "Fraternidade Gaudéria · contra " + agressor,
+          descricao: "+2 em testes de ataque contra " + agressor + " no seu próximo turno (o agressor do ataque ou efeito que você tomou no lugar do aliado). Só contra " + agressor + ": aplique pelo botão no resultado do ataque.",
+          duracao: { tipo: "turnos", turnos: 1, momento: "fim", contador: "alvo" },
+        }, "nova");
+        e.usoAberto = true;
+        e.liberado = false;
+        e.agressor = agressor;
+        e.usadoEm = new Date().toISOString();
+        e.cena = cenaAtual(o);
+        salvar(ctx);
+        UI.aviso("Fraternidade Gaudéria: você é o alvo agora. Gastou 1 " + g.qual + " (" + g.antes + " → " + g.depois + ")." + (r ? " +2 contra " + agressor + " até o fim do seu próximo turno." : ""), { duracao: 8000 });
+      });
+    });
+  }
+
+  function controlesGauderio(ctx, o, org, e) {
+    var ef = efeitoGauderio(o);
+    var preso = usoDaRodadaPreso(o, e);
+    var sigla = siglaDoGasto(o);
+    return [
+      el("p.t-mini", { role: "status", texto: (preso ? "Usada nesta rodada." : "Disponível.") + (ef
+        ? " +2 em testes de ataque contra " + (e.agressor || "o agressor") + " até o fim do seu próximo turno (" + (EF() ? EF().textoDaDuracao(ef) : "") + ")."
+        : "") }),
+      el("div.faixa", {}, [
+        botao("Fraternidade Gaudéria (1 " + sigla + ")", function () { usarFraternidade(ctx, o, org, e); },
+          { desligado: preso, dica: preso ? "Uma vez por rodada: já usada nesta rodada." : "Quando um aliado adjacente for alvo de um ataque ou efeito.", foco: "origem:gauderio" }),
+        preso ? botao("Nova rodada (libera o uso)", function () {
+          UI.confirmar({ titulo: "Nova rodada?", texto: "Libera outro uso de Fraternidade Gaudéria nesta rodada nova. O +2 contra " + (e.agressor || "o agressor") + " continua até o fim do seu próximo turno.", rotuloConfirmar: "Liberar" })
+            .then(function (ok) { if (ok) { e.liberado = true; salvar(ctx); } });
+        }) : null,
+        ef ? botao("Encerrar o +2 (fim do seu próximo turno)", function () { encerrarGauderio(o, "manual"); salvar(ctx); }) : null,
+      ]),
+      el("p.t-mini", { texto: "Com o combate da mesa, o +2 termina sozinho no fim do seu próximo turno. Sem ele, a ficha não sabe quando os turnos passam: encerre o +2 no fim do seu próximo turno e libere o uso quando a rodada virar." }),
+    ];
+  }
+
+  /* No resultado de um ataque: o +2 contra o agressor, por clique e com
+     confirmação (a ficha não sabe quem é o alvo), uma vez por ataque. */
+  function acoesNoAtaque(ctx, arma, r) {
+    var o = ordemDe(ctx);
+    var ef = efeitoGauderio(o);
+    if (!ef || !ctx.podeEditar || !ctx.podeEditar()) return { acoes: [], notas: [] };
+    var e = estado(o, "gauderioAbutre");
+    var agressor = e.agressor || "o agressor";
+    var usado = false;
+    return { notas: [], acoes: [{
+      rotulo: "Fraternidade Gaudéria: +2 contra " + agressor,
+      dica: "Só se este ataque for contra " + agressor + ".",
+      aoClicar: function (cartao, b) {
+        if (usado) return;
+        UI.confirmar({ titulo: "Fraternidade Gaudéria", texto: "Este ataque é contra " + agressor + "?", rotuloConfirmar: "Aplicar +2" }).then(function (ok) {
+          if (!ok || usado) return;
+          usado = true;
+          if (b) b.disabled = true;
+          global.RAMARolagens.mostrar(Object.assign({}, r, {
+            total: r.total + 2,
+            parcelas: (r.parcelas || []).concat([{ rotulo: "Fraternidade Gaudéria (origem Gaudério Abutre)", valor: 2 }]),
+          }), { nome: (arma && arma.nome ? arma.nome + " · " : "") + "Fraternidade Gaudéria", notas: ["Mesmo ataque, +2 contra " + agressor + ". O crítico continua o do dado."] });
+        });
+      },
+    }] };
   }
 
   /* Custo em Sanidade (Sussurros e Vultos, AS7 p. 80): perde a SAN e
@@ -252,6 +373,7 @@
   }
 
   var CONTROLES = {
+    gauderioAbutre: function (ctx, o, org, e) { return controlesGauderio(ctx, o, org, e); },
     /* Antes só… (Revoltado, Extra, v5.1): a ficha não sabe onde os
        aliados estão — quem joga marca. Os três bônus entram e saem da
        conta com este controle. */
@@ -985,6 +1107,7 @@
 
   global.RAMASecaoOrigens = {
     acoesNoTeste: acoesNoTeste,
+    acoesNoAtaque: acoesNoAtaque,
     controles: controles,
     controlesDePoder: controlesDePoder,
     temporarioDaCena: temporarioDaCena,
