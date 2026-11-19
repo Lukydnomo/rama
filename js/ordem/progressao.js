@@ -2465,10 +2465,13 @@
       ordem.atributos, ordem.pericias, ordem.escolhas, ordem.afinidade, ordem.opcionais,
       ordem.registrosDeRitual || null, ordem.prestigio,
       /* O marco de estado importado e as aquisições dele (v2.34). */
-      ordem.importacao ? [ordem.importacao.marco, ordem.importacao.aquisicoes] : null,
+      ordem.importacao ? [ordem.importacao.marco, ordem.importacao.aquisicoes, ordem.importacao.reconstrucao || null] : null,
+      /* As aquisições extras (v9.16). */
+      ordem.extras || null,
       Object.keys(desativadasDe(ordem)).sort(),
       ordem.progressao ? ordem.progressao.length : 0,
-      itens ? itens.map(function (i) { return i ? [i.id, i.tipo, i.nome, i.ordem && i.ordem.grupo] : null; }) : null,
+      /* Em uso: um extra pode depender do item vestido (v9.16). */
+      itens ? itens.map(function (i) { return i ? [i.id, i.tipo, i.nome, i.ordem && i.ordem.grupo, !!(i.ordem && i.ordem.emUso)] : null; }) : null,
       /* O círculo e o elemento de cada ritual entram na assinatura: é
          por eles que a elegibilidade de uma concessão é conferida, e
          mudar um à mão precisa refazer a conta. */
@@ -2527,7 +2530,8 @@
       ordem.atributos, ordem.pericias, ordem.escolhas, Array.isArray(ordem.escolhas) ? ordem.escolhas.length : -1,
       ordem.opcionais, ordem.afinidade, ordem.estadoDasOrigens, ordem.trajetoria,
       ordem.registrosDeRitual, Array.isArray(ordem.registrosDeRitual) ? ordem.registrosDeRitual.length : -1,
-      ordem.prestigio, ordem.importacao, ordem.personalizacoes, ordem.excluidas,
+      ordem.prestigio, ordem.importacao, ordem.personalizacoes, ordem.excluidas, ordem.extras,
+      Array.isArray(ordem.extras) ? ordem.extras.length : -1,
       Array.isArray(ordem.progressao) ? ordem.progressao.length : -1,
     ];
   }
@@ -2680,7 +2684,631 @@
     return deLado;
   }
 
-  function percorrer(ordem, contexto, pararEm) {
+
+  /* =================================================================
+     RECONSTRUÇÃO DO HISTÓRICO IMPORTADO (v9.16)
+     -----------------------------------------------------------------
+     O marco acima guarda o retrato: as etapas até ele ficam "histórico
+     indisponível". Quem sabe a história pode trocá-la pelas escolhas de
+     verdade, etapa por etapa, pela MESMA vaga e pelo MESMO registro de
+     uma ficha nativa (`ordem.escolhas`). O que muda é só um detalhe de
+     contabilidade: o retrato já contém o que aquela escolha deu (o +1
+     do atributo, o grau de treino), então registrar a escolha numa
+     etapa do retrato DEVOLVE à base de criação o que ela passou a dar —
+     o valor final continua o importado, e nada conta duas vezes.
+
+       importacao.reconstrucao = {
+         versao: 1,
+         retrato:    { atributos, pericias }   valores do momento da importação
+         vagas:      { idDaVaga: "desconhecida" | "vazia" }
+         absorvidos: { idDaVaga: { atributos: {k: n}, graus: {k: n} } }
+       }
+
+     · etapa com registro            → reconstruída: vale como na ficha nativa;
+     · "vazia"                        → a vaga não foi preenchida de verdade:
+                                         volta a ser pendência normal;
+     · "desconhecida" ou sem marca    → continua histórico indisponível.
+
+     `absorvidos` diz quanto a reconstrução daquela etapa tirou da base,
+     para desfazer devolver exatamente isso. Depois de reconstruída, a
+     etapa é uma etapa nativa: trocar a escolha muda os valores como em
+     qualquer ficha. A importação continua registrada (procedência),
+     mas não substitui os vínculos reconstruídos.
+     ================================================================= */
+
+  var SITUACOES_DE_VAGA = { desconhecida: true, vazia: true };
+
+  function reconstrucaoDe(ordem) {
+    var imp = ordem && ordem.importacao;
+    var r = imp && imp.reconstrucao;
+    return r && typeof r === "object" ? r : null;
+  }
+
+  function situacaoMarcada(ordem, idVaga) {
+    var r = reconstrucaoDe(ordem);
+    var s = r && r.vagas ? r.vagas[idVaga] : "";
+    return SITUACOES_DE_VAGA[s] ? s : "";
+  }
+
+  function garantirReconstrucao(ordem) {
+    var imp = ordem.importacao;
+    if (!imp.reconstrucao || typeof imp.reconstrucao !== "object") imp.reconstrucao = { versao: 1 };
+    var r = imp.reconstrucao;
+    if (!r.vagas || typeof r.vagas !== "object") r.vagas = {};
+    if (!r.absorvidos || typeof r.absorvidos !== "object") r.absorvidos = {};
+    if (!r.retrato || typeof r.retrato !== "object") {
+      r.retrato = { atributos: Object.assign({}, ordem.atributos || {}), pericias: Object.assign({}, ordem.pericias || {}) };
+    }
+    return r;
+  }
+
+  function grauDaBase(ordem, k) {
+    var g = GRAUS.indexOf(C.grau(ordem.pericias ? ordem.pericias[k] : "").chave);
+    return g < 0 ? 0 : g;
+  }
+  function definirGrauDaBase(ordem, k, g) {
+    if (!ordem.pericias) ordem.pericias = {};
+    if (g <= 0) delete ordem.pericias[k];
+    else ordem.pericias[k] = GRAUS[Math.min(3, g)];
+  }
+
+  /* Os valores finais da ficha agora (atributos e graus em número). */
+  function valoresFinais(ordem, contexto) {
+    var est = percorrer(ordem, contexto, null);
+    var graus = {};
+    Object.keys(est.graus).forEach(function (k) { graus[k] = Math.max(0, GRAUS.indexOf(est.graus[k])); });
+    return { atributos: Object.assign({}, est.atributos), graus: graus, estado: est };
+  }
+
+  /* As chaves de atributo e de perícia que uma escolha menciona, em
+     qualquer profundidade (Versatilidade → poder → perícia). */
+  function chavesDaEscolha(reg) {
+    var saida = { atributos: {}, pericias: {} };
+    (function andar(v, prof) {
+      if (prof > 9 || v === null || v === undefined) return;
+      if (typeof v === "string") {
+        if (C.ATRIBUTOS.some(function (a) { return a.chave === v; })) saida.atributos[v] = true;
+        else if (C.pericia(v)) saida.pericias[v] = true;
+        return;
+      }
+      if (typeof v === "object") Object.keys(v).forEach(function (k) { andar(v[k], prof + 1); });
+    })([reg && reg.valor, reg && reg.opcoes], 0);
+    return { atributos: Object.keys(saida.atributos), pericias: Object.keys(saida.pericias) };
+  }
+
+  /* A avaliação de uma escolha (registro de etapa) ou de um extra. */
+  function avaliacaoDe(est, reg) {
+    if (!reg) return null;
+    if (reg.extra) {
+      var x = (est.extras || []).filter(function (y) { return y.ref === reg.extra; })[0];
+      return x ? { valido: x.valido, completo: x.completo, motivos: x.motivos || [], faltam: x.faltam || [] } : null;
+    }
+    return est.avaliacoes[reg.id] || null;
+  }
+  function problemasDe(est, reg) {
+    var av = avaliacaoDe(est, reg);
+    if (!av) return 99;
+    return (av.motivos || []).length + (av.valido ? 0 : 1);
+  }
+
+  /* Depois de registrar uma escolha numa etapa do retrato: tira da base
+     o que a escolha passou a dar, até os valores finais voltarem a ser
+     os de antes (`alvo`). Duas situações:
+       · a escolha vale e soma por cima do retrato (o atributo vai a 4
+         onde o retrato tinha 3) → a base desce a diferença;
+       · a escolha não vale porque o retrato já contém o que ela dá (a
+         perícia "já é treinada", o atributo "já está em 5") → a base
+         desce um passo naquela chave, se isso resolver sem mudar o
+         valor final.
+     O que não fecha volta como diferença, para a revisão decidir. */
+  function absorver(ordem, idVaga, alvo, contexto, opcoesAbs) {
+    var mov = { atributos: {}, graus: {} };
+    /* "extra.<ref>": a absorção de um extra que veio de um poder
+       importado (o retrato já continha o que ele dá). */
+    var refExtra = /^extra\./.test(idVaga) ? idVaga.slice(6) : "";
+    function reg() {
+      if (refExtra) {
+        var x = extrasDe(ordem).filter(function (y) { return y.ref === refExtra; })[0];
+        return x ? { id: "extra:" + x.ref, extra: x.ref, valor: x.chave, opcoes: x.opcoes } : null;
+      }
+      return (ordem.escolhas || []).filter(function (r) { return r.etapa === idVaga; })[0] || null;
+    }
+    function moverAtributo(k, n) {
+      var base = inteiro(ordem.atributos[k], 0);
+      var novo = Math.max(0, base - n);
+      if (novo === base) return false;
+      ordem.atributos[k] = novo;
+      mov.atributos[k] = (mov.atributos[k] || 0) + (base - novo);
+      return true;
+    }
+    function moverGrau(k, n) {
+      var base = grauDaBase(ordem, k);
+      var novo = Math.max(0, base - n);
+      if (novo === base) return false;
+      definirGrauDaBase(ordem, k, novo);
+      mov.graus[k] = (mov.graus[k] || 0) + (base - novo);
+      return true;
+    }
+    function desfazerUm(tipo, k) {
+      if (tipo === "atributo") { ordem.atributos[k] = inteiro(ordem.atributos[k], 0) + 1; mov.atributos[k]--; if (!mov.atributos[k]) delete mov.atributos[k]; }
+      else { definirGrauDaBase(ordem, k, grauDaBase(ordem, k) + 1); mov.graus[k]--; if (!mov.graus[k]) delete mov.graus[k]; }
+    }
+
+    var tentadas = [];
+    for (var volta = 0; volta < 12; volta++) {
+      var agora = valoresFinais(ordem, contexto);
+      var mudou = false;
+      C.ATRIBUTOS.forEach(function (a) {
+        var d = (agora.atributos[a.chave] || 0) - (alvo.atributos[a.chave] || 0);
+        if (d > 0 && moverAtributo(a.chave, d)) mudou = true;
+      });
+      Object.keys(alvo.graus).forEach(function (k) {
+        var d = (agora.graus[k] || 0) - (alvo.graus[k] || 0);
+        if (d > 0 && moverGrau(k, d)) mudou = true;
+      });
+      if (mudou) continue;
+      var r = reg();
+      var antes = problemasDe(agora.estado, r);
+      if (!r || antes === 0) break;
+      /* A escolha não vale: tenta descer um passo em cada chave que ela
+         menciona e fica com o que resolve sem mexer no valor final. */
+      var ch = chavesDaEscolha(r);
+      var tentativas = ch.atributos.map(function (k) { return ["atributo", k]; }).concat(ch.pericias.map(function (k) { return ["grau", k]; }));
+      var achou = false;
+      for (var i = 0; i < tentativas.length && !achou; i++) {
+        var tp = tentativas[i][0], k = tentativas[i][1];
+        var ok = tp === "atributo" ? (alvo.atributos[k] > 0 && moverAtributo(k, 1)) : ((alvo.graus[k] || 0) > 0 && moverGrau(k, 1));
+        if (!ok) continue;
+        /* Menos problemas é o sinal: a escolha pode precisar de vários
+           passos (três perícias de um Grau de Treinamento) até valer; o
+           valor final é conferido no fim. */
+        var depois = valoresFinais(ordem, contexto);
+        if (problemasDe(depois.estado, reg()) < antes) { achou = true; tentadas.push([tp, k]); }
+        else desfazerUm(tp, k);
+      }
+      if (!achou) break;
+    }
+    /* Se as tentativas não chegaram a uma escolha válida, a base volta
+       ao que era: melhor a escolha marcada com o motivo do que um valor
+       perdido. */
+    var rFim = reg();
+    var avFim = rFim ? avaliacaoDe(valoresFinais(ordem, contexto).estado, rFim) : null;
+    /* Numa simulação (a janela conferindo uma escolha ainda pela metade)
+       as tentativas ficam: o que a tela mostra é o que falta, não o
+       problema que a base de antes criaria. */
+    if (tentadas.length && rFim && !(avFim && avFim.valido && avFim.completo) && !(opcoesAbs && opcoesAbs.simulacao)) {
+      tentadas.reverse().forEach(function (x) { desfazerUm(x[0], x[1]); });
+    }
+
+    var rec = garantirReconstrucao(ordem);
+    var acumulado = rec.absorvidos[idVaga] || { atributos: {}, graus: {} };
+    Object.keys(mov.atributos).forEach(function (k) { acumulado.atributos[k] = (acumulado.atributos[k] || 0) + mov.atributos[k]; });
+    Object.keys(mov.graus).forEach(function (k) { acumulado.graus[k] = (acumulado.graus[k] || 0) + mov.graus[k]; });
+    if (Object.keys(acumulado.atributos).length || Object.keys(acumulado.graus).length) rec.absorvidos[idVaga] = acumulado;
+    else delete rec.absorvidos[idVaga];
+
+    var fim = valoresFinais(ordem, contexto);
+    var diferencas = [];
+    C.ATRIBUTOS.forEach(function (a) {
+      if ((fim.atributos[a.chave] || 0) !== (alvo.atributos[a.chave] || 0)) diferencas.push({ tipo: "atributo", chave: a.chave, nome: a.nome, esperado: alvo.atributos[a.chave] || 0, obtido: fim.atributos[a.chave] || 0 });
+    });
+    Object.keys(alvo.graus).forEach(function (k) {
+      if ((fim.graus[k] || 0) !== (alvo.graus[k] || 0)) diferencas.push({ tipo: "pericia", chave: k, nome: nomeDaPericia(k), esperado: GRAUS[alvo.graus[k] || 0], obtido: GRAUS[fim.graus[k] || 0] });
+    });
+    var r2 = reg();
+    return { movido: mov, diferencas: diferencas, avaliacao: avaliacaoDe(fim.estado, r2), estado: fim.estado };
+  }
+
+  function vagaDoHistorico(ordem, idVaga) {
+    var marco = marcoDe(ordem);
+    if (!marco) return null;
+    var v = vagas(ordem).filter(function (x) { return x.id === idVaga; })[0] || null;
+    return v && vagaHistorica(v, marco) ? v : null;
+  }
+
+  /* As aquisições importadas que uma etapa reconstruída representa
+     voltam a valer sozinhas quando a etapa é desfeita. */
+  function soltarAquisicoesDaVaga(ordem, idVaga) {
+    (ordem.importacao && ordem.importacao.aquisicoes || []).forEach(function (a) {
+      if (a.representacao === "progressao" && a.vaga === idVaga) { a.representacao = "importada"; delete a.vaga; }
+    });
+  }
+
+  /* Registra a escolha de verdade numa etapa do retrato. `candidato` é o
+     mesmo { valor, opcoes } da janela de escolha; para uma concessão de
+     rituais, { rituais: [vínculos] }. `info.aquisicoes`: refs das
+     aquisições importadas que esta escolha passa a representar (saem da
+     conta como importadas — uma fonte mecânica só). */
+  function reconstruirVaga(ordem, idVaga, candidato, info, contexto) {
+    var v = vagaDoHistorico(ordem, idVaga);
+    if (!v) return { ok: false, motivo: "Esta etapa não faz parte do histórico importado desta ficha." };
+    var i = info || {};
+    var rec = garantirReconstrucao(ordem);
+    var existente = (ordem.escolhas || []).filter(function (r) { return r.etapa === idVaga; })[0];
+    if (existente) desfazerReconstrucao(ordem, idVaga, contexto, { manterMarca: true });
+    var alvo = valoresFinais(ordem, contexto);
+    var registro;
+    if (v.tipo === "rituais") {
+      registro = definirRituais(ordem, idVaga, (candidato && candidato.rituais) || []);
+      if (!registro) { delete rec.vagas[idVaga]; return { ok: true, registro: null, movido: { atributos: {}, graus: {} }, diferencas: [] }; }
+    } else {
+      registro = registrar(ordem, v, candidato || {});
+    }
+    if (i.procedencia) registro.procedencia = String(i.procedencia).slice(0, 160);
+    delete rec.vagas[idVaga];
+    var refs = {};
+    (i.aquisicoes || []).forEach(function (ref) { refs[ref] = true; });
+    (ordem.importacao.aquisicoes || []).forEach(function (a) {
+      if (refs[a.ref]) { a.representacao = "progressao"; a.vaga = idVaga; }
+    });
+    var res = absorver(ordem, idVaga, alvo, contexto, { simulacao: !!i.simulacao });
+    return { ok: true, registro: registro, movido: res.movido, diferencas: res.diferencas, avaliacao: res.avaliacao };
+  }
+
+  /* Volta a etapa ao retrato: a escolha sai, a base recebe de volta o
+     que a reconstrução tirou, e as aquisições importadas que ela
+     representava voltam a valer. */
+  function desfazerReconstrucao(ordem, idVaga, contexto, opcoes) {
+    var rec = reconstrucaoDe(ordem);
+    var reg = (ordem.escolhas || []).filter(function (r) { return r.etapa === idVaga; })[0];
+    if (reg) remover(ordem, reg.id);
+    var ab = rec && rec.absorvidos ? rec.absorvidos[idVaga] : null;
+    if (ab) {
+      Object.keys(ab.atributos || {}).forEach(function (k) { ordem.atributos[k] = inteiro(ordem.atributos[k], 0) + ab.atributos[k]; });
+      Object.keys(ab.graus || {}).forEach(function (k) { definirGrauDaBase(ordem, k, grauDaBase(ordem, k) + ab.graus[k]); });
+      delete rec.absorvidos[idVaga];
+    }
+    soltarAquisicoesDaVaga(ordem, idVaga);
+    if (rec && !(opcoes && opcoes.manterMarca)) delete rec.vagas[idVaga];
+    return { ok: true };
+  }
+
+  /* "Etapa desconhecida" (continua histórico) ou "não preenchida" (vira
+     pendência normal). Uma etapa com escolha é desfeita antes. */
+  function marcarVaga(ordem, idVaga, situacao, contexto) {
+    if (!vagaDoHistorico(ordem, idVaga)) return { ok: false, motivo: "Esta etapa não faz parte do histórico importado desta ficha." };
+    if (situacao && !SITUACOES_DE_VAGA[situacao]) return { ok: false, motivo: "Situação desconhecida." };
+    if ((ordem.escolhas || []).some(function (r) { return r.etapa === idVaga; })) desfazerReconstrucao(ordem, idVaga, contexto, { manterMarca: true });
+    var rec = garantirReconstrucao(ordem);
+    if (situacao) rec.vagas[idVaga] = situacao; else delete rec.vagas[idVaga];
+    return { ok: true };
+  }
+
+  /* As etapas do retrato, com a situação de cada uma — a visão da
+     progressão da reconstrução (o assistente e a aba Progressão leem
+     daqui). */
+  function etapasDoHistorico(ordem, contexto) {
+    var marco = marcoDe(ordem);
+    if (!marco) return [];
+    var est = estado(ordem, contexto);
+    var porEtapa = {};
+    (ordem.escolhas || []).forEach(function (r) { porEtapa[r.etapa] = r; });
+    return vagas(ordem).filter(function (v) { return vagaHistorica(v, marco); }).map(function (v) {
+      var r = porEtapa[v.id] || null;
+      var av = r ? est.avaliacoes[r.id] : null;
+      var marca = situacaoMarcada(ordem, v.id);
+      var situacao = r ? (av && av.valido && av.completo ? "reconstruida" : (av && !av.valido ? "invalida" : "incompleta")) : (marca === "vazia" ? "vazia" : "desconhecida");
+      return {
+        id: v.id, vaga: v, tipo: v.tipo, rotulo: v.rotulo, rotuloEtapa: v.rotuloEtapa || etapaDe(ordem, v).rotulo, degrau: v.degrau,
+        situacao: situacao, marcada: !!marca, registro: r, avaliacao: av,
+        descricao: r ? descrever(ordem, r) : "",
+      };
+    });
+  }
+
+  /* Completa: nenhuma etapa do retrato ficou sem história e nenhuma
+     aquisição importada ficou "etapa desconhecida". A partir daí o marco
+     não segura mais nada — a ficha é como uma nativa. */
+  function reconstrucaoCompleta(ordem, contexto) {
+    if (!marcoDe(ordem) || !reconstrucaoDe(ordem)) return false;
+    var abertas = etapasDoHistorico(ordem, contexto).filter(function (x) { return x.situacao === "desconhecida"; });
+    if (abertas.length) return false;
+    /* A importada que a camada oficial já dá (a habilidade da trilha,
+       com a opção registrada) não conta: ela fica de lado sozinha. */
+    var deLado = {};
+    (estado(ordem, contexto).importadasDeLado || []).forEach(function (x) { if (x.aquisicao) deLado[x.aquisicao.ref] = true; });
+    return !(ordem.importacao.aquisicoes || []).some(function (a) { return a.representacao === "importada" && !deLado[a.ref]; });
+  }
+
+  /* Se um poder cabe numa etapa do retrato, e por qual caminho: direto,
+     por Transcender (poder paranormal numa vaga de poder de classe) ou
+     pela trilha (Versatilidade). `via: "nao"` = a etapa não concede
+     esse tipo de poder. */
+  function cabeNaVaga(v, e, ordem) {
+    var paranormal = e.tipo === "paranormal";
+    switch (v.tipo) {
+      case "poderClasse":
+        if (paranormal) return { ok: true, via: "transcender" };
+        if ((e.tipo === "classe" || e.tipo === "geral") && P.pertenceAClasse(e, ordem.classe)) return { ok: true, via: "direto" };
+        if (e.tipo === "classe" || e.tipo === "geral") return { ok: false, via: "direto", motivo: e.nome + " não é um poder da classe da ficha (de outra classe, entra por uma escolha interna, como Expansão de Conhecimento)." };
+        return { ok: false, via: "nao", motivo: "Esta etapa concede um poder de classe." };
+      case "versatilidade":
+        if (e.tipo === "trilha" && P.primeiraDaTrilha(e.trilha) && P.primeiraDaTrilha(e.trilha).chave === e.chave) return { ok: true, via: "trilha" };
+        if (paranormal) return { ok: true, via: "transcender" };
+        if ((e.tipo === "classe" || e.tipo === "geral") && P.pertenceAClasse(e, ordem.classe)) return { ok: true, via: "direto" };
+        return { ok: false, via: "nao", motivo: "Versatilidade dá um poder de classe ou o primeiro poder de outra trilha da classe." };
+      case "transcenderExposicao":
+      case "transcenderItem":
+        return paranormal ? { ok: true, via: "direto" } : { ok: false, via: "nao", motivo: "Esta etapa só concede poder paranormal." };
+      case "trilhaElite":
+        var trE = C.trilha(ordem.trilha);
+        return trE && opcoesDeElite(trE.chave).some(function (h) { return h.chave === e.chave; }) ? { ok: true, via: "direto" } : { ok: false, via: "nao", motivo: "A habilidade de elite é a 3ª ou a 4ª da trilha da ficha." };
+      default:
+        return { ok: false, via: "nao", motivo: "Esta etapa não concede poder." };
+    }
+  }
+
+  /* Compatibilidade de vários poderes com uma etapa, conferida no
+     personagem de antes dela — sem a própria aquisição importada (um
+     poder ainda "etapa desconhecida" não pode barrar a si mesmo). */
+  function compatibilidadeNaVaga(ordem, idVaga, itens, contexto) {
+    var c = contextoDaVaga(ordem, idVaga, contexto);
+    return (itens || []).map(function (it) {
+      if (!c) return { ok: false, via: "nao", motivos: ["Etapa inexistente."] };
+      var e = P.poder(it.chave);
+      if (!e) return { ok: false, via: "nao", motivos: ["Sem poder do catálogo."] };
+      var cabe = cabeNaVaga(c.vaga, e, ordem);
+      if (!cabe.ok) return { ok: false, via: cabe.via, motivos: [cabe.motivo] };
+      var p = c.percurso;
+      if (it.ref) {
+        p = copiarPercurso(p);
+        p.adquiridos = p.adquiridos.filter(function (a) { return a.id !== "importacao." + it.ref; });
+      }
+      var motivos = candidato(e, p, c.etapa, ordem, it.opcoes || {}).motivos.slice();
+      if (cabe.via === "transcender") motivos = candidato(P.poder("transcender"), p, c.etapa, ordem).motivos.concat(motivos);
+      var mg = motivoDoGrupo(e, c.vaga, ordem);
+      if (mg) motivos.push(mg);
+      return { ok: !motivos.length, via: cabe.via, motivos: motivos };
+    });
+  }
+
+  /* Rituais numa concessão do retrato: quantos ela dá naquela etapa e se
+     cada ritual cabe nela. */
+  function compatibilidadeDeRituais(ordem, idVaga, rituais, contexto) {
+    var c = contextoDaVaga(ordem, idVaga, contexto);
+    if (!c || c.vaga.tipo !== "rituais" || !A) return { quantidade: 0, itens: (rituais || []).map(function () { return { ok: false, motivos: ["Esta etapa não concede rituais."] }; }) };
+    var quantidade = A.quantidadeDa(c.vaga.concessao, c.percurso.atributos.int || 0);
+    return {
+      quantidade: quantidade,
+      itens: (rituais || []).map(function (rit) {
+        var dado = rit ? dadosDoRitualDaFicha(rit) : null;
+        if (!dado) return { ok: false, motivos: ["Ritual sem dados."] };
+        var eleg = A.elegibilidade(c.vaga.concessao, comConhecimento(dado, ordem, c.percurso, c.etapa, contexto));
+        return { ok: eleg.ok, motivos: eleg.ok ? [] : [eleg.motivo] };
+      }),
+    };
+  }
+
+  /* =================================================================
+     AQUISIÇÕES EXTRAS (v9.16)
+     -----------------------------------------------------------------
+     O que o personagem recebeu FORA das vagas normais: recompensa da
+     campanha, treinamento especial, concessão do mestre, efeito
+     permanente, poder dado por item. Não ocupa vaga e não fica válido
+     só por ser extra: os requisitos são conferidos na etapa informada
+     (ou no personagem atual, se a etapa não é conhecida). Ignorar um
+     requisito é uma EXCEÇÃO, separada da concessão, com motivo escrito.
+
+       ordem.extras = [{
+         ref,                      identidade estável (não é `id`: a
+                                   exportação apaga todo id)
+         tipo: "poder" | "atributo" | "treino",
+         chave, opcoes,            o poder e as escolhas internas dele
+         atributo, valor,          tipo "atributo": +valor no atributo
+         pericia, grau,            tipo "treino": a perícia vai ao grau
+         nome,                     retrato do rótulo
+         procedencia,              justificativa ("recompensa da missão…")
+         quando: { degrau } | null quando foi adquirida, se conhecido
+         depende: { tipo: "item", item, emUso } | { tipo: "aquisicao",
+                  chave } | { tipo: "condicao", texto, ativa } | null
+         excecao: { motivo } | null
+         importacao: ref da aquisição importada que ele representa
+       }]
+     ================================================================= */
+
+  var TIPOS_DE_EXTRA = { poder: true, atributo: true, treino: true };
+
+  function normalizarExtra(b) {
+    if (!b || typeof b !== "object") return null;
+    var ref = /^[A-Za-z0-9_.:-]{1,60}$/.test(String(b.ref || "")) ? String(b.ref) : "";
+    if (!ref) return null;
+    var tipo = TIPOS_DE_EXTRA[b.tipo] ? b.tipo : "poder";
+    var x = {
+      ref: ref, tipo: tipo,
+      chave: tipo === "poder" && /^[A-Za-z0-9.:_-]{1,80}$/.test(String(b.chave || "")) ? String(b.chave) : "",
+      opcoes: tipo === "poder" ? (limparOpcoes(b.opcoes) || {}) : {},
+      nome: String(b.nome || "").replace(/[\u0000-\u001F]/g, " ").slice(0, 160),
+      procedencia: String(b.procedencia || "").replace(/[\u0000-\u001F]/g, " ").slice(0, 200),
+      quando: b.quando && typeof b.quando === "object" && Number.isFinite(Number(b.quando.degrau)) && b.quando.degrau !== null && b.quando.degrau !== ""
+        ? { degrau: Math.max(0, Math.min(40, inteiro(b.quando.degrau, 0))) } : null,
+      depende: null,
+      excecao: b.excecao && typeof b.excecao === "object" && String(b.excecao.motivo || "").trim()
+        ? { motivo: String(b.excecao.motivo).replace(/[\u0000-\u001F]/g, " ").trim().slice(0, 300) } : null,
+      registradoEm: typeof b.registradoEm === "string" ? b.registradoEm.slice(0, 40) : "",
+    };
+    if (tipo === "atributo") {
+      x.atributo = C.ATRIBUTOS.some(function (a) { return a.chave === b.atributo; }) ? b.atributo : "";
+      x.valor = Math.max(-5, Math.min(5, inteiro(b.valor, 1))) || 1;
+    }
+    if (tipo === "treino") {
+      x.pericia = C.pericia(b.pericia) ? b.pericia : "";
+      x.grau = GRAUS.indexOf(b.grau) > 0 ? b.grau : "treinado";
+    }
+    var d = b.depende && typeof b.depende === "object" ? b.depende : null;
+    if (d && d.tipo === "item" && typeof d.item === "string" && d.item) x.depende = { tipo: "item", item: d.item.slice(0, 80), emUso: d.emUso === true };
+    else if (d && d.tipo === "aquisicao" && /^[A-Za-z0-9.:_-]{1,80}$/.test(String(d.chave || ""))) x.depende = { tipo: "aquisicao", chave: String(d.chave) };
+    else if (d && d.tipo === "condicao" && String(d.texto || "").trim()) x.depende = { tipo: "condicao", texto: String(d.texto).replace(/[\u0000-\u001F]/g, " ").trim().slice(0, 200), ativa: d.ativa !== false };
+    if (typeof b.importacao === "string" && /^[A-Za-z0-9_.:-]{1,80}$/.test(b.importacao)) x.importacao = b.importacao;
+    return x;
+  }
+
+  function normalizarExtras(lista) {
+    var vistos = {};
+    return (Array.isArray(lista) ? lista : []).map(normalizarExtra).filter(function (x) {
+      if (!x || vistos[x.ref]) return false;
+      vistos[x.ref] = true;
+      return true;
+    }).slice(0, 120);
+  }
+
+  function extrasDe(ordem) { return Array.isArray(ordem && ordem.extras) ? ordem.extras : []; }
+
+  function nomeDoExtra(x) {
+    if (x.tipo === "atributo") return nomeDoAtributo(x.atributo) + " " + (x.valor > 0 ? "+" : "") + x.valor;
+    if (x.tipo === "treino") return nomeDaPericia(x.pericia) + " " + (C.grau(x.grau) || {}).nome;
+    var e = P.poder(x.chave);
+    return e ? nomeDoPoder(e, x.opcoes) : (x.nome || "Poder desconhecido");
+  }
+
+  /* A dependência do extra: um item (no inventário; em uso, se pedido),
+     outra aquisição ou uma condição que quem joga liga e desliga. */
+  function dependenciaDoExtra(x, percurso, contexto) {
+    var d = x.depende;
+    if (!d) return { ok: true, texto: "" };
+    if (d.tipo === "item") {
+      var itens = itensDoContexto(contexto);
+      if (!itens) return { ok: true, texto: "depende de um item" };
+      var it = itens.filter(function (i) { return i && i.id === d.item; })[0];
+      if (!it) return { ok: false, texto: "O item de que este benefício depende não está mais no inventário." };
+      var emUso = !!(it.ordem && it.ordem.emUso);
+      if (d.emUso && !emUso) return { ok: false, texto: it.nome + " não está em uso: o benefício fica suspenso." };
+      return { ok: true, texto: "depende de " + it.nome + (d.emUso ? " (em uso)" : "") };
+    }
+    if (d.tipo === "aquisicao") {
+      var tem = percurso.adquiridos.some(function (a) { return vale(a) && !a.efeitosDesativados && a.chave === d.chave; });
+      var e = P.poder(d.chave);
+      return tem ? { ok: true, texto: "depende de " + (e ? e.nome : d.chave) } : { ok: false, texto: "Depende de " + (e ? e.nome : d.chave) + ", que a ficha não tem agora." };
+    }
+    if (d.tipo === "condicao") return d.ativa ? { ok: true, texto: "condição: " + d.texto } : { ok: false, texto: "Condição desligada: " + d.texto + "." };
+    return { ok: true, texto: "" };
+  }
+
+  function etapaDoExtra(ordem, x, t) {
+    var conhecido = !!x.quando;
+    var d = conhecido ? Math.min(x.quando.degrau, t.passos) : t.passos;
+    var base = etapaDe(ordem, { id: "extra:" + x.ref, degrau: d });
+    var e = etapaDe(ordem, { id: "extra:" + x.ref, degrau: d, rotuloEtapa: "Extra · " + (conhecido ? base.rotulo : "etapa desconhecida") });
+    e.conhecida = conhecido;
+    e.rotuloDaEtapa = base.rotulo;
+    return e;
+  }
+
+  function avaliarExtra(x, percurso, ordem, contexto, t) {
+    var etapa = etapaDoExtra(ordem, x, t);
+    var saida = { faltam: [], problemas: [], filhos: [] };
+    if (x.tipo === "poder") {
+      var e = P.poder(x.chave);
+      if (!x.chave) saida.faltam.push("O poder recebido");
+      else if (!e) saida.problemas.push("Poder desconhecido: " + (x.nome || x.chave) + ".");
+      else saida = avaliarPoder(e, x.opcoes || {}, percurso, etapa, ordem, contexto, 0);
+    } else if (x.tipo === "atributo") {
+      if (!x.atributo) saida.faltam.push("Atributo");
+    } else if (x.tipo === "treino") {
+      if (!x.pericia) saida.faltam.push("Perícia");
+    }
+    var dep = dependenciaDoExtra(x, percurso, contexto);
+    var completo = !saida.faltam.length;
+    var excecao = !!x.excecao;
+    var valido = !saida.problemas.length || excecao;
+    return {
+      etapa: etapa, faltam: saida.faltam, motivos: saida.problemas, filhos: saida.filhos,
+      completo: completo, valido: valido, suspenso: !dep.ok, dependencia: dep.texto,
+      mantidaPorExcecao: excecao && saida.problemas.length > 0,
+    };
+  }
+
+  function aplicarExtra(x, aval, percurso, efeitos, ordem) {
+    var origem = { nome: nomeDoExtra(x), detalhe: "Aquisição extra" + (x.procedencia ? " · " + x.procedencia : "") };
+    if (x.tipo === "poder") {
+      aval.filhos.forEach(function (f) { adquirir(percurso, efeitos, f, { via: "extra", etapa: aval.etapa, registroId: "extra:" + x.ref }); });
+      percurso.adquiridos.forEach(function (a) { if (a.registroId === "extra:" + x.ref) { a.extra = x.ref; a.procedencia = x.procedencia; } });
+    } else if (x.tipo === "atributo") {
+      aplicarEfeito(percurso, efeitos, { tipo: "atributo", atributo: x.atributo, valor: x.valor }, {}, origem, aval.etapa);
+    } else if (x.tipo === "treino") {
+      subirGrau(percurso, x.pericia, GRAUS.indexOf(x.grau), origem.nome, origem.detalhe);
+    }
+  }
+
+  function novaRef() { return "x" + String(uuid()).replace(/[^A-Za-z0-9]/g, "").slice(0, 20); }
+
+  /* Grava (cria ou troca) um extra. `ordem.extras` é a fonte: a ficha
+     recalcula, e remover tira só o que ele dava. */
+  function gravarExtra(ordem, bruto) {
+    var b = Object.assign({}, bruto || {});
+    if (!b.ref) b.ref = novaRef();
+    if (!b.registradoEm) b.registradoEm = agora();
+    var x = normalizarExtra(b);
+    if (!x) return null;
+    if (x.tipo === "poder") guardarElementosDaEscolha(ordem, [x.chave, x.opcoes]);
+    x.nome = nomeDoExtra(x);
+    if (!Array.isArray(ordem.extras)) ordem.extras = [];
+    var i = -1;
+    ordem.extras.forEach(function (y, n) { if (y.ref === x.ref) i = n; });
+    if (i >= 0) ordem.extras[i] = x; else ordem.extras.push(x);
+    if (x.importacao && ordem.importacao) {
+      (ordem.importacao.aquisicoes || []).forEach(function (a) { if (a.ref === x.importacao) { a.representacao = "extra"; a.extra = x.ref; delete a.vaga; } });
+    }
+    return x;
+  }
+
+  /* Um poder importado ("etapa desconhecida") que vira aquisição extra:
+     o retrato já continha o que ele dá, então a base devolve — como na
+     etapa reconstruída — e o valor final não muda. */
+  function converterEmExtra(ordem, bruto, contexto) {
+    var alvo = valoresFinais(ordem, contexto);
+    var x = gravarExtra(ordem, bruto);
+    if (!x) return { ok: false, motivo: "Extra inválido." };
+    var res = ordem.importacao ? absorver(ordem, "extra." + x.ref, alvo, contexto) : { movido: {}, diferencas: [], avaliacao: null };
+    return { ok: true, extra: x, movido: res.movido, diferencas: res.diferencas, avaliacao: res.avaliacao };
+  }
+
+  function removerExtra(ordem, ref) {
+    var x = extrasDe(ordem).filter(function (y) { return y.ref === ref; })[0];
+    /* O que a conversão tirou da base volta com ela. */
+    var rec = reconstrucaoDe(ordem);
+    var ab = rec && rec.absorvidos ? rec.absorvidos["extra." + ref] : null;
+    if (ab) {
+      Object.keys(ab.atributos || {}).forEach(function (k) { ordem.atributos[k] = inteiro(ordem.atributos[k], 0) + ab.atributos[k]; });
+      Object.keys(ab.graus || {}).forEach(function (k) { definirGrauDaBase(ordem, k, grauDaBase(ordem, k) + ab.graus[k]); });
+      delete rec.absorvidos["extra." + ref];
+    }
+    ordem.extras = extrasDe(ordem).filter(function (y) { return y.ref !== ref; });
+    if (x && x.importacao && ordem.importacao) {
+      (ordem.importacao.aquisicoes || []).forEach(function (a) { if (a.ref === x.importacao && a.representacao === "extra") { a.representacao = "importada"; delete a.extra; } });
+    }
+    return !!x;
+  }
+
+  /* O percurso no momento do extra: o da etapa informada (o personagem
+     ali), ou o do fim, para a etapa desconhecida. */
+  function contextoDoExtra(ordem, ref, contexto, quando) {
+    var t = R().trilho(ordem);
+    var x = extrasDe(ordem).filter(function (y) { return y.ref === ref; })[0] || { ref: ref || "novo", quando: quando || null };
+    var q = quando !== undefined ? quando : x.quando;
+    var copia = JSON.parse(JSON.stringify(ordem));
+    copia.extras = extrasDe(copia).filter(function (y) { return y.ref !== ref; });
+    var p = percorrer(copia, contexto, null, { degrau: q ? Math.min(q.degrau, t.passos) : null });
+    var etapa = etapaDoExtra(ordem, { ref: x.ref, quando: q }, t);
+    return { percurso: p.percursoNoDegrau || novoPercurso(ordem), etapa: etapa };
+  }
+
+  /* Todos os poderes que podem ser um extra, conferidos na etapa. O que
+     não cabe continua visível, com o motivo. */
+  function candidatosExtra(ordem, ref, contexto, quando) {
+    var c = contextoDoExtra(ordem, ref, contexto, quando);
+    var lista = P.TODOS.filter(function (e) { return ["classe", "geral", "paranormal", "trilha"].indexOf(e.tipo) >= 0; });
+    if (P.paranormaisDisponiveis) P.paranormaisDisponiveis().forEach(function (e) { if (lista.indexOf(e) < 0) lista.push(e); });
+    return lista.map(function (e) { return candidato(e, c.percurso, c.etapa, ordem); });
+  }
+
+  function simularExtra(ordem, bruto, contexto) {
+    var copia = JSON.parse(JSON.stringify(ordem));
+    var x = gravarExtra(copia, bruto);
+    var est = percorrer(copia, contexto, null);
+    return { extra: x, estado: est, avaliacao: x ? (est.extras.filter(function (y) { return y.ref === x.ref; })[0] || null) : null };
+  }
+
+  function percorrer(ordem, contexto, pararEm, parada) {
     var t = R().trilho(ordem);
     var exposicao = R().exposicao(ordem);
     var classe = C.classe(ordem.classe);
@@ -2697,6 +3325,11 @@
     var historicos = [];
     var antesHistorico = false;
     var importadasDeLado = marco ? adquirirImportadas(ordem, percurso, efeitos, marco, t) : [];
+    /* v9.16: as aquisições extras, conferidas na etapa delas, e o
+       percurso num degrau (a tela de um extra confere ali). */
+    var extrasAvaliados = [];
+    var percursoNoDegrau = null;
+    var limiteDaParada = parada && parada.degrau !== null && parada.degrau !== undefined ? parada.degrau * 100 + 96 : Infinity;
 
     /* Um registro por vaga. Dois para a mesma — a sincronização juntou
        duas decisões de aparelhos diferentes — valem pelo mais recente, e
@@ -2739,6 +3372,10 @@
         eventos.push({ ordem: d * 100 + POSICAO.trilhaAuto, trilhaAuto: h, degrau: d });
       });
     }
+    extrasDe(ordem).forEach(function (x) {
+      var d = x.quando ? Math.min(x.quando.degrau, t.passos) : null;
+      eventos.push({ ordem: d === null ? 1e7 : d * 100 + 96, extra: x });
+    });
     eventos.sort(function (a, b) { return a.ordem - b.ordem; });
 
     var trilhaOk = true;
@@ -2746,6 +3383,15 @@
 
     eventos.forEach(function (ev) {
       if (pararEm && ev.vaga && ev.vaga.id === pararEm && !antes) antes = copiarPercurso(percurso);
+      if (parada && !percursoNoDegrau && ev.ordem > limiteDaParada) percursoNoDegrau = copiarPercurso(percurso);
+
+      if (ev.extra) {
+        var avx = avaliarExtra(ev.extra, percurso, ordem, contexto, t);
+        if (avx.completo && avx.valido && !avx.suspenso) aplicarExtra(ev.extra, avx, percurso, efeitos, ordem);
+        extrasAvaliados.push(Object.assign({ ref: ev.extra.ref, extra: ev.extra, nome: nomeDoExtra(ev.extra), entrada: ev.extra.tipo === "poder" ? P.poder(ev.extra.chave) : null,
+          rotuloEtapa: avx.etapa.conhecida ? avx.etapa.rotuloDaEtapa : "etapa desconhecida", vale: avx.completo && avx.valido && !avx.suspenso }, avx, { filhos: undefined }));
+        return;
+      }
 
       if (ev.sobreviventeAuto) {
         var hs = ev.sobreviventeAuto;
@@ -2825,8 +3471,10 @@
 
       /* Marco importado: a etapa sem registro, no marco ou abaixo dele, é
          histórico indisponível — nem vaga, nem efeito (v2.34). */
-      if (marco && !porEtapa[v.id] && vagaHistorica(v, marco)) {
-        historicos.push({ id: v.id, tipo: v.tipo, rotulo: v.rotulo, rotuloEtapa: v.rotuloEtapa, degrau: v.degrau, vaga: v });
+      /* v9.16: marcada "não preenchida" na reconstrução, a etapa volta a
+         ser vaga normal. */
+      if (marco && !porEtapa[v.id] && vagaHistorica(v, marco) && situacaoMarcada(ordem, v.id) !== "vazia") {
+        historicos.push({ id: v.id, tipo: v.tipo, rotulo: v.rotulo, rotuloEtapa: v.rotuloEtapa, degrau: v.degrau, vaga: v, marcada: situacaoMarcada(ordem, v.id) === "desconhecida" });
         percurso.historicas[v.id] = true;
         if (pararEm === v.id) antesHistorico = true;
         return;
@@ -2961,6 +3609,8 @@
       marco: marco,
       historicoImportado: historicos,
       importadasDeLado: importadasDeLado,
+      extras: extrasAvaliados,
+      percursoNoDegrau: parada ? (percursoNoDegrau || copiarPercurso(percurso)) : null,
       trilho: t,
       exposicao: exposicao,
       rituais: resumoDeRituais(ordem, contexto, percurso, vs, t, registrosProcessados),
@@ -3863,9 +4513,24 @@
   }
 
   function contextoDaVaga(ordem, idVaga, contexto) {
+    /* v9.16: a janela de uma aquisição extra usa "extra:<ref>@<degrau>"
+       como vaga: as opções internas (Transcender → poder…) são
+       conferidas no personagem daquela etapa. */
+    var mx = /^extra:([A-Za-z0-9_.:-]+?)@(\d*)$/.exec(String(idVaga || ""));
+    if (mx) {
+      var cx = contextoDoExtra(ordem, mx[1], contexto, mx[2] === "" ? null : { degrau: parseInt(mx[2], 10) });
+      return { vaga: vaga(idVaga, "extra", { rotulo: "Aquisição extra", degrau: cx.etapa.degrau, rotuloEtapa: cx.etapa.rotulo }), percurso: cx.percurso, etapa: cx.etapa };
+    }
     var v = vagas(ordem).filter(function (x) { return x.id === idVaga; })[0] || null;
     if (!v) return null;
     var p = estadoAntes(ordem, idVaga, contexto) || novoPercurso(ordem);
+    /* v9.16: reconstruindo uma etapa do retrato, os poderes importados
+       ("etapa desconhecida") não entram na conta da lista — o poder que
+       a pessoa está ligando à etapa não pode barrar a si mesmo. */
+    if (contexto && contexto.semImportadas) {
+      p = copiarPercurso(p);
+      p.adquiridos = p.adquiridos.filter(function (a) { return a.via !== "importacao"; });
+    }
     return { vaga: v, percurso: p, etapa: etapaDe(ordem, v) };
   }
 
@@ -3994,14 +4659,18 @@
     var c = contextoDaVaga(ordem, idVaga, contexto);
     if (!c) return [];
     var teto = c.vaga.maximo || C.GERACAO_ATRIBUTOS.maximoPorAumento;
+    /* v9.16: reconstruindo uma etapa do retrato, o valor importado já
+       contém o aumento que veio aqui — a conta é a de antes dele. */
+    var hist = !!(contexto && contexto.semImportadas);
     return C.ATRIBUTOS.map(function (a) {
       var atual = c.percurso.atributos[a.chave] || 0;
+      var antes = hist ? Math.max(0, atual - 1) : atual;
       return {
         atributo: a,
-        atual: atual,
-        novo: atual + 1,
-        disponivel: atual < teto,
-        motivos: atual < teto ? [] : [a.nome + " já está em " + atual + ". O aumento de atributo não passa de " + teto + "."],
+        atual: antes,
+        novo: antes + 1,
+        disponivel: antes < teto,
+        motivos: antes < teto ? [] : [a.nome + " já está em " + atual + ". O aumento de atributo não passa de " + teto + "."],
       };
     });
   }
@@ -4013,12 +4682,17 @@
     var f = filtro || {};
     var p = c ? c.percurso : novoPercurso(ordem);
     var etapa = c ? c.etapa : { nex: 5, separado: false, rotulo: "" };
+    /* v9.16: reconstruindo uma etapa do retrato, o grau importado pode
+       ser justamente o que veio aqui — a regra é conferida um passo
+       antes (a reconstrução devolve o passo à base). */
+    var hist = !!(contexto && contexto.semImportadas) && (modo === "grau" || modo === "treinamento" || modo === "treinar");
 
     return C.PERICIAS.filter(function (pe) {
       if (f.entre && f.entre.indexOf(pe.chave) < 0) return false;
       return true;
     }).map(function (pe) {
       var atual = p.graus[pe.chave] || 0;
+      if (hist && atual > 0) atual--;
       var motivo = "";
       if (f.exceto && f.exceto.indexOf(pe.chave) >= 0) motivo = pe.nome + " não pode ser escolhida aqui.";
       else if (modo === "grau") motivo = motivoParaSubir(atual, etapa, pe.chave, false);
@@ -4360,5 +5034,25 @@
     trilhaSobreviventeDe: trilhaSobreviventeDe,
     planoDeTransicao: planoDeTransicao,
     transicionar: transicionar,
+
+    /* v9.16: reconstrução do histórico importado e aquisições extras. */
+    reconstrucaoDe: reconstrucaoDe,
+    etapasDoHistorico: etapasDoHistorico,
+    reconstruirVaga: reconstruirVaga,
+    desfazerReconstrucao: desfazerReconstrucao,
+    marcarVaga: marcarVaga,
+    reconstrucaoCompleta: reconstrucaoCompleta,
+    absorver: absorver,
+    valoresFinais: valoresFinais,
+    compatibilidadeNaVaga: compatibilidadeNaVaga,
+    compatibilidadeDeRituais: compatibilidadeDeRituais,
+    normalizarExtras: normalizarExtras,
+    gravarExtra: gravarExtra,
+    converterEmExtra: converterEmExtra,
+    removerExtra: removerExtra,
+    candidatosExtra: candidatosExtra,
+    contextoDoExtra: contextoDoExtra,
+    simularExtra: simularExtra,
+    nomeDoExtra: nomeDoExtra,
   };
 })(typeof window !== "undefined" ? window : globalThis);

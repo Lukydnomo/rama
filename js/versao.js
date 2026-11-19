@@ -118,6 +118,25 @@
 
   var CHANGELOG = [
     {
+      versao: "9.16.0",
+      codinome: "ESTRATIGRAFIA",
+      data: "19/11/2026",
+      mudancas: {
+        "Adicionado": [
+          "Importar do CRIS, nova seção “Progressão e procedência”: escolha “Reconstruir a progressão” e diga, etapa por etapa até o NEX importado, o que veio em cada uma — o poder de classe de NEX 15%, o atributo de NEX 20%, as perícias do Grau de Treinamento, os rituais de cada concessão. O que você não souber fica como etapa desconhecida, e uma vaga que nunca foi preenchida pode ser marcada como “não preenchida”. Nada fica conferido sem você confirmar.",
+          "Cada poder e ritual importado responde duas perguntas separadas: “O que é isso?” e “Como foi adquirido?”. A procedência pode ser uma etapa (as compatíveis primeiro, com quem já ocupa cada uma e o motivo das que não cabem), uma escolha interna de outra entrada (Transcender → poder paranormal, Expansão de Conhecimento → poder de outra classe, Versatilidade → trilha), parte da mesma aquisição, um item, uma aquisição extra, uma concessão da mesa ou “aquisição conhecida, etapa desconhecida”. Cada entrada mostra o resumo: o que era → o que virou → de onde veio → conferida.",
+          "Visão da progressão no assistente, com as etapas, o que veio em cada uma, as aquisições extras e o que ficou sem etapa; ela e a revisão por assunto editam as mesmas decisões. “Sugerir associações” propõe o primeiro poder compatível para cada etapa em aberto, e só aplica com o botão.",
+          "Uma entrada do CRIS que mistura várias coisas pode ser dividida em partes, cada uma com destino e procedência; o texto original fica como referência e renomear não perde as decisões.",
+          "Na reconstrução, a base de criação devolve o que cada etapa dá e o valor final continua o do CRIS: Atributos mostram “criação + etapa”, e o máximo de Sanidade diz quando o Transcender de uma etapa reconstruída muda a conta. A conferência final separa o que ficou automatizado, extra, sem histórico, como texto ou fora.",
+          "Aba Progressão: as etapas do histórico importado aparecem com Reconstruir, Não preenchida, Trocar e Desfazer, pela janela de escolha de sempre. Reconstruída por inteiro, a ficha deixa de ser segurada pelo marco e evolui como uma criada no R.A.M.A.",
+          "Aba Progressão, em qualquer ficha de Ordem: “Aquisições extras” — poder, atributo ou treino recebidos fora das vagas normais, com procedência, etapa (se conhecida), dependência de item, de outra aquisição ou de uma condição, e exceção a requisitos com motivo obrigatório. Um extra não fica válido só por ser extra.",
+        ],
+        "Técnico": [
+          "Schema da ficha 37: ordem.extras e ordem.importacao.reconstrucao (retrato do CRIS, etapas marcadas e o que a base devolveu); as aquisições importadas ganham a entrada de origem e as representações progressao, extra e parte. Uma aba de versão anterior recusa a ficha em vez de descartá-los.",
+        ],
+      },
+    },
+    {
       versao: "9.15.0",
       codinome: "MOTOCLUBE",
       data: "18/11/2026",

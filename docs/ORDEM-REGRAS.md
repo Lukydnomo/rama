@@ -544,6 +544,62 @@ Atributos e graus de perícia gravados são o estado **no marco**.
   motivo. A progressão continua funcionando acima dele.
 - Sem `ordem.importacao`, nada disso existe: fichas antigas não mudam.
 
+### Reconstrução da progressão e aquisições extras (v9.16)
+
+O marco continua sendo o padrão — importar não obriga ninguém a lembrar a
+história. Quem sabe (no todo ou em parte) troca o histórico indisponível pelas
+escolhas de verdade, pela **mesma vaga e pelo mesmo registro** de uma ficha
+nativa (`ordem.escolhas`). Duas perguntas por entrada do CRIS:
+
+- **O que é isso?** — o destino (catálogo, Homebrew, personalizado, texto…);
+- **Como foi adquirido?** — a procedência: uma etapa do retrato (por id
+  estável da vaga, ex. `d3.poderClasse`), uma escolha interna de outra entrada
+  (Transcender → poder; Expansão de Conhecimento → poder de outra classe;
+  Versatilidade → trilha), parte da mesma aquisição de outra entrada, item,
+  aquisição extra, concessão da mesa (rituais) ou **aquisição conhecida, etapa
+  desconhecida**.
+
+`ordem.importacao.reconstrucao` guarda o retrato do CRIS (`retrato`), a marca
+de cada etapa sem escolha (`vagas`: `desconhecida` continua histórico;
+`vazia` vira pendência normal) e o que cada reconstrução devolveu à base
+(`absorvidos`).
+
+- **Sem contar duas vezes.** O retrato já contém o que a escolha deu. Registrar
+  a escolha numa etapa do retrato faz a base de criação devolver exatamente
+  isso (`absorver` em `progressao.js`): o +1 do aumento de atributo, o passo de
+  grau, a perícia treinada pelo poder. O valor final continua o importado; a
+  composição passa a mostrar *criação + etapa*. Quando a escolha não fecha (uma
+  perícia "já treinada" pela origem, um grau que exigiria NEX 70%), nada é
+  movido: a etapa aparece como *não vale*, com o motivo, e o valor fica.
+- **Uma fonte mecânica só.** A aquisição importada que a escolha representa
+  passa a `representacao: "progressao"` (com `vaga`), `"extra"` (com `extra`)
+  ou `"parte"` (com `parteDe`), e sai da conta como importada. Desfazer a
+  etapa devolve a base e a aquisição volta a `"importada"`.
+- **Requisitos na etapa.** A conferência é a do motor, no personagem daquela
+  etapa, com as anteriores já reconstruídas. Uma etapa de poder é de uma
+  entrada só; a segunda que a pedir vira conflito, sem sumir.
+- **Completa ou parcial.** Com todas as etapas reconstruídas (ou não
+  preenchidas) e nenhuma aquisição importada de etapa desconhecida, o marco
+  deixa de segurar NEX, nível e estágio (`minimoDoMarco` devolve `null`): a
+  ficha evolui e revisa etapas anteriores como uma nativa. Parcial, o marco
+  continua, e as partes reconstruídas já funcionam normalmente.
+- **Na ficha.** A aba Progressão lista as etapas do histórico importado:
+  *Reconstruir* abre a janela de escolha de sempre (conferida um passo antes,
+  porque o valor importado já contém o que veio ali), *Não preenchida*,
+  *Trocar* e *Desfazer*.
+
+**Aquisições extras** (`ordem.extras`) valem para qualquer ficha de Ordem, não
+só importada: benefício fora das vagas normais — recompensa, treinamento
+especial, concessão do mestre, efeito permanente, poder de item. Tipos:
+`poder` (com as opções internas), `atributo` (+n) e `treino` (perícia a um
+grau). Têm `procedencia`, `quando` (degrau, se conhecido), `depende` (item —
+em uso ou não —, outra aquisição ou uma condição ligada/desligada) e
+`excecao` (`{ motivo }`). Não ocupam vaga e **não ficam válidas só por serem
+extras**: os requisitos são conferidos na etapa informada (ou no personagem
+atual); manter fora do requisito é exceção da mesa, com motivo obrigatório.
+Com a dependência faltando, o extra fica registrado e suspenso. Não confundir
+com o **suplemento Extras** (fonte `EXTRA`), que é conteúdo avulso de Ordem.
+
 ### Calcular, comparar, ajustar só o resíduo
 
 Item reconhecido nasce da base do catálogo; as modificações reconhecidas são

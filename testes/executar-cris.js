@@ -590,7 +590,7 @@ t.grupo("Assistente · tudo reconhecido ainda passa pela revisão (Meko)");
 {
   const r = conv(meko, {}, deps);
   const s0 = X.situacao(r.entradas, {});
-  t.ok("uma entrada por coisa do CRIS, em sete seções", r.entradas.length > 60 && X.SECOES.every((s) => s0.porSecao[s.chave].total > 0));
+  t.ok("uma entrada por coisa do CRIS, em oito seções", r.entradas.length > 60 && X.SECOES.every((s) => s0.porSecao[s.chave].total > 0));
   t.igual("nada precisa de destino", s0.semDestino, 0);
   t.ok("nada começa conferido: criar fica bloqueado", !s0.pronto && s0.conferidas === 0 && s0.sugeridas === r.entradas.length);
   const so1 = X.confirmarSecao(r.entradas, {}, "identidade");
@@ -712,6 +712,237 @@ t.grupo("Assistente · item do catálogo que pede uma opção (Kit de perícia)"
   const e = ent(comOpcao, "item:kit-crime");
   t.ok("com a opção, a escolha fica resolvida e confirmável", e.estado === "escolhido" && X.podeConfirmar(e));
   t.ok("e o item entra do catálogo, com o nome do CRIS", comOpcao.ficha.inventario.itens.some((i) => i.nome === "Kit de Crime" && i.origemCatalogoId === "op.geral.kit-de-pericia"));
+}
+
+/* =====================================================================
+   v9.16 — RECONSTRUÇÃO DA PROGRESSÃO E AQUISIÇÕES EXTRAS
+   ===================================================================== */
+const ctxDe = (f) => ({ inventario: f.inventario, rituais: f.rituais.itens });
+const finais = (f) => { const v = E.valoresFinais(f.ordem, ctxDe(f)); return { atr: v.atributos, graus: v.graus }; };
+const DEC_JEFF = {
+  favorita: "item:item-1",
+  reconstrucao: { ativa: true,
+    procedencia: {
+      "poder:poder-5": { tipo: "vaga", vaga: "d3.poderClasse" },
+      "poder:poder-4": { tipo: "vaga", vaga: "d6.poderClasse" },
+      "poder:poder-6": { tipo: "item", item: "item:item-3", emUso: false },
+    },
+    vagas: { "d4.atributo": { tipo: "atributo", valor: "for" }, "d7.grauTreinamento": { tipo: "pericias", pericias: ["fortitude", "luta", "reflexos"] } } },
+};
+
+t.grupo("v9.16 · reconstrução completa (Jeff)");
+const rRec = converter(retratoJeff, DEC_JEFF);
+const fRec = rRec.ficha, oRec = fRec.ordem, cRec = calcular(fRec);
+{
+  t.ok("converte sem erro", rRec.ok);
+  t.ok("todas as etapas do retrato com a escolha de verdade", rRec.progressao.etapas.every((x) => x.situacao === "reconstruida"));
+  t.iguais("os registros nativos nas etapas certas", ["d3.poderClasse", "d4.atributo", "d6.poderClasse", "d7.grauTreinamento"].map((id) => (oRec.escolhas.find((r) => r.etapa === id) || {}).valor || (oRec.escolhas.find((r) => r.etapa === id) ? "ok" : "")), ["golpePesado", "for", "ataqueDeOportunidade", "ok"]);
+  t.iguais("base de criação: FOR 2 (3 do CRIS menos o aumento de NEX 20%)", [oRec.atributos.for, R.atributo(oRec, "for")], [2, 3]);
+  t.iguais("base das perícias: o grau de NEX 35% voltou para a etapa", ["fortitude", "luta", "reflexos"].map((k) => oRec.pericias[k]), ["treinado", "treinado", "treinado"]);
+  t.iguais("  e o final continua veterano (sem contar duas vezes)", ["fortitude", "luta", "reflexos"].map((k) => R.grauDaPericia(oRec, k)), ["veterano", "veterano", "veterano"]);
+  t.iguais("atributos finais iguais aos do CRIS", finais(fRec).atr, finais(fJ).atr);
+  t.iguais("PV, PE, SAN, PD, Defesa, esquiva iguais aos de antes", [cRec.pv.total, cRec.pe.total, cRec.san.total, cRec.pd.total, cRec.defesa.total, cRec.esquiva.total], [cJ.pv.total, cJ.pe.total, cJ.san.total, cJ.pd.total, cJ.defesa.total, cJ.esquiva.total]);
+  t.igual("Luta continua +10 (o treino não soma duas vezes)", R.bonusDePericia(oRec, "luta", fRec.inventario).total, 10);
+  t.igual("recursos atuais preservados (PV 1, PD 1)", [oRec.recursos.pv, oRec.recursos.pd].join(), "1,1");
+  const aq = (k) => oRec.importacao.aquisicoes.find((a) => a.chave === k);
+  t.ok("Golpe Pesado e Ataque de Oportunidade: representados pela etapa, uma fonte só", aq("golpePesado").representacao === "progressao" && aq("golpePesado").vaga === "d3.poderClasse" && aq("ataqueDeOportunidade").vaga === "d6.poderClasse");
+  const est = estado(fRec);
+  t.igual("  Golpe Pesado adquirido uma vez, pela etapa", est.adquiridos.filter((a) => a.chave === "golpePesado" && a.valido).map((a) => a.etapaId).join(), "d3.poderClasse");
+  t.ok("a aquisição guarda de que entrada do CRIS veio", aq("golpePesado").entrada === "poder:poder-5");
+  t.ok("Sangue Fervente: aquisição extra que depende do Dedo Decepado", oRec.extras.length === 1 && oRec.extras[0].chave === "sangueFervente" && oRec.extras[0].depende.tipo === "item" && aq("sangueFervente").representacao === "extra");
+  const dedo = arma(fRec, "Dedo Decepado (Sangue Fervente)");
+  t.ok("  o item existe e o extra aponta para o id dele", oRec.extras[0].depende.item === dedo.id);
+  t.ok("reconstrução completa: o marco não segura mais o NEX", E.reconstrucaoCompleta(oRec, ctxDe(fRec)) && R.minimoDoMarco(oRec) === null);
+  t.ok("a importação continua registrada como procedência", oRec.importacao.fonte.documentId === "OwH4ajq32U6pYGVlJBHa" && oRec.importacao.marco.nex === 40);
+  t.igual("nenhuma pendência no NEX importado", est.pendencias.length, 0);
+  t.igual("nenhuma divergência na conferência", rRec.conferencia.divergente, 0);
+  const pg = ent(rRec, "poder:poder-5");
+  t.ok("a entrada diz: catálogo → NEX 15%: Poder de classe", pg.procedencia.texto === "NEX 15% → Poder de classe" && /Catálogo/.test(pg.rotuloDestino));
+  t.ok("nada fica conferido sozinho", X.situacao(rRec.entradas, {}).conferidas === 0);
+}
+
+t.grupo("v9.16 · a ficha reconstruída evolui como a nativa");
+{
+  const f = JSON.parse(JSON.stringify(fRec));
+  f.ordem.nex = 45;
+  const o = R.normalizar(f.ordem);
+  const est = E.estado(o, ctxDe(f));
+  t.ok("NEX 45%: só as etapas novas pedem escolha", est.pendencias.length > 0 && est.pendencias.every((p) => (p.vaga ? p.vaga.degrau : 9) >= 9));
+  const f2 = JSON.parse(JSON.stringify(fRec));
+  f2.ordem.nex = 15;
+  const o2 = R.normalizar(f2.ordem);
+  const est2 = E.estado(o2, ctxDe(f2));
+  t.ok("NEX 15% (abaixo do marco, permitido): as escolhas acima ficam guardadas, sem efeito", est2.fora.length >= 3 && R.atributo(o2, "for") === 2 && o2.escolhas.length === oRec.escolhas.length);
+  t.ok("  Golpe Pesado (NEX 15%) continua valendo", est2.adquiridos.some((a) => a.chave === "golpePesado" && a.valido));
+  const f3 = JSON.parse(JSON.stringify(fRec));
+  const v = E.vagas(f3.ordem).find((x) => x.id === "d4.atributo");
+  E.registrar(f3.ordem, v, { valor: "agi", opcoes: {} });
+  t.iguais("trocar o aumento de NEX 20% de FOR para AGI muda só os dois atributos (como na ficha nativa)", [R.atributo(f3.ordem, "for"), R.atributo(f3.ordem, "agi"), R.atributo(f3.ordem, "vig")], [2, 3, 2]);
+}
+
+t.grupo("v9.16 · desfazer e trocar tiram só o que a escolha dava");
+{
+  const f = JSON.parse(JSON.stringify(fRec));
+  const o = f.ordem;
+  E.desfazerReconstrucao(o, "d4.atributo", ctxDe(f));
+  t.iguais("desfazer NEX 20%: a base volta a 3, o final continua 3", [o.atributos.for, R.atributo(o, "for")], [3, 3]);
+  t.ok("  a etapa volta a ser desconhecida", E.etapasDoHistorico(o, ctxDe(f)).find((x) => x.id === "d4.atributo").situacao === "desconhecida");
+  E.desfazerReconstrucao(o, "d3.poderClasse", ctxDe(f));
+  const gp = o.importacao.aquisicoes.find((a) => a.chave === "golpePesado");
+  t.ok("desfazer NEX 15%: Golpe Pesado volta a ser importado (etapa desconhecida)", gp.representacao === "importada" && !gp.vaga);
+  t.igual("  e continua uma aquisição só", E.estado(o, ctxDe(f)).adquiridos.filter((a) => a.chave === "golpePesado" && a.valido).length, 1);
+  t.ok("  o marco volta a segurar o NEX (reconstrução parcial)", R.minimoDoMarco(o) && R.minimoDoMarco(o).nex === 40);
+  E.removerExtra(o, o.extras[0].ref);
+  t.ok("remover o extra: Sangue Fervente volta a ser importado", o.importacao.aquisicoes.find((a) => a.chave === "sangueFervente").representacao === "importada" && !(o.extras || []).length);
+  t.iguais("  os valores não mudam no caminho", [calcular(f).pv.total, calcular(f).defesa.total, R.atributo(o, "for")], [cJ.pv.total, cJ.defesa.total, 3]);
+}
+
+t.grupo("v9.16 · reconstrução parcial e etapa desconhecida");
+{
+  const r = converter(retratoJeff, { reconstrucao: { ativa: true, procedencia: { "poder:poder-5": { tipo: "vaga", vaga: "d3.poderClasse" }, "poder:poder-4": { tipo: "desconhecida" } }, vagas: { "d6.poderClasse": { tipo: "vazia" } } } });
+  const o = r.ficha.ordem, est = estado(r.ficha);
+  t.ok("etapa conhecida reconstruída; as outras ficam desconhecidas", r.progressao.etapas.find((x) => x.id === "d3.poderClasse").situacao === "reconstruida" && r.progressao.etapas.find((x) => x.id === "d4.atributo").situacao === "desconhecida");
+  t.ok("“não preenchida” vira pendência normal; “desconhecida” não", est.pendencias.some((p) => p.id === "d6.poderClasse") && !est.pendencias.some((p) => p.id === "d4.atributo"));
+  t.ok("Ataque de Oportunidade: aquisição conhecida, etapa desconhecida, com o efeito aplicado", o.importacao.aquisicoes.find((a) => a.chave === "ataqueDeOportunidade").representacao === "importada" && est.adquiridos.some((a) => a.chave === "ataqueDeOportunidade" && a.valido));
+  t.ok("  nenhuma etapa inventada para ela", ent(r, "poder:poder-4").procedencia.situacao === "desconhecida" && !o.escolhas.some((x) => x.valor === "ataqueDeOportunidade"));
+  t.ok("parcial: o marco continua segurando", R.minimoDoMarco(o).nex === 40);
+  t.iguais("os valores finais são os do CRIS", [R.atributo(o, "for"), calcular(r.ficha).pv.total], [3, cJ.pv.total]);
+}
+
+t.grupo("v9.16 · etapa ocupada, requisito na etapa e conflitos");
+{
+  const r = converter(retratoJeff, { reconstrucao: { ativa: true, procedencia: { "poder:poder-5": { tipo: "vaga", vaga: "d3.poderClasse" }, "poder:poder-4": { tipo: "vaga", vaga: "d3.poderClasse" } } } });
+  t.ok("duas entradas na mesma etapa: a de depois na ficha do CRIS vira conflito, com o motivo", ent(r, "poder:poder-5").estado === "conflito" && /já está ocupada/.test(ent(r, "poder:poder-5").motivo) && ent(r, "poder:poder-4").procedencia.ok);
+  t.ok("  e continua valendo como importada (nada some)", r.ficha.ordem.importacao.aquisicoes.find((a) => a.chave === "golpePesado").representacao === "importada");
+  const r2 = converter(retratoJeff, { reconstrucao: { ativa: true, vagas: { "d4.atributo": { tipo: "atributo", valor: "int", pericia: "luta" } } } });
+  const e4 = r2.progressao.etapas.find((x) => x.id === "d4.atributo");
+  t.ok("ponto de Intelecto numa perícia que já era treinada na etapa: não vale, com o motivo", e4.situacao === "invalida" && /já é treinada/.test(e4.motivos.join(" ")));
+  t.iguais("  a base não perde valor por uma escolha que não vale", [r2.ficha.ordem.atributos.int, R.atributo(r2.ficha.ordem, "int")], [1, 1]);
+  const vaga = ent(rRec, "vaga:d3.poderClasse");
+  const cand = (n) => vaga.vaga.candidatos.find((c) => c.rotulo === n);
+  t.ok("o seletor da etapa mostra compatíveis e o motivo dos incompatíveis", cand("Golpe Pesado").ok && cand("Golpe Pesado").ocupada && cand("Sangue Fervente").via === "transcender");
+  const rN = converter(retratoJeff, { reconstrucao: { ativa: true, procedencia: { "poder:poder-6": { tipo: "vaga", vaga: "d3.poderClasse" } } } });
+  const sf = ent(rN, "vaga:d3.poderClasse");
+  t.ok("poder paranormal numa vaga de poder de classe: por Transcender, conferido na etapa", rN.ficha.ordem.escolhas.some((x) => x.etapa === "d3.poderClasse" && x.valor === "transcender" && x.opcoes.poder.valor === "sangueFervente") && /Transcender/.test(sf.rama));
+}
+
+t.grupo("v9.16 · escolhas compostas e concessão de vários rituais (Gina)");
+const entG = (r, nome) => r.entradas.find((e) => (e.tipo === "poder" || e.tipo === "ritual") && e.rotulo.indexOf(nome) >= 0).chave;
+const rG0 = converter(gina);
+const kG = { sens: entG(rG0, "Sensitivo"), exp: entG(rG0, "Expansão"), golpe: entG(rG0, "Golpe Pesado"), saber: entG(rG0, "Saber Ampliado"), camuf: entG(rG0, "Camuflar"), sangue: entG(rG0, "Sangue de Ferro"), mochila: entG(rG0, "Mochila") };
+const ritG = rG0.entradas.filter((e) => e.tipo === "ritual").slice(0, 4).map((e) => e.chave);
+{
+  const dec = { reconstrucao: { ativa: true, procedencia: {
+    [kG.camuf]: { tipo: "vaga", vaga: "d3.poderClasse" }, [kG.sens]: { tipo: "vaga", vaga: "d6.poderClasse" }, [kG.exp]: { tipo: "vaga", vaga: "d9.poderClasse" },
+    [kG.golpe]: { tipo: "dentro", entrada: kG.exp }, [kG.saber]: { tipo: "vaga", vaga: "d10.versatilidade" },
+    [ritG[0]]: { tipo: "vaga", vaga: "d1.rituaisIniciais" }, [ritG[1]]: { tipo: "vaga", vaga: "d1.rituaisIniciais" }, [ritG[2]]: { tipo: "vaga", vaga: "d1.rituaisIniciais" },
+    [kG.mochila]: { tipo: "extra", procedencia: "recompensa da missão", quando: 6 },
+  } } };
+  const r = converter(gina, dec);
+  const o = r.ficha.ordem, est = estado(r.ficha);
+  const d9 = o.escolhas.find((x) => x.etapa === "d9.poderClasse");
+  t.ok("Transcender → Expansão de Conhecimento → Golpe Pesado, no registro nativo", d9.valor === "transcender" && d9.opcoes.poder.valor === "expansaoDeConhecimento" && d9.opcoes.poder.opcoes.poder.valor === "golpePesado");
+  t.ok("  a etapa vale e as duas aquisições importadas saem da conta", r.progressao.etapas.find((x) => x.id === "d9.poderClasse").situacao === "reconstruida" &&
+    ["expansaoDeConhecimento", "golpePesado"].every((k) => o.importacao.aquisicoes.find((a) => a.chave === k).vaga === "d9.poderClasse"));
+  t.igual("  Golpe Pesado: uma aquisição só, pela escolha interna", est.adquiridos.filter((a) => a.chave === "golpePesado" && a.valido).length, 1);
+  t.ok("Versatilidade → primeiro poder de Graduado (Saber Ampliado)", o.escolhas.some((x) => x.etapa === "d10.versatilidade" && x.valor === "trilha" && x.opcoes.trilha.valor === "graduado"));
+  t.ok("três rituais numa concessão só (rituais iniciais)", est.rituais.concessoes.find((c) => c.id === "d1.rituaisIniciais").escolhidos.length === 3);
+  const r4 = converter(gina, { reconstrucao: { ativa: true, procedencia: Object.fromEntries(ritG.map((k) => [k, { tipo: "vaga", vaga: "d1.rituaisIniciais" }])) } });
+  const e1 = r4.progressao.etapas.find((x) => x.id === "d1.rituaisIniciais");
+  t.ok("quatro rituais na concessão de três: a etapa não vale, com o motivo", e1.situacao === "invalida" && /dá 3 rituais/.test(e1.motivos.join(" ")));
+  const ext = o.extras.find((x) => x.chave === "mochilaDeUtilidades");
+  t.ok("Mochila de Utilidades: extra em NEX 30%, sem ocupar vaga", ext && ext.quando.degrau === 6 && !o.escolhas.some((x) => x.valor === "mochilaDeUtilidades"));
+  t.ok("  incompleto sem o item escolhido: fica registrado, sem efeito, e diz o que falta", est.extras.find((x) => x.ref === ext.ref).vale === false && /Item/.test(ent(r, kG.mochila).procedencia.motivos.join(" ")));
+  t.ok("SAN: Transcender das etapas reconstruídas aparece no motivo do máximo", /Transcender/.test((revisao(r, "maximo:san") || {}).texto || ""));
+}
+
+t.grupo("v9.16 · aquisição extra: requisito, exceção e dependência");
+{
+  const f = JSON.parse(JSON.stringify(fRec));
+  const o = f.ordem;
+  const x = E.gravarExtra(o, { tipo: "poder", chave: "golpePesado", procedencia: "treinamento especial" });
+  const av = () => E.estado(o, ctxDe(f)).extras.find((y) => y.ref === x.ref);
+  t.ok("um extra repetido não vale só por ser extra", av().vale === false && /já tem/.test(av().motivos.join(" ")));
+  E.gravarExtra(o, Object.assign({}, x, { excecao: { motivo: "A mesa liberou uma segunda vez" } }));
+  t.ok("com a exceção registrada (e o motivo), vale — e continua dizendo por quê", av().vale === true && av().mantidaPorExcecao);
+  t.ok("exceção sem motivo não é exceção", E.normalizarExtras([{ ref: "xa", tipo: "poder", chave: "golpePesado", excecao: { motivo: "  " } }])[0].excecao === null);
+  const dedo = arma(f, "Dedo Decepado (Sangue Fervente)");
+  const sf = () => E.estado(o, ctxDe(f)).extras.find((y) => y.extra.chave === "sangueFervente");
+  t.ok("poder de item: o requisito do poder continua conferido (Sangue 2)", sf().vale === false && /Sangue 2/.test(sf().motivos.join(" ")));
+  const xsf = o.extras.find((y) => y.chave === "sangueFervente");
+  E.gravarExtra(o, Object.assign({}, xsf, { excecao: { motivo: "o item concede sem o requisito (decisão da mesa)" }, depende: { tipo: "item", item: dedo.id, emUso: true } }));
+  dedo.ordem.emUso = false;
+  t.ok("  com a exceção e “só em uso”: guardado o item, fica suspenso", sf().suspenso === true && sf().vale === false);
+  dedo.ordem.emUso = true;
+  t.ok("  com o item em uso, vale", sf().vale === true);
+  f.inventario.itens = f.inventario.itens.filter((i) => i !== dedo);
+  t.ok("  sem o item no inventário, suspenso com o motivo", sf().suspenso === true && /não está mais no inventário/.test(sf().dependencia));
+  const antesVig = R.atributo(o, "vig");
+  const xv = E.gravarExtra(o, { tipo: "atributo", atributo: "vig", valor: 1, procedencia: "ritual permanente", quando: { degrau: 5 } });
+  t.igual("extra de atributo: +1 em VIG", R.atributo(o, "vig"), antesVig + 1);
+  t.igual("  na etapa informada", E.estado(o, ctxDe(f)).extras.find((y) => y.ref === xv.ref).rotuloEtapa, "NEX 25%");
+  E.removerExtra(o, xv.ref);
+  t.igual("  remover tira só o +1", R.atributo(o, "vig"), antesVig);
+  const xt = E.gravarExtra(o, { tipo: "treino", pericia: "medicina", grau: "treinado", procedencia: "curso de primeiros socorros" });
+  t.igual("extra de treino: Medicina treinada", R.grauDaPericia(o, "medicina"), "treinado");
+  E.removerExtra(o, xt.ref);
+}
+
+t.grupo("v9.16 · dividir uma entrada em partes, sem duplicar");
+{
+  const dec = { componentes: { "poder:poder-5": [{ id: "a", nome: "Golpe Pesado" }, { id: "b", nome: "Dano extra do Golpe" }] },
+    reconstrucao: { ativa: true, procedencia: { "poder:poder-5~a": { tipo: "vaga", vaga: "d3.poderClasse" }, "poder:poder-5~b": { tipo: "parte", entrada: "poder:poder-5~a" } } } };
+  const r = converter(retratoJeff, dec);
+  t.ok("a entrada dividida fica como referência; as partes viram entradas próprias", ent(r, "poder:poder-5").tipo === "dividida" && !!ent(r, "poder:poder-5~a") && !!ent(r, "poder:poder-5~b"));
+  t.ok("  as partes dizem de que entrada vieram; a original fica como referência", /Parte de “Golpe Pesado”/.test(ent(r, "poder:poder-5~b").cris) && ent(r, "poder:poder-5").partes.length === 2 && ent(r, "poder:poder-5~b").parteDe === "poder:poder-5");
+  const aqs = r.ficha.ordem.importacao.aquisicoes;
+  t.ok("a parte “efeito” é parte da mesma aquisição: sem conta própria", aqs.find((a) => a.entrada === "poder:poder-5~b").representacao === "parte");
+  t.igual("  Golpe Pesado uma vez só", estado(r.ficha).adquiridos.filter((a) => a.chave === "golpePesado" && a.valido).length, 1);
+  const ren = converter(retratoJeff, Object.assign({}, dec, { componentes: { "poder:poder-5": [{ id: "a", nome: "Golpe Pesado (renomeado)" }, { id: "b", nome: "Efeito" }] } }));
+  t.ok("renomear as partes não perde as decisões (chaves estáveis)", ent(ren, "poder:poder-5~a").procedencia.texto === "NEX 15% → Poder de classe" && ent(ren, "poder:poder-5~b").procedencia.situacao === "parte");
+}
+
+t.grupo("v9.16 · outros trilhos de progressão");
+{
+  const nivel = JSON.parse(JSON.stringify(retratoJeff));
+  nivel.ficha.isNexLevelOn = true; nivel.ficha.nex = "40%"; nivel.ficha.nexString = "40%";
+  const r = converter(nivel, { reconstrucao: { ativa: true, procedencia: { "poder:poder-5": { tipo: "vaga", vaga: "d3.poderClasse" } }, vagas: { "d4.atributo": { tipo: "atributo", valor: "for" } } } });
+  const e3 = r.progressao.etapas.find((x) => x.id === "d3.poderClasse");
+  t.ok("NEX & Experiência: as etapas têm o nome do nível", /^Nível 3/.test(e3.rotulo) && e3.situacao === "reconstruida");
+  t.iguais("  e a base desconta o aumento do nível 4", [r.ficha.ordem.atributos.for, R.atributo(r.ficha.ordem, "for")], [2, 3]);
+  const f = JSON.parse(JSON.stringify(fRec));
+  f.ordem.opcionais = Object.assign({}, f.ordem.opcionais, { evolucaoModular: true });
+  const om = R.normalizar(f.ordem);
+  const estM = E.estado(om, ctxDe(f));
+  t.ok("Evolução Modular ligada depois: a escolha de “Poder de classe” fica guardada, sem sumir", om.escolhas.some((x) => x.etapa === "d3.poderClasse") && estM.fora.some((x) => x.registro.etapa === "d3.poderClasse"));
+  const surv = JSON.parse(JSON.stringify(retratoJeff));
+  surv.ficha.className = "Sobrevivente";
+  const rs = converter(surv, { estagio: "2", reconstrucao: { ativa: true } });
+  t.ok("Sobrevivente: as etapas do retrato são as de estágio", rs.ok && rs.progressao.etapas.every((x) => !/NEX/.test(x.rotulo)));
+}
+
+t.grupo("v9.16 · persistência, arquivo e importações antigas");
+{
+  const dupla = F.normalizarFicha(JSON.parse(JSON.stringify(F.normalizarFicha(JSON.parse(JSON.stringify(fRec))))));
+  t.ok("normalizar duas vezes mantém a reconstrução e os extras", JSON.stringify(dupla.ordem.importacao.reconstrucao) === JSON.stringify(fRec.ordem.importacao.reconstrucao) && dupla.ordem.extras.length === 1);
+  t.iguais("  e as contas", [calcular(dupla).pv.total, R.atributo(dupla.ordem, "for"), R.grauDaPericia(dupla.ordem, "luta")], [cRec.pv.total, 3, "veterano"]);
+  const pacote = V.exportar("personagem", fRec);
+  const texto = JSON.stringify(pacote);
+  t.ok("o arquivo não leva ids", !/"id":/.test(texto));
+  const imp = V.importado(JSON.parse(texto));
+  const g = imp.dados;
+  t.ok("importa pelo caminho de sempre", imp.ok);
+  t.ok("as escolhas reconstruídas, a base e a procedência atravessam", g.ordem.escolhas.some((x) => x.etapa === "d3.poderClasse" && x.valor === "golpePesado") && g.ordem.atributos.for === 2 && g.ordem.importacao.aquisicoes.find((a) => a.chave === "golpePesado").vaga === "d3.poderClasse");
+  t.ok("o extra continua preso ao item novo", g.ordem.extras[0].depende.item === arma(g, "Dedo Decepado (Sangue Fervente)").id);
+  t.iguais("as contas batem depois da volta", [calcular(g).pv.total, R.atributo(g.ordem, "for"), R.grauDaPericia(g.ordem, "luta")], [cRec.pv.total, 3, "veterano"]);
+  t.ok("ainda reconstruída por inteiro", E.reconstrucaoCompleta(g.ordem, ctxDe(g)));
+  const velha = JSON.parse(JSON.stringify(fJ));
+  delete velha.ordem.importacao.reconstrucao;
+  const nv = F.normalizarFicha(velha);
+  t.ok("importação antiga (sem reconstrução): continua com o marco e o histórico indisponível", !nv.ordem.importacao.reconstrucao && R.minimoDoMarco(nv.ordem).nex === 40 && estado(nv).historicoImportado.length === estJ.historicoImportado.length);
+  t.ok("  e pode ser reconstruída depois, na ficha", E.reconstruirVaga(nv.ordem, "d4.atributo", { valor: "for", opcoes: {} }, {}, ctxDe(nv)).ok && nv.ordem.atributos.for === 2 && R.atributo(nv.ordem, "for") === 3);
+  const semRec = converter(retratoJeff, { reconstrucao: { ativa: false } });
+  t.iguais("sem reconstruir, o resultado é o de antes", semRec.resumo, rJ.resumo);
 }
 
 console.log(`\n${FORTE}${passaram + falharam} verificações${FIM} · ${VERDE}${passaram} ok${FIM} · ${falharam ? VERMELHO : CINZA}${falharam} falhas${FIM}`);

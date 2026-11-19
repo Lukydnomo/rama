@@ -400,7 +400,37 @@
      Ver js/ordem/progressao.js (vagaHistorica) e js/importar-cris.js.
      ================================================================= */
 
-  var REPRESENTACOES = ["importada", "regras", "item", "texto"];
+  /* v9.16: "progressao" — virou a escolha de uma etapa reconstruída
+     (`vaga`); "extra" — virou uma aquisição extra (`extra`); "parte" —
+     é parte de outra aquisição importada (`parteDe`), sem conta própria. */
+  var REPRESENTACOES = ["importada", "regras", "item", "texto", "progressao", "extra", "parte"];
+  /* "~": a parte de uma entrada dividida (poder:abc~p1). */
+  var REF_SEGURA = /^[A-Za-z0-9_.:~-]{1,80}$/;
+
+  /* A reconstrução do histórico (v9.16, ver progressao.js). */
+  function normalizarReconstrucao(b) {
+    if (!b || typeof b !== "object") return null;
+    var saida = { versao: 1, retrato: { atributos: {}, pericias: {} }, vagas: {}, absorvidos: {} };
+    var rt = b.retrato && typeof b.retrato === "object" ? b.retrato : {};
+    C.ATRIBUTOS.forEach(function (a) {
+      if (rt.atributos && rt.atributos[a.chave] !== undefined) saida.retrato.atributos[a.chave] = Math.max(0, Math.min(9, inteiro(rt.atributos[a.chave], 0)));
+    });
+    Object.keys(rt.pericias || {}).slice(0, 80).forEach(function (k) {
+      if (C.pericia(k) && C.grau(rt.pericias[k]).chave === rt.pericias[k]) saida.retrato.pericias[k] = rt.pericias[k];
+    });
+    Object.keys(b.vagas || {}).slice(0, 200).forEach(function (k) {
+      if (/^[A-Za-z0-9.-]{1,60}$/.test(k) && (b.vagas[k] === "desconhecida" || b.vagas[k] === "vazia")) saida.vagas[k] = b.vagas[k];
+    });
+    Object.keys(b.absorvidos || {}).slice(0, 200).forEach(function (k) {
+      var ab = b.absorvidos[k];
+      if (!/^[A-Za-z0-9.-]{1,60}$/.test(k) || !ab || typeof ab !== "object") return;
+      var x = { atributos: {}, graus: {} };
+      C.ATRIBUTOS.forEach(function (a) { var n = inteiro(ab.atributos && ab.atributos[a.chave], 0); if (n) x.atributos[a.chave] = Math.max(-9, Math.min(9, n)); });
+      Object.keys(ab.graus || {}).slice(0, 80).forEach(function (p) { var n = inteiro(ab.graus[p], 0); if (n && C.pericia(p)) x.graus[p] = Math.max(-3, Math.min(3, n)); });
+      if (Object.keys(x.atributos).length || Object.keys(x.graus).length) saida.absorvidos[k] = x;
+    });
+    return saida;
+  }
   var MODOS_DO_MARCO = ["nex", "nivel", "estagio"];
 
   function textoLimitado(v, n) { return String(v === undefined || v === null ? "" : v).replace(/[\u0000-\u001F]/g, " ").slice(0, n); }
@@ -464,6 +494,16 @@
           representacao: REPRESENTACOES.indexOf(a.representacao) >= 0 ? a.representacao : "texto",
           nota: textoLimitado(a.nota, 300),
         };
+        /* v9.16: de que entrada do CRIS veio (e de que parte dela), e o
+           que a representa agora — por chaves estáveis, nunca por nome. */
+        if (REF_SEGURA.test(String(a.entrada || ""))) saida.entrada = String(a.entrada);
+        if (REF_SEGURA.test(String(a.componente || ""))) saida.componente = String(a.componente);
+        if (saida.representacao === "progressao" && /^[A-Za-z0-9.-]{1,60}$/.test(String(a.vaga || ""))) saida.vaga = String(a.vaga);
+        if (saida.representacao === "extra" && REF_SEGURA.test(String(a.extra || ""))) saida.extra = String(a.extra);
+        if (saida.representacao === "parte" && REF_SEGURA.test(String(a.parteDe || ""))) saida.parteDe = String(a.parteDe);
+        if (saida.representacao === "progressao" && !saida.vaga) saida.representacao = "importada";
+        if (saida.representacao === "extra" && !saida.extra) saida.representacao = "importada";
+        if (saida.representacao === "parte" && !saida.parteDe) saida.representacao = "importada";
         var op = opcoesSeguras(a.opcoes, 0);
         if (op && typeof op === "object" && !Array.isArray(op) && Object.keys(op).length) saida.opcoes = op;
         return saida;
@@ -486,6 +526,7 @@
       rituais: (Array.isArray(b.rituais) ? b.rituais : []).filter(function (id) {
         return typeof id === "string" && id.length > 0 && id.length <= 80;
       }).slice(0, 300),
+      reconstrucao: normalizarReconstrucao(b.reconstrucao) || undefined,
     };
   }
 
@@ -494,6 +535,9 @@
   function minimoDoMarco(ficha) {
     var imp = ficha && ficha.importacao;
     if (!imp || !imp.marco) return null;
+    /* v9.16: reconstruída por inteiro, a ficha é como uma nativa — o
+       marco fica como procedência e não segura mais nada. */
+    if (imp.reconstrucao && E() && E().reconstrucaoCompleta && global.RAMAOrdemPoderes && E().reconstrucaoCompleta(ficha)) return null;
     return { modo: imp.marco.modo, nex: imp.marco.nex, nivel: imp.marco.nivel, estagio: imp.marco.estagio, degrau: imp.marco.degrau };
   }
 
@@ -3024,6 +3068,13 @@
       ? global.RAMAOrdemRamificacao.normalizarRamificacao(b.ramificacao)
       : (b.ramificacao && typeof b.ramificacao === "object" ? JSON.parse(JSON.stringify(b.ramificacao)) : null);
 
+    /* Aquisições extras (v9.16): fora das vagas normais. Sem o motor,
+       passam como vieram — nunca somem numa gravação. */
+    var extras = (E() && E().normalizarExtras)
+      ? E().normalizarExtras(b.extras)
+      : (Array.isArray(b.extras) ? JSON.parse(JSON.stringify(b.extras)) : []);
+    if (extras.length) ficha.extras = extras;
+
     ficha.registrosDeRitual = (E() && E().normalizarRegistrosDeRitual)
       ? E().normalizarRegistrosDeRitual(b.registrosDeRitual)
       : (Array.isArray(b.registrosDeRitual) ? JSON.parse(JSON.stringify(b.registrosDeRitual)) : []);
@@ -3088,7 +3139,10 @@
     ficha.contadores = normalizarContadores(b.contadores);
     /* Marco de estado importado (v2.34): só existe na ficha importada. */
     var importacao = normalizarImportacao(b.importacao);
-    if (importacao) ficha.importacao = importacao;
+    if (importacao) {
+      if (!importacao.reconstrucao) delete importacao.reconstrucao;
+      ficha.importacao = importacao;
+    }
     if (A2()) A2().normalizar(ficha, b);
     /* Arquivos Secretos 3 (v2.33). Sem o módulo, passa como veio. */
     if (A3()) A3().normalizar(ficha, b);

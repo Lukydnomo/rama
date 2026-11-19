@@ -3228,6 +3228,7 @@
         painelPendencias(ctx, o, c, est),
         painelImportacao(ctx, o, c, est),
         painelAprendizado(ctx, o, c, est),
+        painelExtras(ctx, o, est),
         painelAfinidade(ctx, o, c, est),
         painelEscolhas(ctx, o, c, est),
         painelForaDaProgressao(ctx, o, est),
@@ -3637,8 +3638,93 @@
   }
 
   var REPRESENTACAO_IMPORTADA = {
-    importada: "efeito aplicado", regras: "já vem das regras", item: "concedido por item (sem efeito fora dele)", texto: "só texto",
+    importada: "etapa desconhecida, efeito aplicado", regras: "já vem das regras", item: "concedido por item (sem efeito fora dele)", texto: "só texto",
+    progressao: "escolha de uma etapa reconstruída", extra: "aquisição extra", parte: "parte de outra aquisição",
   };
+
+  var SITUACAO_DO_HISTORICO = {
+    reconstruida: "Reconstruída", invalida: "Não vale (veja o motivo)", incompleta: "Incompleta",
+    vazia: "Não preenchida (pendência normal)", desconhecida: "Etapa desconhecida",
+  };
+
+  /* v9.16: reconstruir uma etapa do retrato pela janela de escolha de
+     sempre. O valor final não muda: a base devolve o que a escolha dá. */
+  function reconstruirEtapa(ctx, h) {
+    var o = ordemDe(ctx);
+    ES.abrir({
+      ordem: o, contexto: contextoDe(ctx), rituais: rituaisDe(ctx), ctx: ctx, vagaId: h.id, reconstruir: true,
+      aoRegistrar: function () { aoMudarOrdem(ctx); UI.avisoOk("Etapa reconstruída: " + h.rotuloEtapa + " · " + h.rotulo + "."); },
+      aoMudarRituais: function () { aoMudarOrdem(ctx); },
+      aoConfirmar: function () { aoMudarOrdem(ctx); },
+    });
+  }
+
+  function linhaDoHistorico(ctx, o, h) {
+    var pode = ctx.podeEditar && ctx.podeEditar();
+    var botoes = [];
+    if (pode && h.situacao === "desconhecida") {
+      botoes.push(el("button.r-botao.r-botao--mini", { type: "button", texto: "Reconstruir", "aria-label": "Reconstruir " + h.rotuloEtapa + ", " + h.rotulo, onclick: function () { reconstruirEtapa(ctx, h); } }));
+      botoes.push(el("button.r-botao.r-botao--mini.r-botao--fantasma", { type: "button", texto: "Não preenchida", "aria-label": h.rotuloEtapa + ", " + h.rotulo + ": não preenchida",
+        onclick: function () { E.marcarVaga(o, h.id, "vazia", contextoDe(ctx)); aoMudarOrdem(ctx); } }));
+    } else if (pode && h.situacao === "vazia") {
+      botoes.push(el("button.r-botao.r-botao--mini.r-botao--fantasma", { type: "button", texto: "Voltar a desconhecida", onclick: function () { E.marcarVaga(o, h.id, "desconhecida", contextoDe(ctx)); aoMudarOrdem(ctx); } }));
+    } else if (pode && h.registro) {
+      botoes.push(el("button.r-botao.r-botao--mini", { type: "button", texto: "Trocar", "aria-label": "Trocar a escolha de " + h.rotuloEtapa, onclick: function () { reconstruirEtapa(ctx, h); } }));
+      botoes.push(el("button.r-botao.r-botao--mini.r-botao--fantasma", { type: "button", texto: "Desfazer", "aria-label": "Desfazer a reconstrução de " + h.rotuloEtapa,
+        onclick: function () {
+          UI.confirmar({ titulo: "Desfazer a reconstrução?", texto: h.rotuloEtapa + " · " + h.rotulo + " volta a ser etapa desconhecida. A base de criação recebe de volta o que esta escolha dava; o valor final continua o mesmo.", rotuloConfirmar: "Desfazer" })
+            .then(function (ok) { if (ok) { E.desfazerReconstrucao(o, h.id, contextoDe(ctx)); aoMudarOrdem(ctx); } });
+        } }));
+    }
+    var motivos = h.avaliacao ? (h.avaliacao.motivos || []).concat((h.avaliacao.faltam || []).map(function (f) { return "Falta: " + f; })) : [];
+    return el("li.ordem-historico", { dataset: { situacao: h.situacao } }, [
+      el("span.ordem-historico__etapa", { texto: h.rotuloEtapa + " · " + h.rotulo }),
+      el("span.ordem-historico__oque", { texto: h.descricao || "" }),
+      el("span.etiqueta" + (h.situacao === "reconstruida" ? ".etiqueta--calculo" : (h.situacao === "invalida" || h.situacao === "incompleta" ? ".etiqueta--parcial" : "")), { texto: SITUACAO_DO_HISTORICO[h.situacao] || h.situacao }),
+      motivos.length ? el("span.t-mini.t-aviso.ordem-historico__motivo", { texto: motivos.join(" ") }) : null,
+      botoes.length ? el("span.faixa.ordem-historico__acoes", {}, botoes) : null,
+    ]);
+  }
+
+  /* Aquisições extras (v9.16): fora das vagas normais, com a etapa (se
+     conhecida), a procedência e a situação — valendo, suspensa pela
+     dependência, sem requisito ou mantida por exceção. */
+  function painelExtras(ctx, o, est) {
+    var lista = (est && est.extras) || [];
+    var pode = ctx.podeEditar && ctx.podeEditar();
+    if (!lista.length && !pode) return null;
+    if (!C.classe(o.classe)) return null;
+    function abrirX(ref) {
+      ES.abrirExtra({ ordem: o, contexto: contextoDe(ctx), rituais: rituaisDe(ctx), ctx: ctx, ref: ref || "",
+        aoGravar: function (x) { aoMudarOrdem(ctx); UI.avisoOk("Aquisição extra registrada: " + x.nome + "."); } });
+    }
+    var linhas = lista.map(function (x) {
+      var sit = x.vale ? (x.mantidaPorExcecao ? "Vale por exceção da mesa" : "Vale") : (x.suspenso ? "Suspensa" : (!x.completo ? "Incompleta" : "Não vale"));
+      var det = [];
+      if (x.extra.procedencia) det.push(x.extra.procedencia);
+      if (x.dependencia) det.push(x.dependencia);
+      if (x.mantidaPorExcecao && x.extra.excecao) det.push("Exceção: " + x.extra.excecao.motivo);
+      var problemas = (x.motivos || []).concat((x.faltam || []).map(function (f) { return "Falta: " + f; }));
+      return el("li.ordem-historico", { dataset: { situacao: x.vale ? "reconstruida" : "invalida" } }, [
+        el("span.ordem-historico__etapa", { texto: x.nome }),
+        el("span.ordem-historico__oque", { texto: x.rotuloEtapa + (det.length ? " · " + det.join(" · ") : "") }),
+        el("span.etiqueta" + (x.vale ? ".etiqueta--calculo" : ".etiqueta--parcial"), { texto: sit }),
+        !x.vale && problemas.length ? el("span.t-mini.t-aviso.ordem-historico__motivo", { texto: problemas.join(" ") + (x.suspenso ? "" : " Um extra não vale só por ser extra: corrija ou registre a exceção com o motivo.") }) : null,
+        pode ? el("span.faixa.ordem-historico__acoes", {}, [
+          el("button.r-botao.r-botao--mini", { type: "button", texto: "Editar", "aria-label": "Editar " + x.nome, onclick: function () { abrirX(x.ref); } }),
+          el("button.r-botao.r-botao--mini.r-botao--fantasma", { type: "button", texto: "Remover", "aria-label": "Remover " + x.nome, onclick: function () {
+            UI.confirmar({ titulo: "Remover a aquisição extra?", texto: x.nome + " sai da ficha, com o que ela dava. Se veio da importação, volta a ser um poder importado de etapa desconhecida.", rotuloConfirmar: "Remover", perigo: true })
+              .then(function (ok) { if (ok) { E.removerExtra(o, x.ref); aoMudarOrdem(ctx); } });
+          } }),
+        ]) : null,
+      ]);
+    });
+    return UI.painel("Aquisições extras" + (lista.length ? " (" + lista.length + ")" : ""), el("div.pilha", {}, [
+      el("p.t-mini", { texto: "Benefícios fora das vagas normais: recompensas da campanha, treinamento especial, concessões do mestre, efeitos permanentes e poderes de item. Não ocupam vaga; os requisitos são conferidos na etapa informada. Não confundir com o suplemento Extras (conteúdo avulso de Ordem), que é uma fonte de poderes e origens." }),
+      lista.length ? el("ul.ordem-historicos", {}, linhas) : null,
+      pode ? el("div.faixa", {}, [el("button.r-botao.r-botao--mini", { type: "button", texto: "Adicionar aquisição extra", onclick: function () { abrirX(""); } })]) : null,
+    ]));
+  }
 
   function painelImportacao(ctx, o, c, est) {
     var imp = o.importacao;
@@ -3647,17 +3733,22 @@
     var quando = fonte.lidoEm ? new Date(fonte.lidoEm) : null;
     var historico = (est && est.historicoImportado) || [];
     var deLado = (est && est.importadasDeLado) || [];
+    var completa = !!(imp.reconstrucao && E.reconstrucaoCompleta && E.reconstrucaoCompleta(o, contextoDe(ctx)));
     var partes = [
       el("p.t-mini", {
         texto: "Importada " + (imp.sistema === "cris" ? "do CRIS" : "") + (quando && !isNaN(quando) ? " em " + quando.toLocaleDateString("pt-BR") : "") +
-               ", no marco " + rotuloDoMarco(imp.marco) + ". As etapas até o marco foram decididas fora do R.A.M.A.: aparecem como histórico indisponível e não pedem escolha. " +
-               "Acima do marco, a progressão segue normal. A importação é pontual: nada sincroniza com a origem.",
+               ", no marco " + rotuloDoMarco(imp.marco) + ". " + (completa
+                 ? "A progressão foi reconstruída por inteiro: a ficha funciona como uma criada no R.A.M.A., e o marco fica só como procedência."
+                 : "As etapas até o marco que ninguém reconstruiu aparecem como etapa desconhecida e não pedem escolha. Reconstruir uma etapa registra a escolha de verdade: a base de criação devolve o que ela dá, e o valor final não muda.") +
+               " Acima do marco, a progressão segue normal. A importação é pontual: nada sincroniza com a origem.",
       }),
     ];
-    if (historico.length) {
-      partes.push(el("details.cris-detalhes", {}, [
-        el("summary", { texto: "Histórico indisponível (" + historico.length + " etapas)" }),
-        el("ul.pilha.pilha--curta", {}, historico.map(function (h) { return el("li.t-mini", { texto: h.rotuloEtapa + " · " + h.rotulo }); })),
+    var etapasH = E.etapasDoHistorico ? E.etapasDoHistorico(o, contextoDe(ctx)) : [];
+    if (etapasH.length) {
+      var abertas = etapasH.filter(function (h) { return h.situacao === "desconhecida"; }).length;
+      partes.push(el("details.cris-detalhes", { open: historico.length && abertas < etapasH.length ? true : null }, [
+        el("summary", { texto: "Etapas do histórico importado (" + etapasH.length + (abertas ? ", " + abertas + " desconhecida" + (abertas === 1 ? "" : "s") : "") + ")" }),
+        el("ul.ordem-historicos", {}, etapasH.map(function (h) { return linhaDoHistorico(ctx, o, h); })),
       ]));
     }
     var aq = imp.aquisicoes || [];

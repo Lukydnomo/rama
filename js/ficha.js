@@ -278,7 +278,8 @@
      os campos novos e os descartaria ao gravar — com o schema maior ela
      recusa abrir a ficha e pede para recarregar.
      Ver docs/CHARACTER_SCHEMA.md. */
-  var VERSAO_SCHEMA = 36;
+  /* 37 (v9.16): ordem.extras e ordem.importacao.reconstrucao. */
+  var VERSAO_SCHEMA = 37;
 
   var MODULOS = {
     atributos: "Atributos", status: "Status/recursos", defesa: "Defesa",

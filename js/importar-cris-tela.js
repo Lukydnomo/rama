@@ -82,6 +82,8 @@
   };
   /* Entradas que escolhem destino (as outras só têm decisões de regra). */
   var COM_DESTINO = { item: 1, ritual: 1, poder: 1, pericia: 1, mod: 1, ataque: 1, texto: 1 };
+  /* v9.16: entradas da reconstrução, com painel próprio. */
+  var COM_PAINEL = { vaga: 1, modo: 1, dividida: 1 };
 
   /* abrir({ aoCriar(id, nome) }) */
   function abrir(opcoes) {
@@ -156,6 +158,7 @@
     function descartar() {
       retrato = null; resultado = null; decisoes = { destinos: {}, vinculos: {} }; confirmados = {}; sinalizados = {}; avisoRecalculo = [];
       operacaoId = null; linkDoRetrato = ""; editando = ""; painel = null; detalhesAbertos = {}; homebrewSalvos = {}; secao = 0; etapa = "carregar";
+      editandoProc = ""; sugestoes = null;
     }
 
     async function carregar(campoLink, botao) {
@@ -293,6 +296,503 @@
           if (alvo.scrollIntoView) alvo.scrollIntoView({ block: "nearest" });
         }
       }, 0);
+    }
+
+
+    /* ------------------------------------------- reconstrução (v9.16)
+       Duas perguntas por entrada: "o que é isso?" (o destino, acima) e
+       "como foi adquirido?" (a procedência, aqui). A visão da progressão
+       e a revisão por assunto editam as MESMAS decisões
+       (decisoes.reconstrucao); toda escolha passa pelo conversor, que a
+       transforma na estrutura nativa e confere os requisitos na etapa. */
+
+    var editandoProc = "";
+    var sugestoes = null;
+
+    function rc() {
+      if (!decisoes.reconstrucao || typeof decisoes.reconstrucao !== "object") decisoes.reconstrucao = {};
+      var r = decisoes.reconstrucao;
+      if (!r.procedencia) r.procedencia = {};
+      if (!r.vagas) r.vagas = {};
+      return r;
+    }
+    function progressao() { return (resultado && resultado.progressao) || { ativa: false, etapas: [], extras: [], semEtapa: [] }; }
+    function entradaDaVaga(id) { return entrada("vaga:" + id); }
+    function nomeDe(chave) { var x = entrada(chave); return x ? x.rotulo : chave; }
+
+    var SITUACAO_ETAPA = {
+      reconstruida: "Reconstruída", vazia: "Não preenchida", desconhecida: "Etapa desconhecida",
+      invalida: "Não vale", incompleta: "Incompleta", conflito: "Conflito",
+    };
+
+    function decidirModo(ativa) {
+      if (criando || criada) return;
+      rc().ativa = !!ativa;
+      recalcular(["progressao:modo"]);
+    }
+
+    /* Uma etapa de poder é de uma entrada só: escolher outra para ela
+       devolve a anterior para "etapa desconhecida" (dito no aviso). */
+    function liberarVaga(idVaga, exceto, tipoVaga) {
+      if (tipoVaga === "rituais") return [];
+      var r = rc(), soltas = [];
+      Object.keys(r.procedencia).forEach(function (k) {
+        var dp = r.procedencia[k];
+        if (k !== exceto && dp && dp.tipo === "vaga" && dp.vaga === idVaga) { r.procedencia[k] = { tipo: "desconhecida" }; soltas.push(k); }
+      });
+      return soltas;
+    }
+
+    function decidirProcedencia(e, dp) {
+      if (criando || criada) return;
+      var r = rc();
+      var soltas = [];
+      if (dp.tipo === "vaga") {
+        var ve = entradaDaVaga(dp.vaga);
+        soltas = liberarVaga(dp.vaga, e.chave, ve && ve.vaga ? ve.vaga.tipo : "");
+        delete r.vagas[dp.vaga];
+      }
+      r.procedencia[e.chave] = dp;
+      editandoProc = "";
+      recalcular([e.chave]);
+      if (soltas.length) UI.avisoAtencao("A etapa era de " + soltas.map(nomeDe).join(", ") + ", que voltou para “etapa desconhecida”.");
+    }
+
+    function decidirVaga(e, dv, entradaEscolhida) {
+      if (criando || criada) return;
+      var r = rc();
+      var id = e.vaga.id;
+      var soltas = [];
+      if (entradaEscolhida) {
+        soltas = liberarVaga(id, entradaEscolhida, e.vaga.tipo);
+        r.procedencia[entradaEscolhida] = { tipo: "vaga", vaga: id };
+        delete r.vagas[id];
+      } else {
+        soltas = liberarVaga(id, "", e.vaga.tipo);
+        r.vagas[id] = dv;
+      }
+      editando = ""; painel = null;
+      recalcular(entradaEscolhida ? [e.chave, entradaEscolhida] : [e.chave]);
+      if (soltas.length) UI.avisoAtencao(soltas.map(nomeDe).join(", ") + " voltou para “etapa desconhecida”.");
+    }
+
+    function decidirRituaisDaVaga(e, marcadas) {
+      if (criando || criada) return;
+      var r = rc();
+      var id = e.vaga.id;
+      Object.keys(r.procedencia).forEach(function (k) {
+        var dp = r.procedencia[k];
+        if (dp && dp.tipo === "vaga" && dp.vaga === id && marcadas.indexOf(k) < 0) r.procedencia[k] = { tipo: "desconhecida" };
+      });
+      marcadas.forEach(function (k) { r.procedencia[k] = { tipo: "vaga", vaga: id }; });
+      delete r.vagas[id];
+      editando = ""; painel = null;
+      recalcular([e.chave].concat(marcadas));
+    }
+
+    /* A linha que resume a entrada inteira: o que era, o que virou, de
+       onde veio e se está conferida. */
+    function linhaDeResumo(e, est) {
+      if (!e.procedencia) return null;
+      var partes = [e.rotulo, e.rotuloDestino || (e.tipo === "ritual" ? "Ritual" : "—"), e.procedencia.texto, est.rotulo];
+      return el("p.t-mini.cris-resumo-linha", { texto: partes.join(" → ") });
+    }
+
+    /* Os destinos de procedência de uma entrada, das etapas compatíveis
+       às outras, com o motivo de cada impedimento. */
+    function etapasPara(e) {
+      var saida = [];
+      entradas().forEach(function (v) {
+        if (v.tipo !== "vaga" || !v.vaga) return;
+        var c = (v.vaga.candidatos || []).filter(function (x) { return x.entrada === e.chave; })[0];
+        var ehRitual = e.tipo === "ritual";
+        if ((v.vaga.tipo === "rituais") !== ehRitual) return;
+        var outras = v.vaga.entradas.filter(function (k) { return k !== e.chave; });
+        var ocupacao = ehRitual
+          ? (v.vaga.entradas.length + " de " + (v.vaga.quantidade || "?") + " escolhidos")
+          : (outras.length ? "ocupada por “" + nomeDe(outras[0]) + "”" : "livre");
+        saida.push({ id: v.vaga.id, rotulo: v.rotulo, ok: !!(c && c.ok), cabe: !!c, motivos: c ? c.motivos : ["Esta etapa não concede " + (ehRitual ? "rituais" : "esse tipo de poder") + "."],
+          ocupacao: ocupacao, ocupada: !ehRitual && outras.length > 0, cheia: ehRitual && v.vaga.quantidade && v.vaga.entradas.length >= v.vaga.quantidade && v.vaga.entradas.indexOf(e.chave) < 0, via: c ? c.via : "" });
+      });
+      return saida.sort(function (a, b) {
+        var pa = a.ok ? (a.ocupada || a.cheia ? 1 : 0) : (a.cabe ? 2 : 3);
+        var pb = b.ok ? (b.ocupada || b.cheia ? 1 : 0) : (b.cabe ? 2 : 3);
+        return pa - pb;
+      });
+    }
+
+    function rotuloDeDegraus() {
+      var pg = progressao();
+      var m = pg.marco || {};
+      var E = global.RAMAOrdemProgressao;
+      var max = m.degrau || 0;
+      var lista = [];
+      for (var d = 1; d <= max; d++) lista.push({ valor: String(d), rotulo: E.rotuloDoDegrau ? E.rotuloDoDegrau(d, m.modo === "nivel") : "Etapa " + d });
+      return lista;
+    }
+
+    function itensDaFicha() {
+      return entradas().filter(function (x) { return x.tipo === "item" && x.alvo && x.alvo.itemId; }).map(function (x) {
+        var it = resultado.ficha.inventario.itens.filter(function (i) { return i.id === x.alvo.itemId; })[0];
+        return it ? { chave: x.chave, nome: it.nome } : null;
+      }).filter(Boolean);
+    }
+
+    function painelDeProcedencia(e) {
+      var caixa = el("div.cris-destino", { tabindex: "-1", role: "region", "aria-label": "Procedência de " + e.rotulo });
+      var dp = e.decisaoProcedencia || {};
+      var nome = idSeguro("proc-" + e.chave);
+      var atual = dp.tipo === "vaga" ? "vaga:" + dp.vaga : (dp.tipo || (e.procedencia && e.procedencia.situacao === "desconhecida" ? "desconhecida" : ""));
+      var partes = [el("p.cris-destino__titulo", { texto: "Como foi adquirido?" }),
+        el("p.t-mini", { texto: "Reconhecer o que é não diz quando veio. Escolha a etapa da progressão, uma escolha interna de outra entrada, uma aquisição extra — ou deixe a etapa como desconhecida. Nada fica conferido sem você confirmar." })];
+      var etapas = etapasPara(e);
+      var busca = el("input.r-entrada", { type: "search", id: nome + "-busca", autocomplete: "off", placeholder: "Filtrar etapas (ex.: 15%, Versatilidade)", value: painel && painel.buscaProc || "" });
+      var lista = el("div.cris-opcoes", { role: "radiogroup", "aria-label": "Etapas" });
+      function radio(valorR, rotulo, detalhe, extraClasse) {
+        var id = nome + "-" + String(valorR).replace(/[^A-Za-z0-9_-]/g, "_");
+        return el("label.cris-check" + (extraClasse || ""), { for: id }, [
+          el("input", { type: "radio", name: nome, id: id, value: valorR, checked: valorR === atual }),
+          el("span", {}, [el("span", { texto: " " + rotulo }), detalhe ? el("span.t-mini.cris-check__detalhe", { texto: " — " + detalhe }) : null]),
+        ]);
+      }
+      function pintar() {
+        var q = U.chaveDeBusca ? U.chaveDeBusca(busca.value || "") : String(busca.value || "").toLowerCase();
+        var vistas = etapas.filter(function (x) { return !q || (U.chaveDeBusca ? U.chaveDeBusca(x.rotulo) : x.rotulo.toLowerCase()).indexOf(q) >= 0; });
+        var cabem = vistas.filter(function (x) { return x.ok; });
+        var naoCabem = vistas.filter(function (x) { return !x.ok; });
+        var filhos = [];
+        filhos.push(el("p.cris-resultados__grupo", { texto: "Etapas compatíveis (" + cabem.length + ")" }));
+        if (!cabem.length) filhos.push(el("p.t-mini", { texto: q ? "Nenhuma etapa compatível com esse filtro." : "Nenhuma etapa do histórico aceita esta entrada agora." }));
+        cabem.forEach(function (x) { filhos.push(radio("vaga:" + x.id, x.rotulo, x.ocupacao + (x.via === "transcender" ? " · por Transcender" : x.via === "trilha" ? " · primeiro poder da trilha" : ""))); });
+        if (naoCabem.length) {
+          filhos.push(el("details.cris-detalhes", {}, [el("summary", { texto: "Outras etapas, que não cabem agora (" + naoCabem.length + ")" }),
+            el("div.cris-opcoes", {}, naoCabem.map(function (x) { return radio("vaga:" + x.id, x.rotulo, "não cabe: " + (x.motivos[0] || "incompatível")); }))]));
+        }
+        U.trocar(lista, filhos);
+      }
+      busca.addEventListener("input", function () { if (painel) painel.buscaProc = busca.value; pintar(); });
+      pintar();
+      partes.push(el("div.r-campo", {}, [el("label", { for: nome + "-busca", texto: "Etapas do histórico" }), busca]), lista);
+
+      var outras = entradas().filter(function (x) { return x.tipo === e.tipo && x.chave !== e.chave && x.tipo === "poder"; });
+      var extraForm = el("div.pilha.pilha--curta.cris-proc-extra");
+      var selDentro = null, selParte = null, selItem = null;
+      var campos = {};
+      var fixos = [radio("desconhecida", "Aquisição conhecida, etapa desconhecida", "não inventa etapa: fica fora das vagas, com o efeito aplicado")];
+      if (e.tipo === "poder") {
+        if (outras.length) {
+          selDentro = el("select.r-selecao", { id: nome + "-dentro", "aria-label": "Entrada de que esta é uma escolha interna" }, outras.map(function (x) { return el("option", { value: x.chave, texto: x.rotulo, selected: dp.tipo === "dentro" && dp.entrada === x.chave }); }));
+          selParte = el("select.r-selecao", { id: nome + "-parte", "aria-label": "Entrada de que esta é parte" }, outras.map(function (x) { return el("option", { value: x.chave, texto: x.rotulo, selected: dp.tipo === "parte" && dp.entrada === x.chave }); }));
+          fixos.push(el("div.pilha.pilha--curta", {}, [radio("dentro", "Escolha interna de outra entrada", "Transcender → poder, Expansão de Conhecimento → poder de outra classe, Versatilidade → trilha"), selDentro]));
+          fixos.push(el("div.pilha.pilha--curta", {}, [radio("parte", "Parte da mesma aquisição de outra entrada", "a outra descreve o poder; esta, o efeito — sem contar duas vezes"), selParte]));
+        }
+        var itens = itensDaFicha();
+        if (itens.length) {
+          selItem = el("select.r-selecao", { id: nome + "-item", "aria-label": "Item que concede" }, itens.map(function (x) { return el("option", { value: x.chave, texto: x.nome, selected: dp.tipo === "item" && dp.item === x.chave }); }));
+          fixos.push(el("div.pilha.pilha--curta", {}, [radio("item", "Concedido por um item (vale enquanto o item estiver em uso)", ""), selItem]));
+        }
+        fixos.push(radio("extra", "Aquisição extra (fora das vagas normais)", "recompensa, treinamento especial, concessão do mestre, homebrew"));
+        campos.just = el("input.r-entrada", { type: "text", id: nome + "-just", maxlength: "200", value: dp.tipo === "extra" ? dp.procedencia || "" : "", placeholder: "De onde veio (ex.: recompensa da missão 3)" });
+        campos.quando = el("select.r-selecao", { id: nome + "-quando" }, [el("option", { value: "", texto: "Não sei quando" })].concat(rotuloDeDegraus().map(function (x) { return el("option", { value: x.valor, texto: x.rotulo, selected: dp.tipo === "extra" && String(dp.quando) === x.valor }); })));
+        campos.excecaoLig = el("input", { type: "checkbox", id: nome + "-exc", checked: !!(dp.tipo === "extra" && dp.excecao) });
+        campos.excecao = el("input.r-entrada", { type: "text", id: nome + "-excm", maxlength: "300", value: dp.tipo === "extra" ? dp.excecao || "" : "", placeholder: "Motivo da exceção (obrigatório para manter fora do requisito)" });
+        U.anexar(extraForm, [
+          el("div.r-campo", {}, [el("label", { for: nome + "-just", texto: "Procedência ou justificativa" }), campos.just]),
+          el("div.r-campo", {}, [el("label", { for: nome + "-quando", texto: "Quando foi adquirido (os requisitos são conferidos ali)" }), campos.quando]),
+          el("label.cris-check", { for: nome + "-exc" }, [campos.excecaoLig, el("span", { texto: " Exceção a requisitos, decidida pela mesa (diferente de uma concessão extra)" })]),
+          campos.excecao,
+        ]);
+        fixos.push(extraForm);
+      } else {
+        fixos.push(radio("mesa", "Concessão da mesa (fora da progressão)", "fica marcado como exceção, com nota"));
+      }
+      partes.push(el("p.cris-resultados__grupo", { texto: "Fora das etapas" }), el("div.cris-opcoes", { role: "radiogroup" }, fixos));
+
+      var aviso = el("p.t-mini.t-erro", { role: "alert" });
+      partes.push(aviso, el("div.faixa", {}, [
+        botaoDestino("Usar esta procedência", function () {
+          var marcado = caixa.querySelector("input[name='" + nome + "']:checked");
+          if (!marcado) { aviso.textContent = "Escolha uma opção."; return; }
+          var v = marcado.value;
+          if (v.indexOf("vaga:") === 0) return decidirProcedencia(e, { tipo: "vaga", vaga: v.slice(5) });
+          if (v === "dentro") return decidirProcedencia(e, { tipo: "dentro", entrada: selDentro.value });
+          if (v === "parte") return decidirProcedencia(e, { tipo: "parte", entrada: selParte.value });
+          if (v === "item") return decidirProcedencia(e, { tipo: "item", item: selItem.value, emUso: true });
+          if (v === "extra") {
+            var exc = campos.excecaoLig.checked ? U.aparar(campos.excecao.value, 300) : "";
+            if (campos.excecaoLig.checked && !exc) { aviso.textContent = "A exceção a requisitos precisa de um motivo."; campos.excecao.focus(); return; }
+            return decidirProcedencia(e, { tipo: "extra", procedencia: U.aparar(campos.just.value, 200), quando: campos.quando.value === "" ? null : Number(campos.quando.value), excecao: exc });
+          }
+          return decidirProcedencia(e, { tipo: v });
+        }, true),
+        el("button.r-botao.r-botao--mini.r-botao--fantasma", { type: "button", texto: "Cancelar", onclick: function () { editandoProc = ""; focoDepois = e.chave; desenhar(); } }),
+      ]));
+      U.anexar(caixa, partes);
+      return caixa;
+    }
+
+    /* A etapa vista pelo lado dela: o que veio aqui? */
+    function painelDaVaga(e) {
+      var v = e.vaga;
+      var caixa = el("div.cris-destino", { tabindex: "-1", role: "region", "aria-label": "O que veio em " + e.rotulo });
+      var nome = idSeguro("vg-" + v.id);
+      var partes = [el("p.cris-destino__titulo", { texto: "O que veio nesta etapa?" })];
+      var aviso = el("p.t-mini.t-erro", { role: "alert" });
+      var dv = v.decisao || {};
+      var atualFixo = v.situacao === "vazia" ? "vazia" : (v.situacao === "desconhecida" ? "desconhecida" : "");
+      function radio(valorR, rotulo, detalhe, marcado) {
+        var id = nome + "-" + String(valorR).replace(/[^A-Za-z0-9_-]/g, "_");
+        return el("label.cris-check", { for: id }, [el("input", { type: "radio", name: nome, id: id, value: valorR, checked: !!marcado }),
+          el("span", {}, [el("span", { texto: " " + rotulo }), detalhe ? el("span.t-mini.cris-check__detalhe", { texto: " — " + detalhe }) : null])]);
+      }
+      var fixos = [radio("desconhecida", "Etapa desconhecida", "continua histórico indisponível; nada é inventado", atualFixo === "desconhecida"),
+        radio("vazia", "Não preenchida de verdade", "vira pendência normal na aba Progressão", atualFixo === "vazia")];
+      var C = global.RAMAOrdemCatalogo;
+      var corpo;
+      var ler;
+      if (v.tipo === "atributo") {
+        var selA = el("select.r-selecao", { id: nome + "-atr" }, [el("option", { value: "", texto: "Escolha o atributo" })].concat(C.ATRIBUTOS.map(function (a) {
+          return el("option", { value: a.chave, texto: a.nome + " (" + (resultado.resumo.atributos[a.chave]) + " no CRIS)", selected: dv.tipo === "atributo" && dv.valor === a.chave });
+        })));
+        var selP = el("select.r-selecao", { id: nome + "-per" }, [el("option", { value: "", texto: "Perícia treinada pelo ponto de Intelecto" })].concat(C.PERICIAS.map(function (p) {
+          return el("option", { value: p.chave, texto: p.nome, selected: dv.pericia === p.chave });
+        })));
+        var campoP = el("div.r-campo", { hidden: !(dv.valor === "int") }, [el("label", { for: nome + "-per", texto: "Intelecto aumentado: qual perícia passou a ser treinada?" }), selP]);
+        selA.addEventListener("change", function () { campoP.hidden = selA.value !== "int"; });
+        corpo = [radio("atributo", "Aumento de atributo", "", dv.tipo === "atributo" || v.situacao === "reconstruida"),
+          el("div.r-campo", {}, [el("label", { for: nome + "-atr", texto: "Atributo aumentado" }), selA]), campoP];
+        ler = function () { if (!selA.value) return "Escolha o atributo."; if (selA.value === "int" && !selP.value) return "Escolha a perícia do ponto de Intelecto."; return { tipo: "atributo", valor: selA.value, pericia: selA.value === "int" ? selP.value : "" }; };
+      } else if (v.tipo === "grauTreinamento" || v.tipo === "perito") {
+        var marcadas = dv.tipo === "pericias" ? (dv.pericias || []) : [];
+        var caixas = C.PERICIAS.map(function (p) {
+          var id = nome + "-p-" + p.chave;
+          return el("label.cris-check", { for: id }, [el("input", { type: "checkbox", id: id, value: p.chave, checked: marcadas.indexOf(p.chave) >= 0 }), el("span", { texto: " " + p.nome })]);
+        });
+        corpo = [radio("pericias", v.tipo === "perito" ? "Perícias do Perito" : "Perícias que subiram de grau", "", dv.tipo === "pericias" || v.situacao === "reconstruida"),
+          el("fieldset.cris-opcoes.cris-grade-campos", {}, [el("legend.t-mini", { texto: "Marque as perícias" })].concat(caixas))];
+        ler = function () {
+          var sel = Array.prototype.slice.call(caixa.querySelectorAll("input[type=checkbox]:checked")).map(function (x) { return x.value; });
+          return sel.length ? { tipo: "pericias", pericias: sel } : "Marque ao menos uma perícia.";
+        };
+      } else if (v.tipo === "rituais") {
+        var cands = (v.candidatos || []).slice().sort(function (a, b) { return (b.ok - a.ok) || (b.ocupada - a.ocupada); });
+        var contador = el("p.t-mini", { "aria-live": "polite" });
+        var marc = el("fieldset.cris-opcoes", {}, [el("legend.t-mini", { texto: "Rituais que esta concessão deu (" + (v.quantidade || "?") + " nesta etapa)" })].concat(cands.map(function (c) {
+          var id = nome + "-r-" + idSeguro(c.entrada);
+          var ondeMais = (entrada(c.entrada) || {}).procedencia;
+          var outra = ondeMais && ondeMais.vaga && ondeMais.vaga !== v.id ? " · hoje em " + (entradaDaVaga(ondeMais.vaga) || {}).rotulo : "";
+          return el("label.cris-check", { for: id }, [el("input", { type: "checkbox", id: id, value: c.entrada, checked: c.ocupada }),
+            el("span", {}, [el("span", { texto: " " + c.rotulo }), el("span.t-mini.cris-check__detalhe", { texto: c.ok ? (outra || "") : " — não cabe: " + (c.motivos[0] || "") })])]);
+        })));
+        function contar() { var n = caixa.querySelectorAll("fieldset input[type=checkbox]:checked").length; contador.textContent = n + " de " + (v.quantidade || "?") + " escolhidos" + (v.quantidade && n > v.quantidade ? " — passa do que a concessão dá" : ""); }
+        marc.addEventListener("change", contar);
+        partes.push(marc, contador);
+        setTimeout(contar, 0);
+        partes.push(el("div.cris-opcoes", {}, fixos), aviso, el("div.faixa", {}, [
+          botaoDestino("Usar estes rituais", function () {
+            var fixo = caixa.querySelector("input[name='" + nome + "']:checked");
+            var sel = Array.prototype.slice.call(marc.querySelectorAll("input[type=checkbox]:checked")).map(function (x) { return x.value; });
+            if (sel.length) return decidirRituaisDaVaga(e, sel);
+            if (fixo) { decidirRituaisDaVaga(e, []); return decidirVaga(e, { tipo: fixo.value }); }
+            aviso.textContent = "Marque os rituais ou escolha uma situação.";
+          }, true),
+          el("button.r-botao.r-botao--mini.r-botao--fantasma", { type: "button", texto: "Cancelar", onclick: function () { editando = ""; painel = null; focoDepois = e.chave; desenhar(); } }),
+        ]));
+        U.anexar(caixa, partes);
+        return caixa;
+      } else if (v.candidatos) {
+        var busca = el("input.r-entrada", { type: "search", id: nome + "-busca", autocomplete: "off", placeholder: "Filtrar poderes", value: painel && painel.busca || "" });
+        var lista = el("div.cris-opcoes", { role: "radiogroup", "aria-label": "Poderes do CRIS" });
+        var pintar = function () {
+          var q = U.chaveDeBusca ? U.chaveDeBusca(busca.value || "") : String(busca.value || "").toLowerCase();
+          var vis = v.candidatos.filter(function (c) { return !q || (U.chaveDeBusca ? U.chaveDeBusca(c.rotulo) : c.rotulo.toLowerCase()).indexOf(q) >= 0; });
+          var bons = vis.filter(function (c) { return c.ok || c.ocupada; }), ruins = vis.filter(function (c) { return !c.ok && !c.ocupada; });
+          var linhaC = function (c) {
+            var proc = (entrada(c.entrada) || {}).procedencia;
+            var onde = proc && proc.vaga && proc.vaga !== v.id ? "hoje em " + (entradaDaVaga(proc.vaga) || {}).rotulo : (proc && proc.situacao === "extra" ? "hoje como extra" : (proc && proc.situacao === "dentro" ? "hoje como escolha interna" : ""));
+            return radio("e:" + c.entrada, c.rotulo, (c.ok || c.ocupada ? "" : "não cabe: " + (c.motivos[0] || "") + " ") + (c.via === "transcender" ? "por Transcender " : c.via === "trilha" ? "primeiro poder da trilha " : "") + onde, c.ocupada);
+          };
+          U.trocar(lista, [el("p.cris-resultados__grupo", { texto: "Compatíveis (" + bons.length + ")" })].concat(bons.map(linhaC)).concat(ruins.length ? [el("details.cris-detalhes", {}, [el("summary", { texto: "Não cabem agora (" + ruins.length + ")" }), el("div.cris-opcoes", {}, ruins.map(linhaC))])] : []));
+        };
+        busca.addEventListener("input", function () { if (painel) painel.busca = busca.value; pintar(); });
+        pintar();
+        corpo = [el("div.r-campo", {}, [el("label", { for: nome + "-busca", texto: "Poderes do CRIS" }), busca]), lista];
+        ler = null;
+      } else {
+        corpo = [el("p.t-mini", { texto: "Esta etapa pede uma decisão que o assistente não reconstrói. Deixe como desconhecida ou não preenchida; depois de criar, a aba Progressão abre a escolha nativa." })];
+      }
+      partes = partes.concat(corpo || []);
+      partes.push(el("p.cris-resultados__grupo", { texto: "Sem escolha" }), el("div.cris-opcoes", {}, fixos), aviso);
+      partes.push(el("div.faixa", {}, [
+        botaoDestino("Usar", function () {
+          var marcado = caixa.querySelector("input[name='" + nome + "']:checked");
+          if (!marcado) { aviso.textContent = "Escolha uma opção."; return; }
+          var val = marcado.value;
+          if (val === "vazia" || val === "desconhecida") return decidirVaga(e, { tipo: val });
+          if (val.indexOf("e:") === 0) return decidirVaga(e, null, val.slice(2));
+          var res = ler ? ler() : "Escolha uma opção.";
+          if (typeof res === "string") { aviso.textContent = res; return; }
+          decidirVaga(e, res);
+        }, true),
+        el("button.r-botao.r-botao--mini.r-botao--fantasma", { type: "button", texto: "Cancelar", onclick: function () { editando = ""; painel = null; focoDepois = e.chave; desenhar(); } }),
+      ]));
+      U.anexar(caixa, partes);
+      return caixa;
+    }
+
+    function painelDoModo(e) {
+      var nome = idSeguro("modo");
+      var ativa = progressao().ativa;
+      var caixa = el("div.cris-destino", { tabindex: "-1", role: "region", "aria-label": "Reconstrução da progressão" });
+      var g = el("fieldset.cris-opcoes", {}, [
+        el("legend.t-mini", { texto: "Como tratar as etapas até o NEX importado?" }),
+        el("label.cris-check", { for: nome + "-a" }, [el("input", { type: "radio", name: nome, id: nome + "-a", value: "nao", checked: !ativa }),
+          el("span", { texto: " Só o estado atual — as etapas ficam como histórico indisponível (como nas importações anteriores)." })]),
+        el("label.cris-check", { for: nome + "-b" }, [el("input", { type: "radio", name: nome, id: nome + "-b", value: "sim", checked: ativa }),
+          el("span", { texto: " Reconstruir a progressão — dizer, etapa por etapa, o que veio em cada uma. O que você não souber fica como etapa desconhecida." })]),
+      ]);
+      U.anexar(caixa, [g, el("div.faixa", {}, [
+        botaoDestino("Usar", function () { var m2 = caixa.querySelector("input[name='" + nome + "']:checked"); decidirModo(m2 && m2.value === "sim"); }, true),
+        el("button.r-botao.r-botao--mini.r-botao--fantasma", { type: "button", texto: "Cancelar", onclick: function () { editando = ""; painel = null; focoDepois = e.chave; desenhar(); } }),
+      ])]);
+      return caixa;
+    }
+
+    /* Dividir uma entrada que mistura várias coisas. As partes ganham id
+       estável; renomear mantém as decisões delas. */
+    function formularioDeDivisao(e, partesAtuais) {
+      var lista = (partesAtuais && partesAtuais.length ? partesAtuais.map(function (p) { return { id: p.id, nome: p.nome }; }) : [{ id: novaParte(), nome: e.rotulo }, { id: novaParte(), nome: "" }]);
+      var wrap = el("div.pilha.pilha--curta");
+      var aviso = el("p.t-mini.t-erro", { role: "alert" });
+      function novaParte() { return "p" + String(U.uuid()).replace(/[^A-Za-z0-9]/g, "").slice(0, 8); }
+      function pintar() {
+        U.trocar(wrap, [el("p.t-mini", { texto: "Cada parte vira uma entrada própria, com destino e procedência. O texto original continua na entrada dividida, como referência." })]
+          .concat(lista.map(function (p, n) {
+            var id = idSeguro("parte-" + e.chave + "-" + p.id);
+            var campo = el("input.r-entrada", { type: "text", id: id, maxlength: "120", value: p.nome });
+            campo.addEventListener("input", function () { p.nome = campo.value; });
+            return el("div.faixa", {}, [el("label.so-leitor", { for: id, texto: "Parte " + (n + 1) }), campo,
+              lista.length > 2 ? el("button.r-botao.r-botao--mini.r-botao--fantasma", { type: "button", texto: "Tirar", "aria-label": "Tirar a parte " + (n + 1), onclick: function () { lista.splice(n, 1); pintar(); } }) : null]);
+          }))
+          .concat([el("div.faixa", {}, [
+            lista.length < 12 ? el("button.r-botao.r-botao--mini", { type: "button", texto: "Mais uma parte", onclick: function () { lista.push({ id: novaParte(), nome: "" }); pintar(); } }) : null,
+            botaoDestino(partesAtuais ? "Salvar as partes" : "Dividir", function () {
+              var limpas = lista.filter(function (p) { return U.aparar(p.nome, 120); });
+              if (limpas.length < 2) { aviso.textContent = "Dê nome a pelo menos duas partes."; return; }
+              if (!decisoes.componentes) decisoes.componentes = {};
+              decisoes.componentes[e.chave] = limpas.map(function (p) { return { id: p.id, nome: U.aparar(p.nome, 120) }; });
+              recalcular([e.chave]);
+            }, true),
+          ]), aviso]));
+      }
+      pintar();
+      return wrap;
+    }
+
+    function painelDaDivisao(e) {
+      var caixa = el("div.cris-destino", { tabindex: "-1", role: "region", "aria-label": "Partes de " + e.rotulo });
+      U.anexar(caixa, [
+        el("p.cris-destino__titulo", { texto: "Partes desta entrada" }),
+        el("ul.pilha.pilha--curta", {}, (e.partes || []).map(function (p) { return el("li", {}, [el("button.cris-link-botao", { type: "button", texto: p.nome, onclick: function () { irPara(p.chave); } })]); })),
+        formularioDeDivisao(e, e.partes),
+        el("div.faixa", {}, [
+          el("button.r-botao.r-botao--mini", { type: "button", texto: "Juntar de novo (uma entrada só)", onclick: function () {
+            if (decisoes.componentes) delete decisoes.componentes[e.chave];
+            recalcular([e.chave]);
+          } }),
+          el("button.r-botao.r-botao--mini.r-botao--fantasma", { type: "button", texto: "Cancelar", onclick: function () { editando = ""; painel = null; focoDepois = e.chave; desenhar(); } }),
+        ]),
+      ]);
+      return caixa;
+    }
+
+    /* A visão da progressão: etapas, o que veio em cada uma, extras e o
+       que ficou sem etapa — os mesmos dados da revisão por assunto. */
+    function visaoDaProgressao() {
+      var pg = progressao();
+      if (!pg.ativa) return null;
+      var linhas = pg.etapas.map(function (x) {
+        var sit = SITUACAO_ETAPA[x.situacao] || x.situacao;
+        var oque = x.descricao || (x.entradas.length ? x.entradas.map(nomeDe).join(", ") : "—");
+        return el("li.cris-etapa", { dataset: { situacao: x.situacao } }, [
+          el("button.cris-link-botao", { type: "button", texto: x.rotulo, onclick: function () { irPara("vaga:" + x.id); } }),
+          el("span.cris-etapa__oque", { texto: x.situacao === "reconstruida" || x.situacao === "invalida" || x.situacao === "incompleta" ? oque : "" }),
+          el("span.cris-estado", { class: x.situacao === "reconstruida" ? "cris-estado--conferida" : (x.situacao === "invalida" || x.situacao === "conflito" || x.situacao === "incompleta" ? "cris-estado--conflito" : "cris-estado--sugerido"), texto: sit }),
+        ]);
+      });
+      var semEtapa = pg.semEtapa.filter(function (k) { var x = entrada(k); return x && x.tipo === "poder"; });
+      var partes = [
+        el("p.t-mini", { texto: "Etapa por etapa até o NEX importado. Clique numa etapa para dizer o que veio nela; em cada poder, “Como foi adquirido?” edita o mesmo vínculo." }),
+        el("p.t-mini", { role: "status", texto: ["reconstruida", "vazia", "desconhecida"].map(function (s2) { return pg.etapas.filter(function (x) { return x.situacao === s2; }).length + " " + SITUACAO_ETAPA[s2].toLowerCase(); }).join(" · ") +
+          (pg.etapas.some(function (x) { return x.situacao === "invalida" || x.situacao === "incompleta" || x.situacao === "conflito"; }) ? " · há etapas com problema" : "") + " — de " + pg.etapas.length + " etapas." }),
+        el("ul.cris-etapas", {}, linhas),
+      ];
+      if (pg.extras.length) partes.push(el("div", {}, [el("p.cris-diferencas__secao", { texto: "Aquisições extras (" + pg.extras.length + ")" }),
+        el("ul.cris-diferencas", {}, pg.extras.map(function (x) { return el("li", {}, [x.entrada ? el("button.cris-link-botao", { type: "button", texto: x.nome, onclick: function () { irPara(x.entrada); } }) : el("span", { texto: x.nome }), el("span", { texto: " — " + (x.procedencia || "sem justificativa") })]); }))]));
+      if (semEtapa.length) partes.push(el("div", {}, [el("p.cris-diferencas__secao", { texto: "Poderes com etapa desconhecida (" + semEtapa.length + ")" }),
+        el("ul.cris-diferencas", {}, semEtapa.map(function (k) { return el("li", {}, [el("button.cris-link-botao", { type: "button", texto: nomeDe(k), onclick: function () { irPara(k); } })]); }))]));
+      partes.push(sugestoes ? painelDeSugestoes() : el("div.faixa", {}, [el("button.r-botao.r-botao--mini", { type: "button", texto: "Sugerir associações para as etapas em aberto", onclick: function () { sugestoes = calcularSugestoes(); desenhar(); focar(".cris-sugestoes"); } })]));
+      return UI.painel("Visão da progressão", el("div.pilha", {}, partes));
+    }
+
+    /* Sugestão explícita: para cada etapa de poder sem decisão, o primeiro
+       poder compatível ainda sem etapa. Nada é aplicado sem o botão, e o
+       que for aplicado continua para conferir. */
+    function calcularSugestoes() {
+      var r = rc();
+      var usados = {};
+      Object.keys(r.procedencia).forEach(function (k) { var dp = r.procedencia[k]; if (dp && dp.tipo && dp.tipo !== "desconhecida") usados[k] = true; });
+      var lista = [];
+      entradas().filter(function (v) { return v.tipo === "vaga" && v.vaga && v.vaga.situacao === "desconhecida" && !r.vagas[v.vaga.id] && v.vaga.tipo !== "rituais"; }).forEach(function (v) {
+        var c = (v.vaga.candidatos || []).filter(function (x) { return x.ok && !usados[x.entrada]; })[0];
+        if (!c) return;
+        usados[c.entrada] = true;
+        lista.push({ vaga: v.vaga.id, rotulo: v.rotulo, entrada: c.entrada, nome: c.rotulo });
+      });
+      return lista;
+    }
+
+    function painelDeSugestoes() {
+      return el("div.cris-lote.cris-sugestoes", { tabindex: "-1", role: "region", "aria-label": "Sugestões de associação" }, [
+        el("p.cris-lote__titulo", { texto: sugestoes.length ? "Sugerir estas associações? Elas entram como decisão e continuam para conferir." : "Nenhuma sugestão: não há etapa em aberto com poder compatível sem etapa." }),
+        sugestoes.length ? el("ul.cris-lote__lista", {}, sugestoes.map(function (s) { return el("li", {}, [el("strong", { texto: s.rotulo }), el("span", { texto: " → " + s.nome })]); })) : null,
+        el("p.t-mini", { texto: "A sugestão usa só o que cabe pelas regras na ordem das etapas; ela não sabe a história do personagem." }),
+        el("div.faixa", {}, [
+          sugestoes.length ? el("button.r-botao.r-botao--principal", { type: "button", texto: "Aplicar " + sugestoes.length, onclick: function () {
+            var r = rc();
+            sugestoes.forEach(function (s) { r.procedencia[s.entrada] = { tipo: "vaga", vaga: s.vaga }; delete r.vagas[s.vaga]; });
+            sugestoes = null;
+            recalcular([]);
+          } }) : null,
+          el("button.r-botao.r-botao--fantasma", { type: "button", texto: "Fechar", onclick: function () { sugestoes = null; desenhar(); } }),
+        ]),
+      ]);
+    }
+
+    /* Na conferência final: o que ficou automatizado, extra, sem
+       histórico, como texto ou fora — separados. */
+    function comoFicaAReconstrucao() {
+      var pg = progressao();
+      var ents = entradas();
+      var auto = ents.filter(function (x) { return x.procedencia && (x.procedencia.situacao === "vaga" || x.procedencia.situacao === "dentro" || x.procedencia.situacao === "regras") && x.procedencia.ok; });
+      var extras = ents.filter(function (x) { return x.procedencia && (x.procedencia.situacao === "extra" || x.procedencia.situacao === "mesa"); });
+      var semHist = ents.filter(function (x) { return x.procedencia && x.procedencia.situacao === "desconhecida"; });
+      var texto = ents.filter(function (x) { return (x.tipo === "poder" && /^Habilidade de texto/.test(x.rama)) || (x.procedencia && x.procedencia.situacao === "extraTexto") || (x.destino && x.destino.tipo === "anotacao"); });
+      var fora = ents.filter(function (x) { return (x.destino && x.destino.tipo === "ignorar") || x.vinculo === "ignorar"; });
+      function bloco(titulo, lista, vazio) {
+        return el("div", {}, [el("p.cris-diferencas__secao", { texto: titulo + " (" + lista.length + ")" }),
+          lista.length ? el("ul.cris-diferencas", {}, lista.map(function (x) { return el("li", {}, [el("button.cris-link-botao", { type: "button", texto: x.rotulo, onclick: function () { irPara(x.chave); } }), x.procedencia ? el("span", { texto: " — " + x.procedencia.texto }) : null]); })) : el("p.t-mini", { texto: vazio })]);
+      }
+      var etapasTxt = pg.ativa ? pg.etapas.filter(function (x) { return x.situacao === "reconstruida"; }).length + " de " + pg.etapas.length + " etapas reconstruídas; " +
+        pg.etapas.filter(function (x) { return x.situacao === "vazia"; }).length + " não preenchida(s); " + pg.etapas.filter(function (x) { return x.situacao === "desconhecida"; }).length + " desconhecida(s)." : "Progressão não reconstruída: as etapas até o NEX importado ficam como histórico indisponível.";
+      return UI.painel("Como a ficha fica", el("div.pilha.pilha--curta", {}, [
+        el("p.t-mini", { texto: etapasTxt }),
+        bloco("Automatizado", auto, "Nada associado a etapas ou regras."),
+        bloco("Aquisições extras e concessões da mesa", extras, "Nenhuma."),
+        bloco("Sem histórico conhecido (etapa desconhecida)", semHist, "Nenhuma."),
+        bloco("Preservado como texto", texto, "Nada."),
+        bloco("Descartado por decisão", fora, "Nada."),
+      ]));
     }
 
     /* ------------------------------------------------------------ desenho */
@@ -433,6 +933,7 @@
           onclick: function () { confirmandoSecao = true; editando = ""; painel = null; desenhar(); focar(".cris-lote"); } }) : null,
       ]);
       var corpo = [cabecalho];
+      if (atual.chave === "progressao") corpo.push(visaoDaProgressao());
       if (confirmandoSecao && confirmaveis.length) corpo.push(painelDoLote(confirmaveis, semDestinoAqui, atual));
       corpo.push(el("div.cris-entradas", {}, daSecao.map(cartaoDeEntrada)));
       partes.push(el("section.cris-secao", { "aria-labelledby": "cris-secao-titulo" }, corpo));
@@ -497,13 +998,17 @@
       var est = ok ? ESTADOS.conferida : voltou ? ESTADOS.voltou : (ESTADOS[e.estado] || ESTADOS.sugerido);
       var precisa = !ok && !X().podeConfirmar(e);
       var abertaEdicao = editando === e.chave;
-      var temEscolha = COM_DESTINO[e.tipo] || e.revisoes.some(function (r) { return !r.reconhecer && r.opcoes.length > 1; });
+      var temEscolha = COM_DESTINO[e.tipo] || COM_PAINEL[e.tipo] || e.revisoes.some(function (r) { return !r.reconhecer && r.opcoes.length > 1; });
+      var abertaProc = editandoProc === e.chave;
+      var temProc = !!(e.reconstruir && e.procedencia && e.procedencia.situacao !== "regras" && (e.tipo === "poder" || e.tipo === "ritual"));
       var idTitulo = idSeguro(e.chave) + "-t";
 
       var acoes = [];
       if (!ok && X().podeConfirmar(e)) acoes.push(el("button.r-botao.r-botao--mini.r-botao--principal", { type: "button", texto: "Confirmar", "aria-describedby": idTitulo, onclick: function () { confirmar(e); } }));
-      if (temEscolha && !criada) acoes.push(el("button.r-botao.r-botao--mini" + (precisa ? ".r-botao--principal" : ""), { type: "button", texto: abertaEdicao ? "Fechar" : (precisa ? "Escolher destino" : "Alterar"), "aria-expanded": abertaEdicao ? "true" : "false", "aria-describedby": idTitulo,
-        onclick: function () { if (abertaEdicao) { editando = ""; painel = null; } else { editando = e.chave; painel = { busca: "", selecionado: null, modo: "" }; } confirmandoSecao = false; focoDepois = e.chave; desenhar(); if (!abertaEdicao) focar("#" + idSeguro(e.chave) + " .cris-destino"); } }));
+      if (temEscolha && !criada) acoes.push(el("button.r-botao.r-botao--mini" + (precisa && !temProc ? ".r-botao--principal" : ""), { type: "button", texto: abertaEdicao ? "Fechar" : (COM_PAINEL[e.tipo] ? (e.tipo === "dividida" ? "Partes" : "Escolher") : (precisa && !temProc ? "Escolher destino" : (temProc ? "O que é isso?" : "Alterar"))), "aria-expanded": abertaEdicao ? "true" : "false", "aria-describedby": idTitulo,
+        onclick: function () { if (abertaEdicao) { editando = ""; painel = null; } else { editando = e.chave; editandoProc = ""; painel = { busca: "", selecionado: null, modo: "" }; } confirmandoSecao = false; focoDepois = e.chave; desenhar(); if (!abertaEdicao) focar("#" + idSeguro(e.chave) + " .cris-destino"); } }));
+      if (temProc && !criada) acoes.push(el("button.r-botao.r-botao--mini" + (precisa ? ".r-botao--principal" : ""), { type: "button", texto: abertaProc ? "Fechar" : "Como foi adquirido?", "aria-expanded": abertaProc ? "true" : "false", "aria-describedby": idTitulo,
+        onclick: function () { if (abertaProc) editandoProc = ""; else { editandoProc = e.chave; editando = ""; painel = { busca: "", buscaProc: "", selecionado: null, modo: "" }; } confirmandoSecao = false; focoDepois = e.chave; desenhar(); if (!abertaProc) focar("#" + idSeguro(e.chave) + " .cris-destino"); } }));
       var temDetalhes = e.detalhes.length || (e.dadosCris && (e.dadosCris.descricao || e.dadosCris.texto)) || e.revisoes.some(function (r) { return r.reconhecer; });
       if (temDetalhes) acoes.push(el("button.r-botao.r-botao--mini.r-botao--fantasma", { type: "button", texto: detalhesAbertos[e.chave] ? "Menos detalhes" : "Detalhes", "aria-expanded": detalhesAbertos[e.chave] ? "true" : "false",
         onclick: function () { detalhesAbertos[e.chave] = !detalhesAbertos[e.chave]; focoDepois = e.chave; desenhar(); } }));
@@ -522,12 +1027,15 @@
             e.rotuloDestino ? el("p.t-mini.cris-lado__destino", { texto: e.rotuloDestino }) : null,
           ]),
         ]),
+        linhaDeResumo(e, est),
         voltou ? el("p.t-mini.cris-entrada__voltou", { texto: "Mudou por causa de outra escolha: " + valor(voltou.antes) + " → " + valor(voltou.depois) + "." }) : null,
-        precisa ? el("p.cris-entrada__pergunta", { texto: (e.estado === "conflito" ? "Conflito: " : "") + (e.motivo || "Falta uma correspondência confiável.") + " O que é isso na sua ficha?" })
+        precisa ? el("p.cris-entrada__pergunta", { texto: (e.estado === "conflito" ? "Conflito: " : "") + (e.motivo || "Falta uma correspondência confiável.") +
+          (e.tipo === "vaga" ? " O que veio nesta etapa?" : (e.procedencia && !e.procedencia.ok ? " Como foi adquirido?" : " O que é isso na sua ficha?")) })
           : (e.motivo && !ok ? el("p.t-mini.cris-entrada__motivo", { texto: e.motivo }) : null),
         e.divergente ? el("p.t-mini.t-erro", { texto: "Um valor desta entrada não sai como o esperado na ficha criada: veja os detalhes." }) : null,
         acoes.length ? el("div.faixa.cris-entrada__acoes", {}, acoes) : null,
         abertaEdicao ? painelDeDestino(e) : null,
+        abertaProc ? painelDeProcedencia(e) : null,
         detalhesAbertos[e.chave] ? detalhes(e) : null,
       ]);
     }
@@ -568,6 +1076,9 @@
     }
 
     function painelDeDestino(e) {
+      if (e.tipo === "vaga") return painelDaVaga(e);
+      if (e.tipo === "modo") return painelDoModo(e);
+      if (e.tipo === "dividida") return painelDaDivisao(e);
       var caixa = el("div.cris-destino", { tabindex: "-1", role: "region", "aria-label": "Destino de " + e.rotulo });
       var partes = [el("p.cris-destino__titulo", { texto: COM_DESTINO[e.tipo] ? "O que é isso na sua ficha?" : "Alterar" })];
 
@@ -585,6 +1096,10 @@
         botaoDestino("Não importar", function () { escolherDestino(e, { tipo: "ignorar" }); }),
       ]));
       else if (COM_DESTINO[e.tipo]) partes.push(buscaDeDestino(e));
+      /* v9.16: uma entrada que mistura várias coisas pode ser dividida. */
+      if ((e.tipo === "poder" || e.tipo === "ritual") && !e.parteDe) {
+        partes.push(el("details.cris-detalhes", {}, [el("summary", { texto: "Esta entrada mistura várias coisas? Dividir em partes" }), formularioDeDivisao(e, null)]));
+      }
       partes.push(el("div.faixa", {}, [el("button.r-botao.r-botao--mini.r-botao--fantasma", { type: "button", texto: "Cancelar", onclick: function () { editando = ""; painel = null; focoDepois = e.chave; desenhar(); } })]));
       U.anexar(caixa, partes);
       return caixa;
@@ -818,6 +1333,7 @@
         ]));
       }
       partes.push(resumo(resultado));
+      partes.push(comoFicaAReconstrucao());
       partes.push(diferencas());
       partes.push(el("details.cris-detalhes", { open: mostrarTudo ? true : null }, [
         el("summary", { texto: "Ver detalhes: a comparação completa, avisos e textos guardados" }),

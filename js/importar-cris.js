@@ -176,6 +176,8 @@
     { chave: "inventario", titulo: "Inventário e ataques" },
     { chave: "poderes", titulo: "Poderes e habilidades" },
     { chave: "rituais", titulo: "Rituais e anotações" },
+    /* v9.16: como cada coisa foi adquirida — as etapas da progressão. */
+    { chave: "progressao", titulo: "Progressão e procedência" },
   ];
   var CONFIRMAVEIS = { sugerido: true, escolhido: true };
 
@@ -494,7 +496,37 @@
     if (avisos.some(function (a) { return a.gravidade === "erro"; })) return falhar("atributos", "Atributos essenciais estão corrompidos.");
 
     /* ---------- poderes: reconhecimento ---------- */
-    var poderes = Array.isArray(src.powers) ? src.powers : [];
+    /* v9.16: uma entrada do CRIS que mistura várias coisas pode ser
+       DIVIDIDA em partes (decisoes.componentes): cada parte vira uma
+       entrada própria, com destino e procedência, e o texto original
+       fica como referência na entrada dividida. As chaves das partes são
+       a da entrada mais o id da parte — renomear não perde nada. */
+    var componentesDec = decisoes.componentes && typeof decisoes.componentes === "object" ? decisoes.componentes : {};
+    function partesDe(chave) {
+      var lista = Array.isArray(componentesDec[chave]) ? componentesDec[chave] : [];
+      var vistos = {};
+      return lista.filter(function (c) {
+        if (!c || !/^[A-Za-z0-9_-]{1,20}$/.test(String(c.id || "")) || !U.aparar(c.nome || "", 120) || vistos[c.id]) return false;
+        vistos[c.id] = true;
+        return true;
+      }).slice(0, 12);
+    }
+    function expandir(lista, prefixo, secaoM, tipoM) {
+      var saida = [];
+      lista.forEach(function (p, i) {
+        var chave = prefixo + (p.id || i);
+        var partes = partesDe(chave);
+        if (partes.length < 2) { saida.push(p); return; }
+        meta(chave, { secao: secaoM, tipo: "dividida", subtipo: tipoM, rotulo: String(p.name || "Entrada"), estado: "escolhido", explicita: true,
+          cris: textoSeguro(p.description, 160) || "sem descrição", dadosCris: { nome: String(p.name || ""), descricao: textoSeguro(p.description, 8000) },
+          partes: partes.map(function (c) { return { id: c.id, nome: U.aparar(c.nome, 120), chave: chave + "~" + c.id }; }),
+          motivo: "" });
+        partes.forEach(function (c) { saida.push(Object.assign({}, p, { id: String(p.id || i) + "~" + c.id, name: U.aparar(c.nome, 120), __parteDe: chave })); });
+      });
+      return saida;
+    }
+    var poderes = expandir(Array.isArray(src.powers) ? src.powers : [], "poder:", "poderes", "poder");
+    var ritosCris = expandir(Array.isArray(src.rituals) ? src.rituals : [], "ritual:", "rituais", "ritual");
     var nomesDePoderes = poderes.map(function (p) { return chaveDeTexto(p.name); });
     var porNome = {};
     P.TODOS.forEach(function (e) {
@@ -985,9 +1017,21 @@
       var saida = {};
       var algum = false;
       (e.opcoes || []).forEach(function (op) {
-        if (op.tipo !== "pericia" && op.tipo !== "atributo") return;
+        if (op.tipo !== "pericia" && op.tipo !== "atributo" && op.tipo !== "item") return;
         var efeitos = (e.efeitos || []).filter(function (ef) { return ef.opcao === op.chave && !EFEITOS_DO_RETRATO[ef.tipo]; });
         if (!efeitos.length) return;
+        /* v9.16: o item escolhido (Mochila de Utilidades…), pela chave
+           estável da entrada do inventário — o id do item nasce de novo a
+           cada conversão. */
+        if (op.tipo === "item") {
+          var itensOp = infoItens.filter(function (x) { return x.identificacao !== "ataqueSemItem"; });
+          var vItem = revisao("opcao:" + (p.id || i) + ":" + op.chave, e.nome + " · " + (op.rotulo || op.chave),
+            "O CRIS não guarda qual item esta escolha usa; sem ela, o efeito que depende dela fica de fora.",
+            [{ valor: "", rotulo: "Não informado (sem o efeito)" }].concat(itensOp.map(function (x) { return { valor: x.chave, rotulo: x.item.nome }; })), "");
+          var achadoI = itensOp.filter(function (x) { return x.chave === vItem; })[0];
+          if (achadoI) { saida[op.chave] = achadoI.item.id; algum = true; }
+          return;
+        }
         var lista, sugestao = "", evidencia = "";
         if (op.tipo === "pericia") {
           lista = (op.entre && op.entre.length ? op.entre : C.PERICIAS.map(function (x) { return x.chave; }));
@@ -1026,8 +1070,8 @@
       var chaveP = "poder:" + (p.id || i);
       var dP = destinoDe(chaveP);
       var mP = meta(chaveP, { secao: "poderes", tipo: "poder", rotulo: String(p.name || "Poder"), refAquisicao: refAq,
-        cris: (p.element ? p.element + " · " : "") + (textoSeguro(p.description, 160) || "sem descrição"),
-        dadosCris: { nome: String(p.name || ""), descricao: textoSeguro(p.description, 8000), elemento: p.element || "" }, destino: dP, explicita: !!dP });
+        cris: (p.__parteDe ? "Parte de “" + metas[p.__parteDe].rotulo + "” · " : "") + (p.element ? p.element + " · " : "") + (textoSeguro(p.description, 160) || "sem descrição"),
+        dadosCris: { nome: String(p.name || ""), descricao: textoSeguro(p.description, 8000), elemento: p.element || "" }, destino: dP, explicita: !!dP, parteDe: p.__parteDe || "" });
       if (dP && (dP.tipo === "anotacao" || dP.tipo === "ignorar")) {
         mP.estado = "escolhido";
         poderesFora++;
@@ -1436,12 +1480,12 @@
     /* ---------- rituais ---------- */
     ficha.rituais.itens = [];
     var ritualDaLinha = {};
-    (Array.isArray(src.rituals) ? src.rituals : []).forEach(function (r, i) {
+    ritosCris.forEach(function (r, i) {
       var chaveR = "ritual:" + (r.id || i);
       var dR = destinoDe(chaveR);
       var circ = numeroOuNulo(r.circle);
-      var mR = meta(chaveR, { secao: "rituais", tipo: "ritual", rotulo: String(r.name || "Ritual"),
-        cris: (circ !== null ? circ + "º círculo" : "círculo —") + " · " + (r.element || "elemento —") + (r.execution ? " · " + r.execution : "") + (r.range ? " · " + r.range : ""),
+      var mR = meta(chaveR, { secao: "rituais", tipo: "ritual", rotulo: String(r.name || "Ritual"), parteDe: r.__parteDe || "",
+        cris: (r.__parteDe ? "Parte de “" + metas[r.__parteDe].rotulo + "” · " : "") + (circ !== null ? circ + "º círculo" : "círculo —") + " · " + (r.element || "elemento —") + (r.execution ? " · " + r.execution : "") + (r.range ? " · " + r.range : ""),
         dadosCris: { nome: String(r.name || ""), circulo: circ, elemento: String(r.element || ""), execucao: String(r.execution || ""), alcance: String(r.range || ""), alvo: String(r.target || ""), area: String(r.area || ""),
           duracao: String(r.duration || ""), resistencia: String(r.save || r.resistance || ""), descricao: textoSeguro(r.description, 8000), custo: r.cost || "" },
         destino: dR, explicita: !!dR });
@@ -1571,6 +1615,269 @@
         dc.duracao ? "Duração: " + dc.duracao : "", dc.resistencia ? "Resistência: " + dc.resistencia : "", dc.custo ? "Custo: " + dc.custo : "", dc.descricao].filter(Boolean).join("\n");
     }
 
+
+    /* ---------- reconstrução da progressão (v9.16) ----------
+       "O que é isso?" já foi respondido acima (destino de cada entrada).
+       Aqui entra a segunda pergunta: "como foi adquirido?". Cada resposta
+       vira a estrutura NATIVA correspondente — a escolha de uma etapa
+       (`ordem.escolhas`, pelo motor de progressão), uma aquisição extra
+       (`ordem.extras`) ou a procedência anotada — e a aquisição importada
+       que ela representa sai da conta (uma fonte mecânica só). Nada é
+       conferido sozinho: a revisão mostra cada vínculo e a pessoa confirma.
+
+       decisoes.reconstrucao = {
+         ativa: true,
+         procedencia: { chaveDaEntrada: { tipo: "vaga", vaga } | { tipo: "dentro", entrada }
+           | { tipo: "parte", entrada } | { tipo: "extra", procedencia, quando, depende, excecao }
+           | { tipo: "item", item } | { tipo: "desconhecida" } | { tipo: "mesa" } },
+         vagas: { idDaVaga: { tipo: "atributo", valor, pericia } | { tipo: "pericias", pericias }
+           | { tipo: "vazia" } | { tipo: "desconhecida" } },
+       } */
+    var RC = decisoes.reconstrucao && typeof decisoes.reconstrucao === "object" ? decisoes.reconstrucao : {};
+    var procDec = RC.procedencia && typeof RC.procedencia === "object" ? RC.procedencia : {};
+    var vagasDec = RC.vagas && typeof RC.vagas === "object" ? RC.vagas : {};
+    var reconstruir = RC.ativa === true && !!E.reconstruirVaga && perfil !== "mundano";
+    var ctxR = { inventario: ficha.inventario, rituais: ficha.rituais.itens };
+    var aqPorEntrada = {};
+    ordemMetas.forEach(function (k2) {
+      var m2 = metas[k2];
+      if (!m2.refAquisicao) return;
+      var aq2 = aquisicoes.filter(function (a2) { return a2.ref === m2.refAquisicao; })[0];
+      if (aq2) { aq2.entrada = k2; aqPorEntrada[k2] = aq2; }
+    });
+    var procedencias = {};        // chave da entrada → { texto, situacao, vaga, ok, motivos }
+    var composicoes = {};         // chave da entrada → texto da composição (entra na assinatura)
+    var etapasRec = [];           // a visão da progressão
+    var extrasRec = [];
+    var rotuloDaEtapa = {};
+    var ritualEntradaPorIndice = {};
+    ordemMetas.forEach(function (k2) { if (metas[k2].tipo === "ritual" && typeof metas[k2].ritualIndice === "number") ritualEntradaPorIndice[metas[k2].ritualIndice] = k2; });
+
+    if (reconstruir) {
+      o.importacao.reconstrucao = {
+        versao: 1, vagas: {}, absorvidos: {},
+        retrato: { atributos: JSON.parse(JSON.stringify(o.atributos)), pericias: JSON.parse(JSON.stringify(o.pericias)) },
+      };
+      var historicas = E.etapasDoHistorico(o, ctxR);
+      historicas.forEach(function (h) { rotuloDaEtapa[h.id] = h.rotuloEtapa + " → " + h.rotulo; });
+      var porVaga = {};
+      var dentroDe = {};
+      function nomeDaEntrada(k2) { return metas[k2] ? metas[k2].rotulo : k2; }
+      function marcar(k2, texto, situacao, extra) { procedencias[k2] = Object.assign({ texto: texto, situacao: situacao, ok: true, motivos: [] }, extra || {}); }
+
+      /* 1. As respostas por entrada. */
+      ordemMetas.forEach(function (k2) {
+        var m2 = metas[k2];
+        if (m2.tipo !== "poder" && m2.tipo !== "ritual") return;
+        if (m2.destino && (m2.destino.tipo === "anotacao" || m2.destino.tipo === "ignorar")) return;
+        var dp = procDec[k2] && typeof procDec[k2] === "object" ? procDec[k2] : null;
+        var aq2 = aqPorEntrada[k2];
+        if (m2.tipo === "poder" && aq2 && aq2.representacao === "regras" && (!dp || dp.tipo === "regras")) {
+          marcar(k2, "Dado pelas regras (" + (aq2.procedencia || "classe ou trilha") + ")", "regras");
+          return;
+        }
+        if (!dp || dp.tipo === "desconhecida") {
+          marcar(k2, "Aquisição conhecida, etapa desconhecida", "desconhecida", { decidida: !!dp });
+          if (aq2 && dp) aq2.procedencia = "etapa desconhecida (conferido na importação)";
+          return;
+        }
+        if (dp.tipo === "vaga") {
+          var h = historicas.filter(function (x) { return x.id === dp.vaga; })[0];
+          if (!h) { marcar(k2, "Etapa que não existe nesta ficha", "conflito", { ok: false, motivos: ["A etapa escolhida não faz parte do histórico importado com a classe, a trilha e as regras atuais."] }); return; }
+          (porVaga[h.id] = porVaga[h.id] || []).push(k2);
+          marcar(k2, rotuloDaEtapa[h.id], "vaga", { vaga: h.id, decidida: true });
+          return;
+        }
+        if (m2.tipo === "ritual" && dp.tipo === "mesa") {
+          marcar(k2, "Concessão da mesa (fora da progressão)", "mesa", { decidida: true });
+          var rit = typeof m2.ritualIndice === "number" ? ficha.rituais.itens[m2.ritualIndice] : null;
+          if (rit) {
+            if (!Array.isArray(o.registrosDeRitual)) o.registrosDeRitual = [];
+            o.registrosDeRitual.push({ id: U.uuid(), tipo: "mesa", ritualId: rit.id, nome: rit.nome, circulo: (rit.ordem && rit.ordem.circulo) || 0, nota: "Importação do CRIS: concedido pela mesa.", registradoEm: U.agoraISO() });
+          }
+          return;
+        }
+        if (m2.tipo !== "poder" || !aq2) { marcar(k2, "Aquisição conhecida, etapa desconhecida", "desconhecida"); return; }
+        if (dp.tipo === "dentro" && metas[dp.entrada] && dp.entrada !== k2) {
+          (dentroDe[dp.entrada] = dentroDe[dp.entrada] || []).push(k2);
+          marcar(k2, "Escolha interna de “" + nomeDaEntrada(dp.entrada) + "”", "dentro", { pai: dp.entrada, decidida: true });
+          return;
+        }
+        if (dp.tipo === "parte" && aqPorEntrada[dp.entrada] && dp.entrada !== k2) {
+          aq2.representacao = "parte"; aq2.parteDe = aqPorEntrada[dp.entrada].ref; delete aq2.vaga;
+          if (m2.habilidadeId) {
+            var hb = H.achar(ficha.habilidades, m2.habilidadeId);
+            H.remover(ficha.habilidades, m2.habilidadeId);
+            preservados.push({ titulo: "Parte de " + nomeDaEntrada(dp.entrada) + ": " + m2.rotulo, texto: (hb && hb.texto) || (m2.dadosCris && m2.dadosCris.descricao) || "", deEntrada: k2 });
+          }
+          marcar(k2, "Parte da mesma aquisição de “" + nomeDaEntrada(dp.entrada) + "”", "parte", { pai: dp.entrada, decidida: true });
+          return;
+        }
+        if ((dp.tipo === "extra" || dp.tipo === "item") && aq2.chave && P.poder(aq2.chave)) {
+          var itemId = dp.tipo === "item" && metas[dp.item] ? metas[dp.item].itemId : "";
+          var conv = E.converterEmExtra(o, {
+            tipo: "poder", chave: aq2.chave, opcoes: aq2.opcoes || {},
+            procedencia: dp.tipo === "item" ? "concedido por " + (metas[dp.item] ? metas[dp.item].rotulo : "item") : U.aparar(dp.procedencia || "", 200) || "concessão extra (importação do CRIS)",
+            quando: dp.quando !== undefined && dp.quando !== null && dp.quando !== "" ? { degrau: Number(dp.quando) } : null,
+            depende: itemId ? { tipo: "item", item: itemId, emUso: dp.emUso !== false } : (dp.depende && typeof dp.depende === "object" ? dp.depende : null),
+            excecao: dp.excecao && U.aparar(dp.excecao, 300) ? { motivo: U.aparar(dp.excecao, 300) } : null,
+            importacao: aq2.ref,
+          }, ctxR);
+          var x = conv.ok ? conv.extra : null;
+          if (x) {
+            extrasRec.push({ ref: x.ref, entrada: k2 });
+            marcar(k2, (dp.tipo === "item" ? "Concedido por item: " : "Aquisição extra: ") + x.procedencia, "extra", { extra: x.ref, decidida: true });
+          }
+          return;
+        }
+        if (dp.tipo === "extra" || dp.tipo === "item") {
+          aq2.procedencia = ("aquisição extra: " + (U.aparar(dp.procedencia || "", 140) || "sem justificativa")).slice(0, 160);
+          marcar(k2, "Aquisição extra (só texto: sem poder do catálogo, sem efeito automático)", "extraTexto", { decidida: true });
+          return;
+        }
+        marcar(k2, "Aquisição conhecida, etapa desconhecida", "desconhecida");
+      });
+
+      /* 2. Opções internas: a entrada de dentro entra na opção compatível
+         da entrada de fora (Transcender → poder; Expansão de Conhecimento
+         → poder de outra classe; Versatilidade → trilha). */
+      function encaixar(e, opcoes, filhoK) {
+        var aqF = aqPorEntrada[filhoK];
+        var ef = aqF && aqF.chave ? P.poder(aqF.chave) : null;
+        if (!ef) return { ok: false, motivo: "“" + nomeDaEntrada(filhoK) + "” não é um poder do catálogo." };
+        var alvo = (e.opcoes || []).filter(function (op) {
+          if (opcoes[op.chave] && !(opcoes[op.chave].valor === ef.chave)) return false;
+          if (op.tipo === "poderParanormal") return ef.tipo === "paranormal";
+          if (op.tipo === "poderOutraClasse") return ef.tipo === "classe" && !P.pertenceAClasse(ef, classe);
+          if (op.tipo === "trilhaOutra") return ef.tipo === "trilha" && P.primeiraDaTrilha(ef.trilha) && P.primeiraDaTrilha(ef.trilha).chave === ef.chave;
+          return false;
+        })[0];
+        if (!alvo) return { ok: false, motivo: e.nome + " não tem uma escolha interna que aceite " + ef.nome + "." };
+        opcoes[alvo.chave] = alvo.tipo === "trilhaOutra" ? { valor: ef.trilha, opcoes: aqF.opcoes || {} } : { valor: ef.chave, opcoes: aqF.opcoes || {} };
+        return { ok: true, ref: aqF.ref, opcoes: opcoes[alvo.chave] };
+      }
+      function montarOpcoes(k2, profundidade) {
+        var aq2 = aqPorEntrada[k2];
+        var e = aq2 && aq2.chave ? P.poder(aq2.chave) : null;
+        var opcoes = JSON.parse(JSON.stringify((aq2 && aq2.opcoes) || {}));
+        var refs = aq2 ? [aq2.ref] : [];
+        (dentroDe[k2] || []).forEach(function (fk) {
+          if (!e || profundidade > 3) return;
+          var sub = montarOpcoes(fk, profundidade + 1);
+          var aqF = aqPorEntrada[fk];
+          if (aqF) aqF.opcoes = sub.opcoes;
+          var r2 = encaixar(e, opcoes, fk);
+          if (!r2.ok) { procedencias[fk].ok = false; procedencias[fk].motivos.push(r2.motivo); return; }
+          refs = refs.concat(sub.refs);
+        });
+        return { opcoes: opcoes, refs: refs, entrada: e };
+      }
+      function candidatoParaVaga(v, e, opcoes) {
+        var paranormal = e.tipo === "paranormal";
+        var viaTranscender = { valor: "transcender", opcoes: { poder: { valor: e.chave, opcoes: opcoes } } };
+        switch (v.tipo) {
+          case "poderClasse": return paranormal ? viaTranscender : { valor: e.chave, opcoes: opcoes };
+          case "versatilidade":
+            if (e.tipo === "trilha" && P.primeiraDaTrilha(e.trilha) && P.primeiraDaTrilha(e.trilha).chave === e.chave) return { valor: "trilha", opcoes: { trilha: { valor: e.trilha, opcoes: opcoes } } };
+            return { valor: "poderClasse", opcoes: { poder: paranormal ? viaTranscender : { valor: e.chave, opcoes: opcoes } } };
+          case "transcenderExposicao": case "transcenderItem": return paranormal ? viaTranscender : null;
+          case "trilhaElite": return { valor: e.chave, opcoes: opcoes };
+          default: return null;
+        }
+      }
+
+      /* 3. Etapa por etapa, na ordem da progressão: cada escolha confere os
+         requisitos no personagem daquela etapa, com as anteriores já
+         reconstruídas. */
+      historicas.slice().sort(function (a, b) { return a.vaga.ordem - b.vaga.ordem; }).forEach(function (h) {
+        var lista = porVaga[h.id] || [];
+        var dv = vagasDec[h.id] && typeof vagasDec[h.id] === "object" ? vagasDec[h.id] : null;
+        var info = { id: h.id, rotulo: rotuloDaEtapa[h.id], tipo: h.tipo, entradas: lista.slice(), situacao: "desconhecida", motivos: [], decidida: !!dv || lista.length > 0 };
+        etapasRec.push(info);
+        if (h.situacao !== "desconhecida") {
+          /* Já registrada antes (a arma favorita confirmada na revisão). */
+          info.situacao = h.situacao === "reconstruida" ? "reconstruida" : h.situacao;
+          info.descricao = h.descricao;
+          info.decidida = true;
+          return;
+        }
+        var res = null;
+        if (h.tipo === "rituais") {
+          if (!lista.length) { if (dv && (dv.tipo === "vazia" || dv.tipo === "desconhecida")) { E.marcarVaga(o, h.id, dv.tipo, ctxR); info.situacao = dv.tipo; } return; }
+          var vinculos = lista.map(function (k2) { var rit = ficha.rituais.itens[metas[k2].ritualIndice]; return rit ? E.vinculoDeRitual(rit) : null; }).filter(Boolean);
+          res = E.reconstruirVaga(o, h.id, { rituais: vinculos }, { procedencia: "cris:" + lista.join(",").slice(0, 150) }, ctxR);
+        } else if (lista.length) {
+          var k2 = lista[0];
+          lista.slice(1).forEach(function (outra) {
+            procedencias[outra].ok = false;
+            procedencias[outra].situacao = "conflito";
+            procedencias[outra].motivos.push(info.rotulo + " já está ocupada por “" + nomeDaEntrada(k2) + "”. Escolha outra etapa, marque como extra ou como etapa desconhecida.");
+          });
+          var mo = montarOpcoes(k2, 0);
+          var cand = mo.entrada ? candidatoParaVaga(h.vaga, mo.entrada, mo.opcoes) : null;
+          if (!cand) {
+            procedencias[k2].ok = false;
+            procedencias[k2].situacao = "conflito";
+            procedencias[k2].motivos.push(mo.entrada ? info.rotulo + " não concede " + (mo.entrada.tipo === "paranormal" ? "poder paranormal" : "esse tipo de poder") + "." : "Sem poder do catálogo, a entrada não ocupa uma etapa: associe-a a um poder na pergunta “O que é isso?”.");
+            return;
+          }
+          info.entradas = [k2];
+          res = E.reconstruirVaga(o, h.id, cand, { aquisicoes: mo.refs, procedencia: "cris:" + k2 }, ctxR);
+          (dentroDe[k2] || []).forEach(function (fk) { if (procedencias[fk] && procedencias[fk].ok) procedencias[fk].vaga = h.id; });
+        } else if (dv && dv.tipo === "atributo") {
+          res = E.reconstruirVaga(o, h.id, { valor: dv.valor, opcoes: dv.pericia ? { pericia: dv.pericia } : {} }, { procedencia: "cris:vaga" }, ctxR);
+        } else if (dv && dv.tipo === "pericias") {
+          res = E.reconstruirVaga(o, h.id, { valor: "", opcoes: { pericias: (Array.isArray(dv.pericias) ? dv.pericias : []).filter(function (p) { return C.pericia(p); }) } }, { procedencia: "cris:vaga" }, ctxR);
+        } else if (dv && (dv.tipo === "vazia" || dv.tipo === "desconhecida")) {
+          E.marcarVaga(o, h.id, dv.tipo, ctxR);
+          info.situacao = dv.tipo;
+          return;
+        } else return;
+        if (!res || !res.ok) { info.situacao = "conflito"; info.motivos.push((res && res.motivo) || "Não foi possível registrar a escolha."); return; }
+        var av = res.avaliacao;
+        info.situacao = !res.registro ? "desconhecida" : (av && av.valido && av.completo ? "reconstruida" : (av && !av.valido ? "invalida" : "incompleta"));
+        info.motivos = (av ? (av.motivos || []).concat((av.faltam || []).map(function (f) { return "Falta: " + f + "."; })) : []);
+        res.diferencas.forEach(function (df) {
+          info.motivos.push("Depois da reconstrução, " + df.nome + " fica " + df.obtido + " (no CRIS: " + df.esperado + "). A diferença precisa de explicação: outra etapa, um extra ou a base de criação.");
+        });
+        info.descricao = res.registro ? E.descrever(o, res.registro) : "";
+        info.entradas.forEach(function (k3) {
+          if (!procedencias[k3]) return;
+          if (info.situacao !== "reconstruida") { procedencias[k3].ok = false; procedencias[k3].motivos = procedencias[k3].motivos.concat(info.motivos); }
+        });
+      });
+
+      /* Os extras: requisitos conferidos pelo motor, na etapa deles. */
+      var estFinal = E.estado(o, ctxR);
+      extrasRec.forEach(function (x) {
+        var av = (estFinal.extras || []).filter(function (y) { return y.ref === x.ref; })[0];
+        if (!av || !procedencias[x.entrada]) return;
+        if (!av.vale) {
+          procedencias[x.entrada].ok = false;
+          procedencias[x.entrada].motivos = (av.motivos || []).concat((av.faltam || []).map(function (f) { return "Falta: " + f + "."; })).concat(av.suspenso ? [av.dependencia] : []);
+          if (av.motivos && av.motivos.length && !av.mantidaPorExcecao) procedencias[x.entrada].motivos.push("Um extra não fica válido só por ser extra: para manter mesmo assim, registre a exceção com o motivo.");
+        }
+      });
+
+      /* Compatibilidade de cada etapa com cada poder, para o seletor. */
+      var poderesParaVaga = ordemMetas.filter(function (k2) { return metas[k2].tipo === "poder" && aqPorEntrada[k2] && aqPorEntrada[k2].chave && P.poder(aqPorEntrada[k2].chave) && aqPorEntrada[k2].representacao !== "regras"; });
+      var rituaisParaVaga = ordemMetas.filter(function (k2) { return metas[k2].tipo === "ritual" && typeof metas[k2].ritualIndice === "number"; });
+      etapasRec.forEach(function (info) {
+        if (info.tipo === "rituais" && E.compatibilidadeDeRituais) {
+          var its = rituaisParaVaga.map(function (k2) { return { entrada: k2, ritual: ficha.rituais.itens[metas[k2].ritualIndice] }; });
+          var cr = E.compatibilidadeDeRituais(o, info.id, its.map(function (x) { return x.ritual; }), ctxR);
+          info.quantidade = cr.quantidade;
+          info.candidatos = its.map(function (x, n) { return { entrada: x.entrada, ok: cr.itens[n].ok, motivos: cr.itens[n].motivos, ocupada: info.entradas.indexOf(x.entrada) >= 0 }; });
+          return;
+        }
+        if (info.tipo === "rituais" || !E.compatibilidadeNaVaga) return;
+        var itens = poderesParaVaga.map(function (k2) { return { entrada: k2, chave: aqPorEntrada[k2].chave, ref: aqPorEntrada[k2].ref, opcoes: aqPorEntrada[k2].opcoes || {} }; });
+        var comp = E.compatibilidadeNaVaga(o, info.id, itens, ctxR);
+        info.candidatos = itens.map(function (it, n) { return { entrada: it.entrada, ok: comp[n].ok, motivos: comp[n].motivos, via: comp[n].via || "", ocupada: info.entradas.indexOf(it.entrada) >= 0 }; })
+          .filter(function (c2) { return c2.via !== "nao"; });
+      });
+    }
+
     /* ---------- conferência ----------
        Cada valor que o CRIS mostra vira uma linha: o que o CRIS mostra, o
        que o R.A.M.A. calcula com o que foi reconhecido (antes de ajuste),
@@ -1686,6 +1993,11 @@
       var motivo = r[0] === "san" && origem === "cultistaarrependido" && obs > rama
         ? "o R.A.M.A. aplica a metade da Sanidade da classe (Traços do Outro Lado); o CRIS não"
         : "máximo observado no CRIS; composição desconhecida";
+      /* v9.16: o que as etapas reconstruídas mudam no recurso (Transcender
+         não ganha Sanidade naquele aumento de NEX) fica à vista. */
+      var daReconstrucao = reconstruir ? (c[r[0]].parcelas || []).filter(function (pc) { return pc.rotulo === "Transcender"; }) : [];
+      if (daReconstrucao.length) motivo += "; as etapas reconstruídas aplicam " + daReconstrucao.map(function (pc) { return pc.rotulo + " " + sinal(pc.valor) + " (" + pc.origem + ")"; }).join(", ") +
+        " — se o CRIS já descontava isso de outro jeito, mantenha o valor do CRIS";
       var escolha = revisao("maximo:" + r[0], r[2] + " máximo", "O CRIS mostra " + obs + "; o R.A.M.A. calcula " + rama + " (" + motivo + ").",
         [{ valor: "cris", rotulo: "Manter " + obs + " (ajuste importado " + sinal(obs - rama) + ")" }, { valor: "rama", rotulo: "Usar o cálculo do R.A.M.A. (" + rama + ")" }], "cris");
       if (escolha === "cris") ajusteDaOrdem(r[0], obs - rama, motivo);
@@ -1835,9 +2147,14 @@
       if (obsA === null) return;
       var efetivo = R.atributo(o, a[0]);
       var foraDoLimite = obsA < 0 || obsA > 5;
-      linha({ entrada: "atr:" + a[0], grupo: "Atributos", campo: a[2], cris: obsA, rama: efetivo, deveBater: !foraDoLimite && efetivo === o.atributos[a[0]],
-        motivo: foraDoLimite ? "o R.A.M.A. limita o atributo de 0 a 5" : (efetivo !== o.atributos[a[0]] ? "o R.A.M.A. soma efeitos ao valor da ficha (" + o.atributos[a[0]] + ")" : "igual"),
+      /* v9.16: reconstruída, a base é a de criação e as etapas somam. */
+      var compA = reconstruir && R.composicaoDoAtributo ? R.composicaoDoAtributo(o, a[0]) : null;
+      var textoComp = compA ? "criação " + o.atributos[a[0]] + compA.parcelas.slice(1).map(function (pc) { return " + " + pc.rotulo + (pc.origem ? " (" + pc.origem + ")" : "") + " " + (pc.valor >= 0 ? "+" : "") + pc.valor; }).join("") : "";
+      if (compA) composicoes["atr:" + a[0]] = textoComp;
+      linha({ entrada: "atr:" + a[0], grupo: "Atributos", campo: a[2], cris: obsA, rama: efetivo, deveBater: !foraDoLimite && (reconstruir || efetivo === o.atributos[a[0]]),
+        motivo: foraDoLimite ? "o R.A.M.A. limita o atributo de 0 a 5" : (compA ? textoComp + (o.atributos[a[0]] > 3 ? " — acima de 3 na criação: talvez falte uma etapa ou um extra" : "") : (efetivo !== o.atributos[a[0]] ? "o R.A.M.A. soma efeitos ao valor da ficha (" + o.atributos[a[0]] + ")" : "igual")),
         ler: function (x) { return R.atributo(x.o, a[0]); } });
+      if (compA) linha({ entrada: "atr:" + a[0], grupo: "Atributos", campo: a[2] + " · base de criação", tipo: "info", cris: "—", rama: o.atributos[a[0]], motivo: "o valor do CRIS menos o que as etapas reconstruídas dão", ler: function (x) { return x.o.atributos[a[0]]; } });
     });
 
     [["pv", "currentPv", "PV"], ["pe", "currentPe", "PE"], ["san", "currentSan", "SAN"], ["pd", "currentPd", "PD"]].forEach(function (r) {
@@ -1953,10 +2270,10 @@
     linha({ grupo: "Contagens", campo: "Poderes e habilidades", cris: poderes.length - poderesFora, rama: aquisicoes.length, deveBater: !poderesForaDaConta,
       motivo: (poderesForaDaConta ? poderesForaDaConta + " repetido(s) não repetível(is) ficou(aram) de fora" : "um registro por poder do CRIS") + (poderesFora ? "; " + poderesFora + " em Anotações ou fora, por escolha" : ""),
       ler: function (x) { return x.o.importacao ? x.o.importacao.aquisicoes.length : 0; } });
-    linha({ grupo: "Contagens", campo: "Rituais", cris: (Array.isArray(src.rituals) ? src.rituals.length : 0) - ritosFora, rama: ficha.rituais.itens.length, deveBater: true,
+    linha({ grupo: "Contagens", campo: "Rituais", cris: ritosCris.length - ritosFora, rama: ficha.rituais.itens.length, deveBater: true,
       motivo: "um ritual por linha do CRIS" + (ritosFora ? "; " + ritosFora + " em Anotações ou fora, por escolha" : ""), ler: function (x) { return x.f.rituais.itens.length; } });
 
-    var REPRESENTA = { importada: "efeito aplicado", regras: "dado pelas regras", item: "concedido por item", texto: "só texto" };
+    var REPRESENTA = { importada: "efeito aplicado", regras: "dado pelas regras", item: "concedido por item", texto: "só texto", progressao: "escolha da progressão", extra: "aquisição extra", parte: "parte de outra aquisição" };
     var entradaDaAquisicao = {};
     ordemMetas.forEach(function (k2) { if (metas[k2].refAquisicao) entradaDaAquisicao[metas[k2].refAquisicao] = k2; });
     aquisicoes.forEach(function (aq, j) {
@@ -1971,7 +2288,7 @@
       var el2 = r2.ordem && r2.ordem.elemento ? (RS.nomeDoElemento ? RS.nomeDoElemento(r2.ordem.elemento) : r2.ordem.elemento) : String(r2.elemento || "—");
       return (circ2 ? circ2 + "º" : "—") + " · " + el2;
     }
-    (Array.isArray(src.rituals) ? src.rituals : []).forEach(function (r2, j) {
+    ritosCris.forEach(function (r2, j) {
       var circC = numeroOuNulo(r2.circle);
       if (!ritualDaLinha[j]) return;
       var posRit = ritualDaLinha[j] - 1;
@@ -2050,7 +2367,9 @@
       ajustes: ajustesDoc,
       criticos: criticos,
       rituais: ficha.rituais.itens.map(function (r) { return r.id; }),
+      reconstrucao: o.importacao.reconstrucao || undefined,
     };
+    if (!o.importacao.reconstrucao) delete o.importacao.reconstrucao;
 
     /* A ficha passa pela normalização de sempre: o que sair daqui é o que
        o R.A.M.A. grava, abre e exporta. */
@@ -2123,7 +2442,27 @@
         ["def:defesa", "recursos", "Defesa"], ["def:bloqueio", "recursos", "Bloqueio"], ["def:esquiva", "recursos", "Esquiva"], ["def:deslocamento", "recursos", "Deslocamento"],
         ["rec:limitePe", "recursos", "Limite de PE por turno"], ["rec:carga", "recursos", "Carga"],
         ["inv:favorita", "inventario", "Arma favorita"], ["rit:dt", "rituais", "DT dos rituais"],
+        ["progressao:modo", "progressao", "Reconstrução da progressão"],
       ];
+      /* v9.16: a decisão de reconstruir e uma entrada por etapa do retrato. */
+      meta("progressao:modo", { secao: "progressao", tipo: "modo", rotulo: "Reconstrução da progressão", estado: RC.ativa !== undefined ? "escolhido" : "sugerido",
+        cris: "O CRIS guarda o estado atual, sem a ordem em que as coisas vieram.",
+        modoTexto: reconstruir
+          ? "Reconstruir a progressão: cada etapa até " + (marco.modo === "nivel" ? "o nível " + marco.nivel : marco.modo === "estagio" ? "o " + marco.estagio + "º estágio" : "NEX " + marco.nex + "%") + " recebe a escolha de verdade, ou fica como etapa desconhecida"
+          : "Só o estado atual: as etapas até " + (marco.modo === "nivel" ? "o nível " + marco.nivel : marco.modo === "estagio" ? "o " + marco.estagio + "º estágio" : "NEX " + marco.nex + "%") + " ficam como histórico indisponível",
+        motivo: reconstruir ? "" : "Para associar cada poder, aumento e ritual à etapa em que veio, escolha “Reconstruir a progressão”." });
+      etapasRec.forEach(function (i2) {
+        var nomes = i2.entradas.map(function (k3) { return "“" + (metas[k3] ? metas[k3].rotulo : k3) + "”"; }).join(", ");
+        var problema = i2.situacao === "invalida" || i2.situacao === "incompleta" || i2.situacao === "conflito";
+        meta("vaga:" + i2.id, { secao: "progressao", tipo: "vaga", rotulo: i2.rotulo,
+          cris: i2.entradas.length ? "Do CRIS: " + nomes : "—",
+          estado: problema ? "conflito" : (i2.decidida ? "escolhido" : "sugerido"),
+          motivo: problema ? i2.motivos.join(" ") : (i2.decidida ? "" : "Sem informação: fica como etapa desconhecida até você dizer o que veio aqui."),
+          vagaInfo: i2,
+          vagaTexto: i2.situacao === "reconstruida" || i2.situacao === "invalida" || i2.situacao === "incompleta" ? (i2.descricao || "—") + (problema ? " (" + (i2.situacao === "incompleta" ? "incompleta" : "não vale") + ")" : "")
+            : i2.situacao === "vazia" ? "Não preenchida: vira pendência normal na Progressão"
+            : i2.situacao === "conflito" ? "Conflito" : "Etapa desconhecida (histórico indisponível)" });
+      });
       var peso = {};
       FIXAS.forEach(function (f2, n2) { peso[f2[0]] = n2; });
       var linhasPor = {};
@@ -2198,7 +2537,7 @@
         if (mods.length) partes.push(mods.join(", "));
         return partes.join(" · ");
       }
-      var REP = { importada: "efeito aplicado", regras: "dado pelas regras", item: "concedido por item", texto: "habilidade de texto" };
+      var REP = { importada: "efeito aplicado", regras: "dado pelas regras", item: "concedido por item", texto: "habilidade de texto", progressao: "escolha da progressão", extra: "aquisição extra", parte: "parte de outra aquisição" };
 
       var lista = ordemMetas.map(function (k2) {
         var m2 = metas[k2];
@@ -2234,12 +2573,15 @@
           var aq2 = aquisicoes.filter(function (a3) { return a3.ref === m2.refAquisicao; })[0];
           rama2 = aq2 ? (aq2.representacao === "texto" ? "Habilidade de texto “" + aq2.nome + "”" : aq2.nome + " · " + (REP[aq2.representacao] || aq2.representacao)) +
             (revs.length ? " · " + revs.map(function (rv) { var op = rv.opcoes.filter(function (o2) { return o2.valor === rv.valor; })[0]; return (op ? op.rotulo : valorTexto(rv.valor)); }).join(" · ") :
-              aq2.opcoes ? " · " + Object.keys(aq2.opcoes).map(function (k3) { return aq2.opcoes[k3]; }).join(", ") : "") : (dz && dz.rotulo) || "—";
+              aq2.opcoes && Object.keys(aq2.opcoes).length ? " · " + Object.keys(aq2.opcoes).map(function (k3) { var v3 = aq2.opcoes[k3]; return v3 && typeof v3 === "object" ? ((P.poder(v3.valor) || C.trilha(v3.valor) || {}).nome || v3.valor || "") : v3; }).join(", ") : "") : (dz && dz.rotulo) || "—";
         } else if (m2.tipo === "ritual") {
           var rit2 = typeof m2.ritualIndice === "number" ? x.f.rituais.itens[m2.ritualIndice] : null;
           rama2 = rit2 ? rit2.nome + " · " + rotuloDoRitual(rit2) + (rit2.origemCatalogoId ? " · catálogo" : rit2.origemHomebrewId ? " · cópia da Homebrew" : " · personalizado") : "—";
         } else if (m2.tipo === "texto") rama2 = "Anotações · " + m2.rotulo;
         else if (m2.tipo === "pericia" && !m2.periciaRama) rama2 = "Guardado em Anotações" + (estado2 === "sem_destino" ? " (provisório)" : "");
+        else if (m2.tipo === "modo") rama2 = m2.modoTexto;
+        else if (m2.tipo === "dividida") rama2 = "Dividida em " + m2.partes.length + " partes: " + m2.partes.map(function (pt) { return pt.nome; }).join(", ");
+        else if (m2.tipo === "vaga") rama2 = m2.vagaTexto;
         else rama2 = linhas2.map(function (l) { return (linhas2.length > 1 ? l.campo.replace(m2.rotulo + " · ", "") + ": " : "") + valorTexto(l.final) + (l.ajuste ? " (ajuste " + (l.ajuste > 0 ? "+" : "") + l.ajuste + ")" : ""); }).join(" · ");
         if (m2.formato === "pericia" && linhas2.length) {
           rama2 = linhas2.map(function (l) { return typeof l.final === "number" ? (l.final >= 0 ? "+" : "") + l.final + (l.ajuste ? " (ajuste " + (l.ajuste > 0 ? "+" : "") + l.ajuste + ")" : "") : valorTexto(l.final); }).join(" · ");
@@ -2255,6 +2597,9 @@
           !!(dz && (dz.tipo === "anotacao" || dz.tipo === "ignorar" || dz.tipo === "personalizado") && m2.tipo !== "texto") || m2.vinculo === "ignorar" || m2.vinculo === "anotacao" ||
           (m2.tipo === "poder" && /^Habilidade de texto/.test(rama2));
         var rotDest = rotuloDoDestino(m2);
+        /* v9.16: a procedência ("como foi adquirido?") de poderes e rituais. */
+        var proc = reconstruir && procedencias[k2] ? procedencias[k2] : null;
+        if (proc && !proc.ok && estado2 !== "sem_destino") { estado2 = "conflito"; }
         var e2 = {
           chave: k2, secao: m2.secao || "identidade", tipo: m2.tipo || "valor", rotulo: m2.rotulo || k2,
           cris: cris2, rama: rama2, estado: estado2, motivo: m2.motivo || "", destino: dz || null, rotuloDestino: rotDest,
@@ -2264,8 +2609,21 @@
           alvo: { itemId: m2.itemId || "", ritualIndice: typeof m2.ritualIndice === "number" ? m2.ritualIndice : -1, habilidadeId: m2.habilidadeId || "" },
           detalhes: linhas2.map(function (l) { return { campo: l.campo, cris: l.cris, rama: l.rama, final: l.final, ajuste: l.ajuste, motivo: l.problema ? l.problema + " — " + l.motivo : l.motivo, situacao: l.situacao }; }),
           peso: peso[k2] === undefined ? 1000 : peso[k2],
+          procedencia: proc ? { texto: proc.texto, situacao: proc.situacao, vaga: proc.vaga || "", ok: proc.ok, motivos: proc.motivos.slice(), decidida: !!proc.decidida, pai: proc.pai || "" } : null,
+          decisaoProcedencia: reconstruir && procDec[k2] ? procDec[k2] : null,
+          vaga: m2.vagaInfo ? {
+            id: m2.vagaInfo.id, tipo: m2.vagaInfo.tipo, situacao: m2.vagaInfo.situacao, entradas: m2.vagaInfo.entradas.slice(), quantidade: m2.vagaInfo.quantidade || 0,
+            motivos: m2.vagaInfo.motivos.slice(), decisao: vagasDec[m2.vagaInfo.id] || null,
+            candidatos: (m2.vagaInfo.candidatos || []).map(function (c3) { return { entrada: c3.entrada, rotulo: metas[c3.entrada] ? metas[c3.entrada].rotulo : c3.entrada, ok: c3.ok, motivos: c3.motivos, via: c3.via || "", ocupada: c3.ocupada }; }),
+          } : null,
+          reconstruir: reconstruir,
+          partes: m2.partes ? m2.partes.slice() : null, subtipo: m2.subtipo || "", parteDe: m2.parteDe || "",
         };
-        e2.assinatura = JSON.stringify([e2.estado, e2.rotuloDestino, e2.rama, revs.map(function (rv) { return rv.chave + "=" + rv.valor; })]);
+        if (proc && !proc.ok && proc.motivos.length && estado2 === "conflito") e2.motivo = proc.motivos.join(" ");
+        /* A procedência, a etapa e a composição entram na assinatura: mudar
+           qualquer uma desconfere a entrada, mesmo com o mesmo valor final. */
+        e2.assinatura = JSON.stringify([e2.estado, e2.rotuloDestino, e2.rama, revs.map(function (rv) { return rv.chave + "=" + rv.valor; }),
+          proc ? [proc.texto, proc.ok, proc.motivos] : null, composicoes[k2] || null, m2.vagaInfo ? [m2.vagaInfo.situacao, m2.vagaInfo.descricao || "", m2.vagaInfo.motivos] : null]);
         return e2;
       });
       var ordemSec = {};
@@ -2282,6 +2640,13 @@
       avisos: avisos,
       entradas: entradas,
       secoes: SECOES,
+      /* v9.16: a visão da progressão da reconstrução. */
+      progressao: {
+        ativa: reconstruir, decidida: RC.ativa !== undefined, marco: marco,
+        etapas: etapasRec.map(function (i2) { return { id: i2.id, rotulo: i2.rotulo, tipo: i2.tipo, situacao: i2.situacao, entradas: i2.entradas.slice(), descricao: i2.descricao || "", motivos: i2.motivos.slice() }; }),
+        extras: (normal.ordem.extras || []).map(function (x) { var ent = extrasRec.filter(function (y) { return y.ref === x.ref; })[0]; return { ref: x.ref, nome: x.nome, procedencia: x.procedencia, entrada: ent ? ent.entrada : "" }; }),
+        semEtapa: Object.keys(procedencias).filter(function (k3) { return procedencias[k3].situacao === "desconhecida"; }),
+      },
       pendencias: revisoes,
       comparacao: comparacao,
       conferencia: conferencia,
@@ -2292,7 +2657,9 @@
         nome: normal.nome, classe: (C.classe(normal.ordem.classe) || {}).nome || "—", origem: (C.origem(normal.ordem.origem) || {}).nome || String(src.backgroundName || "—"),
         trilha: normal.ordem.trilha ? (C.trilha(normal.ordem.trilha) || {}).nome : "—",
         progressao: cf.trilho ? cf.trilho.rotulo : "",
-        atributos: normal.ordem.atributos,
+        /* Os valores finais (a base de criação muda com a reconstrução). */
+        atributos: C.ATRIBUTOS.reduce(function (m3, a3) { m3[a3.chave] = R.atributo(normal.ordem, a3.chave); return m3; }, {}),
+        atributosBase: normal.ordem.atributos,
         recursos: { pv: [normal.ordem.recursos.pv, cf.pv.total], pe: [normal.ordem.recursos.pe, cf.pe.total], san: [normal.ordem.recursos.san, cf.san.total], pd: cf.determinacao ? [normal.ordem.recursos.pd, cf.pd.total] : null },
         defesa: cf.defesa.total, bloqueio: cf.bloqueio.total, esquiva: cf.esquiva.total,
         itens: normal.inventario.itens.length, poderes: aquisicoes.length, rituais: normal.rituais.itens.length,

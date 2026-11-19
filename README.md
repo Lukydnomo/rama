@@ -929,6 +929,16 @@ segredo nenhum — ele os lê das Script Properties. Publicá-lo não expõe nad
 
 ### Atualizar o backend
 
+**v9.16.0 — ESTRATIGRAFIA:** reconstrução da progressão na importação do CRIS
+(etapa por etapa, procedência de cada poder e ritual, entradas divididas em
+partes) e aquisições extras na aba Progressão. **Só o site muda** — o Apps
+Script não precisa de atualização (a ficha continua um JSON opaco para ele).
+A ficha sobe para o schema 37: publique o site inteiro de uma vez. Site:
+`js/importar-cris.js`, `js/importar-cris-tela.js`, `js/ordem/progressao.js`,
+`js/ordem/regras.js`, `js/ordem/telas/ordem-escolhas.js`,
+`js/ordem/telas/ficha-ordem.js`, `js/ficha.js`, `css/componentes.css` e
+`js/versao.js`.
+
 **v9.15.0 — MOTOCLUBE:** filtro “Todas” na Origem da criação de Ordem e as
 origens Gaudério Abutre, Ginasta e Dublê (Extra · marca-página). **Só o site
 muda.** Site: `js/ordem/catalogo.js`, `js/ordem/regras.js`,
@@ -2107,7 +2117,7 @@ Três números diferentes, que não se misturam:
 
 | | Onde | O que é |
 |---|---|---|
-| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v9.15.0 |
+| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v9.16.0 |
 | `schemaVersion` | `js/ficha.js` | o formato da FICHA |
 | `versaoFormato` | `js/config.js` | o formato dos arquivos de importação |
 

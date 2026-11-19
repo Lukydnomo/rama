@@ -3790,6 +3790,32 @@ html.arrastando * {
 .cris-tabela--entrada td:nth-child(2), .cris-tabela--entrada td:nth-child(3) { width: 20%; }
 .cris-tabela--entrada td:nth-child(4) { width: 32%; }
 
+/* Reconstrução da progressão (v9.16): a visão por etapa, a linha de
+   resumo de cada entrada e o detalhe de cada opção. Estado sempre
+   escrito; a cor só acompanha. */
+.cris-resumo-linha { margin: 0; color: var(--cor-texto-2); overflow-wrap: anywhere; }
+.cris-check__detalhe { color: var(--cor-texto-3); }
+.cris-etapas { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; max-height: 24rem; overflow-y: auto; }
+.cris-etapa { display: grid; grid-template-columns: minmax(10rem, 1.2fr) minmax(0, 1.5fr) auto; gap: var(--e2); align-items: baseline; padding: var(--e1) 0; border-bottom: 1px solid var(--cor-traco-fraca); }
+.cris-etapa__oque { color: var(--cor-texto-2); overflow-wrap: anywhere; font-size: 0.875rem; }
+.cris-proc-extra { padding-left: 1.6em; }
+
+/* Aba Progressão (v9.16): etapas do histórico importado e aquisições
+   extras — etapa, o que veio, situação escrita e as ações. */
+.ordem-historicos { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.ordem-historico { display: grid; grid-template-columns: minmax(9rem, 1fr) minmax(0, 1.4fr) auto; gap: 2px var(--e2); align-items: baseline; padding: var(--e1) 0; border-bottom: 1px solid var(--cor-traco-fraca); }
+.ordem-historico__etapa { font-weight: 600; font-size: 0.875rem; }
+.ordem-historico__oque { color: var(--cor-texto-2); font-size: 0.875rem; overflow-wrap: anywhere; }
+.ordem-historico__motivo, .ordem-historico__acoes { grid-column: 1 / -1; }
+.ordem-historico__acoes { gap: var(--e1); }
+@media (max-width: 640px) {
+  .ordem-historico { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 640px) {
+  .cris-etapa { grid-template-columns: minmax(0, 1fr); gap: 2px; }
+  .cris-proc-extra { padding-left: 0; }
+}
+
 @media (max-width: 640px) {
   .cris-antes-depois { grid-template-columns: minmax(0, 1fr); gap: var(--e1); }
   .cris-seta { padding-top: 0; transform: rotate(90deg); justify-self: start; }

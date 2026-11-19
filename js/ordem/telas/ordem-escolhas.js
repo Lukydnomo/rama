@@ -84,7 +84,7 @@
      CARTÃO DE PODER
      ================================================================= */
 
-  function cartaoDePoder(cand, escolhido, aoEscolher, classe) {
+  function cartaoDePoder(cand, escolhido, aoEscolher, classe, permitirIndisponivel) {
     var e = cand.entrada;
     var indisponivel = !cand.disponivel;
 
@@ -105,7 +105,7 @@
       "aria-disabled": indisponivel ? "true" : null,
       "aria-label": e.nome + (indisponivel ? ", indisponível: " + cand.motivos.join(" ") : "") + ". " + e.resumo,
       onclick: function () {
-        if (indisponivel) {
+        if (indisponivel && !permitirIndisponivel) {
           UI.avisoAtencao(e.nome + ": " + cand.motivos.join(" "));
           return;
         }
@@ -164,7 +164,7 @@
 
       U.trocar(lista, visiveis.length
         ? visiveis.map(function (c) {
-            return el("div", { role: "listitem" }, [cartaoDePoder(c, c.entrada.chave === valorAtual, aoEscolher, sessao.ordem.classe)]);
+            return el("div", { role: "listitem" }, [cartaoDePoder(c, c.entrada.chave === valorAtual, aoEscolher, sessao.ordem.classe, !!o.permitirIndisponivel)]);
           })
         : el("p.t-mini", { texto: "Nada corresponde aos filtros." }));
 
@@ -813,10 +813,15 @@
     var corpo = el("div.pilha.escolha-corpo");
     var status = el("div.escolha-status", { "aria-live": "polite" });
 
+    /* v9.16: reconstruir uma etapa do retrato importado. A escolha é a
+       mesma janela; a conferência e a gravação passam pela reconstrução
+       (a base devolve o que a escolha passa a dar), e os poderes ainda
+       "etapa desconhecida" não barram a si mesmos na lista. */
+    var historica = !!o.reconstruir;
     var sessao = {
       ordem: ordem,
       vaga: vaga,
-      contextoBase: o.contexto || {},
+      contextoBase: historica ? Object.assign({}, o.contexto || {}, { semImportadas: true }) : (o.contexto || {}),
       contexto: null,
       /* A ficha inteira, quando quem chamou a tem: é por ela que a
          biblioteca de rituais entra em cima desta janela. */
@@ -1114,8 +1119,31 @@
       return partes;
     }
 
+    function simularNaSessao() {
+      if (!historica) return E.simular(ordem, vaga, candidato, sessao.contexto);
+      var copia = JSON.parse(JSON.stringify(ordem));
+      var rs = E.reconstruirVaga(copia, vaga.id, candidato, { aquisicoes: importadasDoCandidato(copia), simulacao: true }, sessao.contexto);
+      return { avaliacao: rs.ok && rs.avaliacao ? rs.avaliacao : { completo: false, valido: false, faltam: [], motivos: [rs.motivo || "Não foi possível conferir."] }, diferencas: rs.diferencas || [] };
+    }
+    /* Os poderes importados ("etapa desconhecida") que esta escolha
+       representa: saem da conta como importados — uma fonte só. */
+    function importadasDoCandidato(ord) {
+      var chaves = [];
+      (function andar(v, prof) {
+        if (prof > 9 || v === null || v === undefined) return;
+        if (typeof v === "string") { if (P.poder(v)) chaves.push(v); return; }
+        if (typeof v === "object") Object.keys(v).forEach(function (k) { andar(v[k], prof + 1); });
+      })([candidato.valor, candidato.opcoes], 0);
+      var usadas = {};
+      return chaves.map(function (k) {
+        var a = ((ord.importacao && ord.importacao.aquisicoes) || []).filter(function (x) { return x.representacao === "importada" && x.chave === k && !usadas[x.ref]; })[0];
+        if (a) usadas[a.ref] = true;
+        return a ? a.ref : null;
+      }).filter(Boolean);
+    }
+
     function atualizarStatus() {
-      var sim = E.simular(ordem, vaga, candidato, sessao.contexto);
+      var sim = simularNaSessao();
       var a = sim.avaliacao;
       var pronto = a.completo && a.valido;
       botao.disabled = !pronto;
@@ -1126,6 +1154,11 @@
       }
       if (a.motivos && a.motivos.length) {
         linhas.push(el("p.t-mini.t-erro", { texto: a.motivos.join(" ") }));
+      }
+      if (historica) {
+        linhas.push(el("p.t-mini", { texto: "Etapa do histórico importado: o valor que a ficha já tem não muda — a base de criação devolve o que esta escolha passa a dar." }));
+        /* Pela metade, a escolha ainda não dá nada: a diferença seria só isso. */
+        (a.completo ? sim.diferencas || [] : []).forEach(function (df) { linhas.push(el("p.t-mini.t-aviso", { texto: df.nome + " ficaria " + df.obtido + " (hoje " + df.esperado + "): confira a base ou outra etapa." })); });
       }
       if (pronto) {
         linhas.push(el("p.t-mini", { texto: "Pronto: " + (E.descrever(ordem, { tipo: vaga.tipo, valor: candidato.valor, opcoes: candidato.opcoes }) || "escolha completa") + "." }));
@@ -1138,7 +1171,7 @@
                    ", vinculado a esta escolha de " + vaga.rotuloEtapa + ".",
           }));
         });
-        if (existente) {
+        if (existente && !historica) {
           var imp = E.impacto(ordem, vaga, candidato, sessao.contexto);
           if (imp.saem.length) linhas.push(el("p.t-mini", { texto: "Sai: " + imp.saem.join(", ") + "." }));
           if (imp.entram.length) linhas.push(el("p.t-mini", { texto: "Entra: " + imp.entram.join(", ") + "." }));
@@ -1161,8 +1194,15 @@
        ritual sem aquisição, nem poder sem o ritual. */
     function confirmar(fechar) {
       if (gravando) return;
-      var sim = E.simular(ordem, vaga, candidato, sessao.contexto);
+      var sim = simularNaSessao();
       if (!sim.avaliacao.completo || !sim.avaliacao.valido) { atualizarStatus(); return; }
+      if (historica) {
+        var rs = E.reconstruirVaga(ordem, vaga.id, candidato, { aquisicoes: importadasDoCandidato(ordem), procedencia: "reconstrucao" }, sessao.contexto);
+        if (!rs.ok) { U.trocar(status, [el("p.t-mini.t-erro", { role: "alert", texto: "Não foi gravado: " + rs.motivo })]); return; }
+        fechar();
+        if (o.aoRegistrar) o.aoRegistrar(rs.registro);
+        return;
+      }
 
       var usados = vinculosDoCandidato(candidato.opcoes).map(function (v) { return v.id; });
       var novos = usados.filter(function (idR) { return !!sessao.novos[idR]; }).map(function (idR) { return sessao.novos[idR]; });
@@ -1482,7 +1522,162 @@
     ]);
   }
 
+  /* =================================================================
+     AQUISIÇÃO EXTRA (v9.16)
+     -----------------------------------------------------------------
+     O que veio fora das vagas normais. Mesma lista de poderes, mesmas
+     opções internas, conferidas no personagem da etapa informada (ou no
+     atual, se a etapa não é conhecida). O extra não fica válido só por
+     ser extra: ignorar um requisito é uma exceção, com motivo.
+     ================================================================= */
+
+  function abrirExtra(opcoes) {
+    var o = opcoes || {};
+    var ordem = o.ordem;
+    var R = global.RAMAOrdemRegras;
+    var existente = o.ref ? ((ordem.extras || []).filter(function (x) { return x.ref === o.ref; })[0] || null) : null;
+    var x = existente ? copiar(existente) : { ref: "x" + String(U.uuid()).replace(/[^A-Za-z0-9]/g, "").slice(0, 20), tipo: "poder", chave: "", opcoes: {}, procedencia: "", quando: null, depende: null, excecao: null };
+    var corpo = el("div.pilha.escolha-corpo");
+    var status = el("div.escolha-status", { "aria-live": "polite" });
+    var t = R.trilho(ordem);
+    var sessao = { ordem: ordem, vaga: null, contextoBase: o.contexto || {}, contexto: null, ctx: o.ctx || null, rituais: o.rituais || (o.contexto && o.contexto.rituais) || [],
+      novos: {}, raiz: corpo, filtros: {}, entradaAtual: null, pintar: pintar, atualizarStatus: atualizarStatus };
+    sessao.contexto = contextoComNovos(sessao);
+    function vagaDaSessao() {
+      return { id: "extra:" + x.ref + "@" + (x.quando ? x.quando.degrau : ""), tipo: "extra", rotulo: "Aquisição extra", rotuloEtapa: x.quando ? E.rotuloDoDegrau(x.quando.degrau, t.separado) : "etapa desconhecida", explicacao: "" };
+    }
+    var m = UI.modal({
+      titulo: existente ? "Aquisição extra — " + (existente.nome || "editar") : "Nova aquisição extra",
+      largo: true,
+      conteudo: [corpo, status],
+      botoes: [
+        { rotulo: "Cancelar", classe: "r-botao--fantasma" },
+        { rotulo: existente ? "Salvar" : "Registrar extra", classe: "r-botao--principal", aoClicar: confirmar },
+      ],
+    });
+    var botao = m.janela.querySelector(".r-modal__rodape .r-botao--principal");
+
+    function pintar() {
+      var rolagem = m.corpo.scrollTop;
+      sessao.vaga = vagaDaSessao();
+      U.trocar(corpo, desenhar());
+      m.corpo.scrollTop = rolagem;
+      atualizarStatus();
+    }
+
+    function campo(id, rotulo, controle, ajuda) {
+      return el("div.r-campo", {}, [el("label", { for: id, texto: rotulo }), ajuda ? el("p.t-mini", { texto: ajuda }) : null, controle]);
+    }
+
+    function desenhar() {
+      var partes = [el("p", { texto: "Um benefício recebido fora das vagas normais: recompensa da campanha, treinamento especial, concessão do mestre, efeito permanente ou poder de item. Não ocupa vaga de progressão." })];
+      partes.push(botoesDeEscolha([{ valor: "poder", rotulo: "Poder ou habilidade" }, { valor: "atributo", rotulo: "Atributo" }, { valor: "treino", rotulo: "Treino em perícia" }], x.tipo, function (v) {
+        if (x.tipo === v) return;
+        x.tipo = v; x.chave = ""; x.opcoes = {}; delete x.atributo; delete x.pericia;
+        if (v === "atributo") { x.atributo = ""; x.valor = 1; }
+        if (v === "treino") { x.pericia = ""; x.grau = "treinado"; }
+        pintar();
+      }));
+      var etapas = [];
+      for (var d = 1; d <= t.passos; d++) etapas.push(d);
+      var selQ = el("select.r-selecao", { id: "extra-quando" }, [el("option", { value: "", texto: "Não sei quando (confere no personagem atual)" })].concat(etapas.map(function (n) {
+        return el("option", { value: String(n), texto: E.rotuloDoDegrau(n, t.separado), selected: !!(x.quando && x.quando.degrau === n) });
+      })));
+      selQ.addEventListener("change", function () { x.quando = selQ.value ? { degrau: Number(selQ.value) } : null; pintar(); });
+      if (x.tipo === "poder") {
+        var e = x.chave ? P.poder(x.chave) : null;
+        sessao.entradaAtual = e;
+        /* Um extra pode ficar fora de um requisito — como exceção da mesa,
+           com motivo: por isso o poder indisponível também pode ser
+           escolhido aqui (o motivo continua à vista e a confirmação pede
+           a exceção). */
+        partes.push(seletorDePoder(sessao, "raiz", E.candidatosExtra(ordem, x.ref, sessao.contexto, x.quando), x.chave, function (k) {
+          if (x.chave === k) return;
+          x.chave = k; x.opcoes = {};
+          pintar();
+        }, { permitirIndisponivel: true }));
+        if (e && e.opcoes.length) {
+          partes.push(el("div.escolha-aninhada", {}, [el("p.t-secao", { texto: "Opções de " + e.nome }), painelDeOpcoes(sessao, e.opcoes, x.opcoes, "raiz", 0)]));
+        }
+      } else if (x.tipo === "atributo") {
+        partes.push(botoesDeEscolha(C.ATRIBUTOS.map(function (a) { return { valor: a.chave, rotulo: a.nome }; }), x.atributo, function (v) { x.atributo = v; pintar(); }));
+        var valorA = el("input.r-entrada", { type: "number", id: "extra-valor", min: "-5", max: "5", step: "1", value: String(x.valor || 1) });
+        valorA.addEventListener("change", function () { x.valor = Math.max(-5, Math.min(5, parseInt(valorA.value, 10) || 1)); atualizarStatus(); });
+        partes.push(campo("extra-valor", "Quanto muda", valorA));
+      } else {
+        partes.push(botoesDeEscolha(C.PERICIAS.map(function (pe) { return { valor: pe.chave, rotulo: pe.nome }; }), x.pericia, function (v) { x.pericia = v; pintar(); }));
+        partes.push(botoesDeEscolha([{ valor: "treinado", rotulo: "Treinado" }, { valor: "veterano", rotulo: "Veterano" }, { valor: "expert", rotulo: "Expert" }], x.grau, function (v) { x.grau = v; pintar(); }));
+      }
+      var just = el("input.r-entrada", { type: "text", id: "extra-proc", maxlength: "200", value: x.procedencia || "", placeholder: "Ex.: recompensa da missão 3; treinamento com a Ordem" });
+      just.addEventListener("input", function () { x.procedencia = just.value; });
+      partes.push(campo("extra-proc", "Procedência ou justificativa", just));
+      partes.push(campo("extra-quando", "Quando foi adquirido", selQ, "Os requisitos são conferidos no personagem daquela etapa."));
+      var itens = (o.contexto && o.contexto.inventario && o.contexto.inventario.itens) || [];
+      var dep = x.depende || {};
+      var selD = el("select.r-selecao", { id: "extra-dep" }, [el("option", { value: "", texto: "Não depende de nada" })]
+        .concat(itens.map(function (i) { return el("option", { value: "item:" + i.id, texto: "Item: " + i.nome, selected: dep.tipo === "item" && dep.item === i.id }); }))
+        .concat([el("option", { value: "condicao", texto: "Uma condição (descrever)", selected: dep.tipo === "condicao" })]));
+      selD.addEventListener("change", function () {
+        if (!selD.value) x.depende = null;
+        else if (selD.value === "condicao") x.depende = { tipo: "condicao", texto: dep.texto || "", ativa: true };
+        else x.depende = { tipo: "item", item: selD.value.slice(5), emUso: true };
+        pintar();
+      });
+      partes.push(campo("extra-dep", "Depende de", selD));
+      if (dep.tipo === "item") {
+        var uso = el("input", { type: "checkbox", id: "extra-uso", checked: dep.emUso !== false });
+        uso.addEventListener("change", function () { x.depende.emUso = uso.checked; atualizarStatus(); });
+        partes.push(el("label.cris-check", { for: "extra-uso" }, [uso, el("span", { texto: " Só enquanto o item estiver em uso" })]));
+      }
+      if (dep.tipo === "condicao") {
+        var txC = el("input.r-entrada", { type: "text", id: "extra-cond", maxlength: "200", value: dep.texto || "" });
+        txC.addEventListener("input", function () { x.depende.texto = txC.value; atualizarStatus(); });
+        var atv = el("input", { type: "checkbox", id: "extra-ativa", checked: dep.ativa !== false });
+        atv.addEventListener("change", function () { x.depende.ativa = atv.checked; atualizarStatus(); });
+        partes.push(campo("extra-cond", "Condição", txC), el("label.cris-check", { for: "extra-ativa" }, [atv, el("span", { texto: " A condição vale agora" })]));
+      }
+      var exc = el("input", { type: "checkbox", id: "extra-exc", checked: !!x.excecao });
+      var motivo = el("input.r-entrada", { type: "text", id: "extra-excm", maxlength: "300", value: x.excecao ? x.excecao.motivo : "", placeholder: "Motivo (obrigatório)" });
+      exc.addEventListener("change", function () { x.excecao = exc.checked ? { motivo: motivo.value } : null; pintar(); });
+      motivo.addEventListener("input", function () { if (x.excecao) x.excecao.motivo = motivo.value; atualizarStatus(); });
+      partes.push(el("label.cris-check", { for: "extra-exc" }, [exc, el("span", { texto: " Exceção a requisitos, decidida pela mesa (não é o mesmo que uma concessão extra)" })]));
+      if (x.excecao) partes.push(campo("extra-excm", "Motivo da exceção", motivo));
+      return partes;
+    }
+
+    function atualizarStatus() {
+      var bruto = copiar(x);
+      if (bruto.excecao && !U.aparar(bruto.excecao.motivo || "")) bruto.excecao = null;
+      if (bruto.depende && bruto.depende.tipo === "condicao" && !U.aparar(bruto.depende.texto || "")) bruto.depende = null;
+      var sim = E.simularExtra(ordem, bruto, sessao.contexto);
+      var a = sim.avaliacao;
+      var linhas = [];
+      var pronto = !!(a && a.completo && a.valido);
+      if (x.excecao && !U.aparar(x.excecao.motivo || "")) { pronto = false; linhas.push(el("p.t-mini.t-aviso", { texto: "A exceção a requisitos precisa de um motivo." })); }
+      if (a && a.faltam.length) linhas.push(el("p.t-mini.t-aviso", { texto: "Falta: " + a.faltam.join("; ") + "." }));
+      if (a && a.motivos.length) linhas.push(el("p.t-mini.t-erro", { texto: a.motivos.join(" ") + (a.mantidaPorExcecao ? " Mantida pela exceção registrada." : " Um extra não fica válido só por ser extra: para manter, registre a exceção com o motivo.") }));
+      if (a && a.suspenso) linhas.push(el("p.t-mini.t-aviso", { texto: a.dependencia + " Fica registrado, sem efeito, até voltar a valer." }));
+      if (pronto) linhas.push(el("p.t-mini", { texto: "Pronto: " + (sim.extra ? sim.extra.nome : "") + " — " + (a.etapa && a.etapa.conhecida ? a.etapa.rotulo : "etapa desconhecida") + "." }));
+      botao.disabled = !pronto;
+      U.trocar(status, linhas);
+    }
+
+    function confirmar(fechar) {
+      var bruto = copiar(x);
+      bruto.procedencia = U.aparar(bruto.procedencia || "", 200);
+      if (bruto.depende && bruto.depende.tipo === "condicao" && !U.aparar(bruto.depende.texto || "")) bruto.depende = null;
+      var gravado = E.gravarExtra(ordem, bruto);
+      if (!gravado) return;
+      fechar();
+      if (o.aoGravar) o.aoGravar(gravado);
+    }
+
+    pintar();
+    return m;
+  }
+
   global.RAMAOrdemEscolhas = {
+    abrirExtra: abrirExtra,
     abrir: abrir,
     abrirAfinidade: abrirAfinidade,
     abrirRituais: abrirRituais,

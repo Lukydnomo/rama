@@ -5,6 +5,48 @@ padrão e normaliza o que chega de fora. Onde ela é guardada — inteira em
 `fichaJson` (formato antigo) ou em blocos (v2.15) — é assunto do backend, e não muda
 nada aqui: ver [DATABASE.md](DATABASE.md).
 
+## Reconstrução da importação e aquisições extras — v9.16 / schema 37
+
+Dois campos novos no bloco de Ordem, opcionais; uma ficha 36 abre igual. O
+schema sobe para uma aba antiga recusar a ficha em vez de descartá-los.
+
+**`ordem.importacao.reconstrucao`** (`normalizarReconstrucao` em
+`js/ordem/regras.js`):
+
+```jsonc
+{
+  "versao": 1,
+  "retrato": { "atributos": { "for": 3 }, "pericias": { "luta": "veterano" } },  // valores do CRIS
+  "vagas": { "d6.poderClasse": "vazia" | "desconhecida" },                        // etapas sem escolha
+  "absorvidos": { "d4.atributo": { "atributos": { "for": 1 }, "graus": {} },     // o que a base devolveu
+                  "extra.x…": { "atributos": {}, "graus": { "medicina": 1 } } }
+}
+```
+
+As aquisições importadas ganham `entrada` (a chave da entrada do CRIS;
+`poder:<id>~<parte>` numa entrada dividida), `componente` e, conforme a
+`representacao` nova: `"progressao"` + `vaga`, `"extra"` + `extra`,
+`"parte"` + `parteDe`. As etapas reconstruídas são registros comuns de
+`ordem.escolhas` (com `procedencia: "cris:<entrada>"`).
+
+**`ordem.extras`** (`normalizarExtras` em `js/ordem/progressao.js`), até 120:
+
+```jsonc
+[{ "ref": "x…", "tipo": "poder" | "atributo" | "treino",
+   "chave": "golpePesado", "opcoes": {},          // poder
+   "atributo": "vig", "valor": 1,                 // atributo
+   "pericia": "medicina", "grau": "treinado",     // treino
+   "nome": "", "procedencia": "recompensa da missão 3",
+   "quando": { "degrau": 6 } | null,
+   "depende": { "tipo": "item", "item": "<id do item>", "emUso": true }
+            | { "tipo": "aquisicao", "chave": "…" } | { "tipo": "condicao", "texto": "…", "ativa": true } | null,
+   "excecao": { "motivo": "…" } | null,
+   "importacao": "imp-…", "registradoEm": "ISO" }]
+```
+
+A identidade é `ref`, não `id`: a exportação apaga todo `id`. O item de
+`depende` atravessa o arquivo como `#ref:item:<posição>`.
+
 ## Imagens da ficha — v9.13 / schema 36
 
 Em todos os sistemas. A nota ganhou `imagens: [{ ref, legenda }]` (até 12, na
