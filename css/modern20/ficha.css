@@ -563,4 +563,13 @@
   & .ram-resumo { border-radius: var(--m20-raio-cartao); border-color: var(--m20-borda); box-shadow: var(--m20-sombra-1); }
   & .ram-aviso { background: var(--m20-aviso-suave); }
   & .ram-estado { border-radius: 999px; }
+
+  /* Movimento (v9.17): a barra de um recurso desliza até o valor novo; a
+     cor do nível acompanha. O número ao lado já está certo na hora — a
+     barra não conta desde zero, só caminha a diferença. */
+  & .status__preenche,
+  & .ordem-recurso__barra > span {
+    transition: width var(--m20-mov-navegar) var(--m20-curva-mover), background var(--m20-mov-estado) var(--m20-curva-mover);
+  }
+  & .ordem-resumo__atual { border-radius: 4px; }
 }

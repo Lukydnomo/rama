@@ -177,6 +177,10 @@
     ordenarPastas();
     ligarArraste();
     desenhar();
+    /* v9.17: a primeira apresentação da lista (só agora, depois da
+       consulta): poucos cartões em escada curta; filtrar, buscar e trocar
+       de pasta depois não repetem. */
+    if (global.RAMAMovimento) global.RAMAMovimento.apresentar(painel.querySelector("#lista-personagens"));
   }
 
   function ordenarPastas() {
@@ -999,6 +1003,13 @@
     var listaAntes = painel.querySelector("#lista-personagens");
     var alturaAntes = listaAntes ? listaAntes.offsetHeight : 0;
     if (!rolagemAntes) indicadorLateral = null;
+    /* v9.17: interrompível — se o indicador ainda está deslizando, a troca
+       nova parte de onde ele ESTÁ na tela, não do último destino. */
+    var indAntes = painel.querySelector(".pastas-laterais__indicador");
+    if (animar && indAntes && indicadorLateral && indAntes.parentNode) {
+      var bAntes = indAntes.parentNode.getBoundingClientRect(), rAntes = indAntes.getBoundingClientRect();
+      if (rAntes.height) indicadorLateral = { y: Math.round(rAntes.top - bAntes.top - indAntes.parentNode.clientTop), h: Math.round(rAntes.height) };
+    }
 
     U.trocar(painel, [
       cabecalho(),
@@ -1027,8 +1038,15 @@
       setTimeout(function () { if (lista.isConnected) lista.style.minHeight = ""; }, 220);
     }
     if (lista) {
-      lista.classList.add("pp-entrando");
-      setTimeout(function () { if (lista.isConnected) lista.classList.remove("pp-entrando"); }, 220);
+      /* v9.17: no Modern20 a entrada é a da família de movimento
+         (js/movimento.js), cancelável por outra troca; no Legacy, a de
+         sempre. */
+      var Mv = global.RAMAMovimento;
+      if (Mv && Mv.ativo()) Mv.entrar(lista);
+      else {
+        lista.classList.add("pp-entrando");
+        setTimeout(function () { if (lista.isConnected) lista.classList.remove("pp-entrando"); }, 220);
+      }
     }
   }
 

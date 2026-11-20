@@ -118,6 +118,26 @@
 
   var CHANGELOG = [
     {
+      versao: "9.17.0",
+      codinome: "CADÊNCIA",
+      data: "19/11/2026",
+      mudancas: {
+        "Melhorado": [
+          "Modern20: uma linguagem só de movimento em todo o site — pressionar responde em ~100 ms, hover e foco em ~150 ms, abas, menus e recolhíveis em ~200 ms, janelas em ~240 ms. Tudo pode ser interrompido: clicar de novo no meio de uma transição segue de onde ela está, sem esperar nem voltar ao começo.",
+          "Abas (fichas, campanhas, biblioteca e as demais): um traço desliza da aba antiga para a nova e só o painel trocado entra. No Perfil e nas pastas laterais, o indicador continua o mesmo, agora partindo de onde está quando a troca é rápida.",
+          "Recolhíveis (rituais, habilidades, poderes, itens, detalhes e gavetas): abrem e fecham com a altura, a seta acompanha o clique na hora e nada fica cortado ou com espaço vazio depois.",
+          "Janelas e folhas entram e saem com fundo e conteúdo juntos; a janela que está saindo já não recebe clique, e foco, Esc e confirmações continuam iguais. Menus surgem do botão que os abriu; avisos entram e saem curtos.",
+          "Botões que esperam o servidor mantêm a largura e, depois da resposta, mostram por um instante se deu certo ou não — só quando a resposta diz. O selo de sincronização e a tela de carregamento não piscam em esperas curtas.",
+          "Fichas: ajustar um recurso atualiza o número na hora e a barra desliza até o valor novo, com um destaque breve no resumo; um redesenho por dano ou cura não faz a barra recomeçar do zero nem anima a ficha inteira.",
+          "Criação de Ordem e importação do CRIS: avançar e voltar de etapa (ou de seção) entram do lado certo; recalcular e conferir não animam. Listas de personagens e campanhas aparecem com uma escada curta só na primeira vez; capas dos sistemas ganham uma inclinação leve sob o mouse; a Home abre em escada curta.",
+          "Com “reduzir movimento” no sistema (inclusive mudando com a página aberta), todo estado chega na hora. O Legacy não muda.",
+        ],
+        "Técnico": [
+          "Tokens --m20-mov-*, --m20-curva-*, --m20-desloc-*, --m20-pressao e --m20-inclinacao em css/modern20/tokens.css; js/movimento.js (RAMAMovimento) com canais interrompíveis, fim único com prazo e delegação de evento (sem observar mutações); testes/executar-movimento.js e a bateria de janelas nos dois estilos.",
+        ],
+      },
+    },
+    {
       versao: "9.16.0",
       codinome: "ESTRATIGRAFIA",
       data: "19/11/2026",

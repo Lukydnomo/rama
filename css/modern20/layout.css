@@ -332,7 +332,7 @@
     letter-spacing: var(--m20-espaco-sobre);
   }
   & .versao-lista { line-height: 1.6; }
-  & .r-modal.r-modal--novidade { animation: m20-novidade-janela 340ms var(--curva) 40ms both; }
+  & .r-modal.r-modal--novidade { animation: m20-novidade-janela var(--m20-mov-especial) var(--m20-curva-sair) 40ms both; }
   & .versao-novidade {
     border-left: 0;
     border-radius: var(--m20-raio-controle);

@@ -1158,6 +1158,172 @@
   & .feedback-falha__titulo { text-transform: none; letter-spacing: 0; font-size: var(--texto-base); }
   & .feedback-sucesso { border: 0; border-radius: var(--m20-raio-cartao); background: var(--m20-ok-suave); box-shadow: inset 3px 0 0 var(--cor-ok); }
   & .r-menu__item svg { flex: 0 0 auto; opacity: 0.8; }
+
+  /* =================================================================
+     MOVIMENTO E MICROINTERAÇÕES (v9.17)
+     -----------------------------------------------------------------
+     Uma família só (tokens --m20-mov-* e --m20-curva-*, em tokens.css):
+     pressionar responde em ~100 ms, hover e foco em ~150 ms, abas,
+     menus e recolhíveis em ~200 ms, janelas em ~240 ms. Só transform,
+     scale, translate e opacity no que se move; a pressão usa a
+     propriedade `scale`, que compõe com qualquer transform que o
+     elemento já tenha (capas, arraste, indicadores). Com movimento
+     reduzido os tokens valem 0 e a pressão vale 1: todo estado chega na
+     hora, nada se perde. O JS da coreografia mora em js/movimento.js.
+     ================================================================= */
+
+  /* ---------- pressionar ---------- */
+  & .r-botao {
+    transition: background var(--tempo-seco) var(--curva), border-color var(--tempo-seco) var(--curva),
+      color var(--tempo-seco) var(--curva), box-shadow var(--tempo-seco) var(--curva),
+      scale var(--m20-mov-toque) var(--m20-curva-mover), opacity var(--tempo-seco) var(--curva);
+  }
+  & .r-icone,
+  & .r-aba,
+  & .r-passo__botao,
+  & .r-menu__item,
+  & .criacao-opcao,
+  & .criacao-pericia,
+  & .escolha-cartao,
+  & .pasta-lateral,
+  & .perfil-nav__aba,
+  & .cris-secoes__botao,
+  & .cris-passos__botao,
+  & .feedback-tipo {
+    transition-property: background, color, border-color, box-shadow, scale;
+    transition-duration: var(--tempo-seco), var(--tempo-seco), var(--tempo-seco), var(--tempo-seco), var(--m20-mov-toque);
+    transition-timing-function: var(--curva);
+  }
+  & .r-botao:active:not(:disabled),
+  & .r-icone:active:not(:disabled),
+  & .r-passo__botao:active:not(:disabled),
+  & .r-aba:active,
+  & .criacao-opcao:active,
+  & .criacao-pericia:active:not(:disabled),
+  & .escolha-cartao:active,
+  & .feedback-tipo:active,
+  & .cris-passos__botao:active:not(:disabled) { scale: var(--m20-pressao); }
+  /* Ocupado: o botão não "afunda" enquanto espera. */
+  & .r-botao--ocupado:active { scale: 1; }
+
+  /* ---------- foco: o anel chega, não pisca ---------- */
+  & .r-botao:focus-visible,
+  & .r-icone:focus-visible,
+  & .r-aba:focus-visible {
+    outline-offset: 2px;
+    transition-property: background, border-color, color, box-shadow, scale, outline-offset;
+  }
+
+  /* ---------- marcar ---------- */
+  & .r-marca input:checked::after { animation: m20-visto var(--m20-mov-navegar) var(--m20-curva-sair); }
+  & .r-interruptor__bola { transition: transform var(--m20-mov-navegar) var(--m20-curva-mover), scale var(--m20-mov-toque) var(--m20-curva-mover); }
+  & .r-interruptor { transition: background var(--m20-mov-navegar) var(--m20-curva-mover); }
+  & .r-interruptor:active .r-interruptor__bola { scale: 0.92; }
+
+  /* ---------- campos: foco e validação ---------- */
+  & .r-entrada--erro,
+  & .r-area--erro { animation: m20-chamar var(--m20-mov-especial) var(--m20-curva-sair); }
+  & .r-ajuda--erro { animation: m20-surgir var(--m20-mov-estado) var(--m20-curva-sair); }
+
+  /* ---------- operação: normal → processando → resultado ----------
+     A largura fica (RAMAUI.ocupar segura o min-width). O resultado só
+     aparece depois da resposta real, e some sozinho. */
+  & .r-botao--ocupado::after { animation: m20-surgir var(--m20-mov-estado) var(--m20-curva-sair) both, r-esteira 0.9s linear infinite; }
+  & .r-botao--concluido {
+    border-color: var(--cor-ok);
+    box-shadow: 0 0 0 3px var(--m20-ok-suave);
+  }
+  & .r-botao--falhou {
+    border-color: var(--cor-erro);
+    box-shadow: 0 0 0 3px var(--m20-erro-suave);
+  }
+
+  /* ---------- abas: o traço que corre (js/movimento.js) ---------- */
+  & .m20-traco-aba {
+    position: absolute;
+    z-index: var(--z-aviso);
+    border-radius: 999px;
+    background: var(--cor-selecao);
+    transform-origin: 0 0;
+    pointer-events: none;
+  }
+  & .r-aba.m20-aba--chegando,
+  & .r-abas .r-aba.m20-aba--chegando,
+  & .biblioteca-abas .r-aba.m20-aba--chegando,
+  & .criatura-elementos .r-aba.m20-aba--chegando { border-bottom-color: transparent; }
+
+  /* ---------- recolhíveis: a seta acompanha a INTENÇÃO ----------
+     Fechando, o <details> continua `open` até a altura chegar; a seta
+     segue o aria-expanded, que muda no clique. */
+  & .recolhivel__seta,
+  & .r-gaveta__seta { transition: transform var(--m20-mov-navegar) var(--m20-curva-mover); }
+  & .recolhivel[open] > .recolhivel__topo[aria-expanded="false"] .recolhivel__seta,
+  & .r-gaveta[open] > .r-gaveta__topo[aria-expanded="false"] .r-gaveta__seta { transform: none; }
+  & .perfil-tema__seta { transition: transform var(--m20-mov-navegar) var(--m20-curva-mover); }
+
+  /* ---------- menus: surgem do controle que os abriu ---------- */
+  & .r-menu__lista:not([hidden]) {
+    transform-origin: top right;
+    animation: m20-menu var(--m20-mov-navegar) var(--m20-curva-sair);
+  }
+  & .r-menu__lista--esquerda:not([hidden]) { transform-origin: top left; }
+
+  /* ---------- janelas ----------
+     Fundo e janela juntos na entrada; na saída (RAMAUI.modal), a camada
+     deixa de receber clique NA HORA e some acelerando. */
+  & .r-fundo { animation: m20-surgir var(--m20-mov-janela) var(--m20-curva-sair); }
+  & .r-modal { animation: m20-janela var(--m20-mov-janela) var(--m20-curva-sair); }
+  & .r-fundo--saindo { pointer-events: none; animation: m20-sumir var(--m20-mov-estado) var(--m20-curva-fechar) forwards; }
+  & .r-fundo--saindo > .r-modal { animation: m20-janela-sair var(--m20-mov-estado) var(--m20-curva-fechar) forwards; }
+  @media (max-width: 640px) {
+    & .r-modal { animation-name: m20-folha; }
+    & .r-fundo--saindo > .r-modal { animation-name: m20-folha-sair; }
+  }
+
+  /* ---------- avisos ---------- */
+  & .r-aviso { animation: m20-aviso var(--m20-mov-janela) var(--m20-curva-sair); }
+  & .r-aviso--saindo { pointer-events: none; animation: m20-aviso-sair var(--m20-mov-estado) var(--m20-curva-fechar) forwards; }
+  & .rolagem { animation: m20-rolar var(--m20-mov-janela) var(--m20-curva-sair); }
+
+  /* ---------- carregando e sincronizando ----------
+     O que dura pouco não pisca: o selo de segundo plano e a tela de
+     carregamento só aparecem se a espera passar de ~200 ms. A barra de
+     primeiro plano continua acendendo NA HORA — o clique foi ouvido. */
+  & .r-sincronia:not([hidden]) { animation: m20-surgir var(--m20-mov-estado) var(--m20-curva-sair) 220ms both; }
+  & .r-carregando { animation: m20-surgir var(--m20-mov-navegar) var(--m20-curva-sair) 160ms both; }
+  & .r-estado { transition: background var(--m20-mov-estado) var(--m20-curva-mover), color var(--m20-mov-estado) var(--m20-curva-mover); }
+
+  /* ---------- cartões e capas ---------- */
+  @media (hover: hover) and (pointer: fine) {
+    & .r-cartao,
+    & .estante-sistemas__opcao,
+    & .hb-sistemas__opcao,
+    & .tipo-ficha { transition: border-color var(--tempo-seco) var(--curva), background var(--tempo-seco) var(--curva),
+      box-shadow var(--tempo-seco) var(--curva), translate var(--m20-mov-estado) var(--m20-curva-mover); }
+    & .r-cartao:hover { translate: 0 -1px; }
+    /* A inclinação da capa (js/movimento.js) mora em `rotate`; a
+       perspectiva vem do pai, para o livro ganhar profundidade sem trocar
+       o transform que o sobe. */
+    & :has(> .capa-sistema) { perspective: 900px; }
+    & .capa-sistema,
+    & :is(.tipo-ficha, .estante-sistemas__opcao, .hb-sistemas__opcao, .escolha-sistema, .sistema-atual) .capa-sistema {
+      transition: transform var(--tempo-seco) var(--curva), box-shadow var(--tempo-seco) var(--curva), rotate var(--m20-mov-navegar) var(--m20-curva-mover);
+    }
+    & .capa-sistema.m20-capa--inclinada,
+    & :is(.tipo-ficha, .estante-sistemas__opcao, .hb-sistemas__opcao, .escolha-sistema, .sistema-atual) .capa-sistema.m20-capa--inclinada {
+      transition: transform var(--tempo-seco) var(--curva), box-shadow var(--tempo-seco) var(--curva), rotate 60ms linear;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    & .r-menu__lista:not([hidden]),
+    & .r-fundo, & .r-modal, & .r-fundo--saindo, & .r-fundo--saindo > .r-modal,
+    & .r-aviso, & .r-aviso--saindo, & .rolagem,
+    & .r-marca input:checked::after,
+    & .r-entrada--erro, & .r-area--erro, & .r-ajuda--erro,
+    & .r-sincronia:not([hidden]), & .r-carregando { animation: none; }
+    & .r-botao--ocupado::after { animation: none; }
+  }
 }
 
 /* ---------- movimento ---------- */
@@ -1183,4 +1349,29 @@
 @keyframes m20-atividade {
   from { background-position: -40% 0; }
   to { background-position: 140% 0; }
+}
+@keyframes m20-sumir { to { opacity: 0; } }
+@keyframes m20-janela-sair {
+  to { opacity: 0; transform: translateY(6px) scale(0.985); }
+}
+@keyframes m20-folha-sair {
+  to { opacity: 0; transform: translateY(var(--m20-desloc-folha)); }
+}
+@keyframes m20-menu {
+  from { opacity: 0; scale: 0.96; translate: 0 -4px; }
+  to { opacity: 1; scale: 1; translate: 0 0; }
+}
+@keyframes m20-aviso {
+  from { opacity: 0; transform: translateY(8px) scale(0.98); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes m20-aviso-sair {
+  to { opacity: 0; transform: translateX(12px); }
+}
+@keyframes m20-visto {
+  from { opacity: 0; scale: 0.4; }
+  to { opacity: 1; scale: 1; }
+}
+@keyframes m20-chamar {
+  from { box-shadow: 0 0 0 6px color-mix(in srgb, var(--cor-erro) 22%, transparent); }
 }

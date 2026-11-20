@@ -103,7 +103,7 @@
   var CAMADAS = ".r-fundo, .r-avisos, .rolagens, .r-sincronia, .r-atividade";
   /* O que entra com animação: se já está na tela quando o estilo troca, a
      animação de entrada não repete (css/interface.css). */
-  var ENTRADAS = ".r-fundo, .r-modal, .rolagem, .r-aviso";
+  var ENTRADAS = ".r-fundo, .r-modal, .rolagem, .r-aviso, .r-menu__lista, .r-sincronia, .r-carregando";
 
   function caixaQueRola(el) {
     for (var no = el && el.parentElement; no && no !== doc.body && no !== doc.documentElement; no = no.parentElement) {
@@ -168,8 +168,15 @@
     var novo = efetivo();
     if (raiz.getAttribute("data-interface") === novo) return;
     var lugar = guardarLugar();
+    /* v9.17: o que estava se movendo para no estado final (js/movimento.js):
+       nenhum movimento atravessa a troca de estilo. */
+    if (global.RAMAMovimento && global.RAMAMovimento.pararTudo) {
+      try { global.RAMAMovimento.pararTudo(); } catch (e) { /* segue a troca */ }
+    }
     if (doc.body) {
-      Array.prototype.forEach.call(doc.querySelectorAll(ENTRADAS), function (el) { el.classList.add("interface-entrou"); });
+      /* Só o que está À VISTA: um menu fechado (hidden) continua livre para
+         animar quando abrir de novo (v9.17). */
+      Array.prototype.forEach.call(doc.querySelectorAll(ENTRADAS), function (el) { if (!el.hidden) el.classList.add("interface-entrou"); });
     }
     raiz.setAttribute("data-interface", novo);
     voltarAoLugar(lugar);

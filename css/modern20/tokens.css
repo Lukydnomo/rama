@@ -57,10 +57,51 @@
 
   --curva: cubic-bezier(0.2, 0, 0, 1);
 
+  /* ---------- movimento (v9.17) ----------
+     Uma família só, em cinco degraus de duração. O uso frequente (hover,
+     marcar, pressionar) é curto e sem elasticidade; o maior degrau fica
+     para apresentações (o changelog). js/movimento.js lê estes mesmos
+     tokens — nenhuma duração é repetida no JS. */
+  --m20-mov-toque: 100ms;      /* pressionar, marcar, responder a um controle */
+  --m20-mov-estado: 150ms;     /* hover, foco, mudança pequena de estado */
+  --m20-mov-navegar: 200ms;    /* abas, menus, recolhíveis, indicadores */
+  --m20-mov-janela: 240ms;     /* janelas, folhas, gavetas */
+  --m20-mov-especial: 340ms;   /* apresentações (novidades da versão) */
+  /* Entrada desacelera (chega macio), deslocamento é o padrão, saída
+     acelera (sai sem pedir atenção). */
+  --m20-curva-sair: cubic-bezier(0.16, 1, 0.3, 1);
+  --m20-curva-mover: cubic-bezier(0.3, 0, 0, 1);
+  --m20-curva-fechar: cubic-bezier(0.4, 0, 1, 1);
+  /* Distâncias: poucos pixels no que é frequente. */
+  --m20-desloc-curto: 4px;
+  --m20-desloc: 8px;
+  --m20-desloc-folha: 32px;
+  /* A pressão: um quase nada, que diz "ouvi". */
+  --m20-pressao: 0.97;
+  /* A inclinação máxima das capas sob o mouse, em graus. */
+  --m20-inclinacao: 6;
+  /* Os tokens que o Legacy já usa em toda transição, alinhados à família. */
+  --tempo-seco: var(--m20-mov-estado);
+  --tempo-curto: var(--m20-mov-navegar);
+  --tempo-medio: var(--m20-mov-janela);
+  --curva: var(--m20-curva-mover);
+
   /* Toque: o controle volta ao alvo de dedo inteiro. */
   @media (pointer: coarse) {
     --m20-controle: var(--alvo-toque);
     --m20-controle-mini: 32px;
+  }
+
+  /* Menos movimento: tudo vira estado imediato (a regra do Legacy, em
+     :root, perderia para este bloco, que é mais específico). */
+  @media (prefers-reduced-motion: reduce) {
+    --m20-mov-toque: 0ms;
+    --m20-mov-estado: 0ms;
+    --m20-mov-navegar: 0ms;
+    --m20-mov-janela: 0ms;
+    --m20-mov-especial: 0ms;
+    --m20-pressao: 1;
+    --m20-inclinacao: 0;
   }
 }
 
@@ -82,6 +123,8 @@
     --m20-ok-suave: color-mix(in srgb, var(--cor-ok) 12%, transparent);
     --m20-aviso-suave: color-mix(in srgb, var(--cor-aviso) 13%, transparent);
     --m20-erro-suave: color-mix(in srgb, var(--cor-erro) 12%, transparent);
+    /* o fundo breve de um valor que acabou de mudar */
+    --m20-destaque-valor: color-mix(in srgb, var(--cor-paranormal) 24%, transparent);
     /* o anel do teclado em campos */
     --m20-anel: color-mix(in srgb, var(--cor-foco) 30%, transparent);
     /* sombras: com moderação, só no que flutua */

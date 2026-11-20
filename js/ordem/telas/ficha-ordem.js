@@ -521,7 +521,11 @@
         item.dataset.nivel = nivel;
         item.setAttribute("aria-label", r.nome + ": " + r.atual + " de " + maximo + ". Ir para o recurso.");
         var atual = item.querySelector(".ordem-resumo__atual");
-        if (atual) atual.textContent = String(r.atual);
+        if (atual && atual.textContent !== String(r.atual)) {
+          atual.textContent = String(r.atual);
+          /* v9.17: o número novo já está escrito; o destaque só chama o olho. */
+          if (global.RAMAMovimento) global.RAMAMovimento.destacar(atual);
+        }
       }
       var barra = document.querySelector('.ordem-recurso[data-recurso="' + r.chave + '"] .ordem-recurso__barra');
       if (barra) {

@@ -56,13 +56,27 @@
        conseguir ler antes de o aviso sumir. */
     var timer = setTimeout(fechar, o.duracao || (o.acao ? 9000 : 4500));
 
+    var fechado = false;
     function fechar() {
+      if (fechado) return;
+      fechado = true;
       clearTimeout(timer);
-      if (node.parentNode) node.parentNode.removeChild(node);
+      /* v9.17: no Modern20 o aviso sai acelerando (já sem receber clique);
+         a remoção não depende do fim da animação — o prazo garante. */
+      if (movimentoAtivo()) {
+        node.classList.add("r-aviso--saindo");
+        setTimeout(function () { if (node.parentNode) node.parentNode.removeChild(node); }, duracaoDe("estado") + 40);
+      } else if (node.parentNode) node.parentNode.removeChild(node);
     }
 
     return fechar;
   }
+
+  /* v9.17: o movimento do Modern20 (js/movimento.js). Sem o módulo, ou no
+     Legacy, ou com movimento reduzido, tudo é imediato como antes. */
+  function M() { return global.RAMAMovimento || null; }
+  function movimentoAtivo() { return !!(M() && M().ativo()); }
+  function duracaoDe(nome) { return M() ? M().ms(nome) : 0; }
 
   function avisoOk(texto, o) { return aviso(texto, Object.assign({ tipo: "ok" }, o || {})); }
   function avisoErro(texto, o) { return aviso(texto, Object.assign({ tipo: "erro", duracao: 7000 }, o || {})); }
@@ -139,12 +153,22 @@
     }
     if (o.regiao) o.regiao.setAttribute("aria-busy", "true");
 
+    var resultado;
     try {
-      return await fn();
+      resultado = await fn();
+      return resultado;
     } finally {
       if (botao) {
         botao.removeAttribute("aria-busy");
         botao.classList.remove("r-botao--ocupado");
+        /* v9.17: o resultado aparece só DEPOIS da resposta, e só quando ela
+           diz (ok: true / ok: false). Um aceno curto no Modern20; o texto e
+           o aviso de cada tela continuam sendo a informação. */
+        if (movimentoAtivo() && resultado && typeof resultado.ok === "boolean" && !resultado.ignorado && botao.isConnected) {
+          var classeFim = resultado.ok ? "r-botao--concluido" : "r-botao--falhou";
+          botao.classList.add(classeFim);
+          setTimeout(function () { botao.classList.remove(classeFim); }, 900);
+        }
         botao.disabled = antes.desabilitado;
         botao.style.minWidth = antes.largura;
         if (o.rotulo) {
@@ -347,9 +371,14 @@
          na hora. */
       var reduzido = false;
       try { reduzido = !!(global.matchMedia && global.matchMedia("(prefers-reduced-motion: reduce)").matches); } catch (e) { reduzido = false; }
-      if (o.saida > 0 && !reduzido) {
+      /* v9.17: no Modern20 toda janela sai com a família de movimento
+         (fundo e janela juntos). A camada para de receber clique NA HORA
+         (.r-fundo--saindo) e é removida por prazo, nunca por um evento que
+         talvez não venha. Pilha, foco e aoFechar seguem já, uma vez. */
+      var saida = movimentoAtivo() ? duracaoDe("estado") + 30 : (o.saida > 0 && !reduzido ? o.saida : 0);
+      if (saida > 0) {
         fundo.classList.add("r-fundo--saindo");
-        setTimeout(function () { if (fundo.parentNode) fundo.parentNode.removeChild(fundo); }, o.saida);
+        setTimeout(function () { if (fundo.parentNode) fundo.parentNode.removeChild(fundo); }, saida);
       } else if (fundo.parentNode) fundo.parentNode.removeChild(fundo);
       pilhaDeModais = pilhaDeModais.filter(function (m) { return m.fundo !== fundo; });
       if (!pilhaDeModais.length) soltarRolagem();
@@ -560,6 +589,9 @@
 
     function fechar() {
       lista.hidden = true;
+      /* Aberto durante uma troca de estilo, o menu ganhou .interface-entrou
+         (sem animação de entrada); fechado, volta a animar ao abrir. */
+      lista.classList.remove("interface-entrou");
       gatilho.setAttribute("aria-expanded", "false");
       document.removeEventListener("click", foraDaqui);
       document.removeEventListener("keydown", teclado);

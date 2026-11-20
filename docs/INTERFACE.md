@@ -143,6 +143,114 @@ escolheu; Compacta aproxima painéis, listas e seções para caber mais informa�
   página aberta nas duas densidades e nos dois estilos e devolve a altura de cada
   aba, elementos que passam da largura e margens indevidas em grades.
 
+## Movimento no Modern20 (v9.17)
+
+Uma linguagem só de movimento, com a mesma família de durações e curvas em
+toda a camada. O Legacy não muda: tudo abaixo vale com
+`data-interface="modern20"`, e com `prefers-reduced-motion` todo estado chega
+na hora (inclusive se a preferência mudar com a página aberta).
+
+### Tokens (`css/modern20/tokens.css`)
+
+| Token | Valor | Uso |
+|---|---|---|
+| `--m20-mov-toque` | 100 ms | pressionar, marcar, responder a um controle |
+| `--m20-mov-estado` | 150 ms | hover, foco, mudança pequena de estado, saída de janela e aviso |
+| `--m20-mov-navegar` | 200 ms | abas, menus, recolhíveis, indicadores, troca de etapa |
+| `--m20-mov-janela` | 240 ms | entrada de janela, folha, aviso |
+| `--m20-mov-especial` | 340 ms | apresentação (novidades da versão, abertura da Home) |
+| `--m20-curva-sair` | `cubic-bezier(0.16, 1, 0.3, 1)` | entrada (desacelera, chega macio) |
+| `--m20-curva-mover` | `cubic-bezier(0.3, 0, 0, 1)` | deslocamento e indicadores |
+| `--m20-curva-fechar` | `cubic-bezier(0.4, 0, 1, 1)` | saída (acelera, sai sem pedir atenção) |
+| `--m20-desloc-curto` / `--m20-desloc` / `--m20-desloc-folha` | 4 / 8 / 32 px | distâncias |
+| `--m20-pressao` | 0.97 | a escala ao pressionar (propriedade `scale`) |
+| `--m20-inclinacao` | 6 | graus máximos da capa sob o mouse |
+
+`--tempo-seco`, `--tempo-curto`, `--tempo-medio` e `--curva` (os do Legacy,
+usados em toda transição antiga) apontam para os degraus acima no Modern20. Com
+movimento reduzido, os cinco degraus valem 0, a pressão vale 1 e a inclinação
+0 — dentro do próprio bloco do Modern20, porque a regra do Legacy (em `:root`)
+perderia para ele.
+
+### Regras de escrita
+
+- Só `transform`, `scale`, `translate`, `rotate` e `opacity` no que se move
+  (a altura dos recolhíveis e a largura das barras são as exceções medidas).
+- A pressão e a inclinação usam as propriedades individuais `scale` e
+  `rotate`: compõem com o `transform` que o elemento já tem (capas, arraste,
+  indicadores) em vez de sobrescrevê-lo.
+- Keyframes novos com prefixo `m20-`, regras dentro de
+  `:where(:root[data-interface="modern20"])` (o teste de tema confere).
+- Nada contínuo e decorativo: o que pulsa é estado (salvando, sincronizando,
+  carregando). Nada de balanço em controle de formulário, zoom grande ou texto
+  animado durante a leitura.
+- Hover só com `(hover: hover) and (pointer: fine)`; no toque, a pressão.
+
+### O módulo (`js/movimento.js`, `RAMAMovimento`)
+
+Carregado em toda página antes de `js/ui.js`. Todas as funções aplicam o estado
+final na hora (e devolvem promessa resolvida) no Legacy, com movimento reduzido
+ou sem a Web Animations API.
+
+| Função | Para quê |
+|---|---|
+| `entrar(el, { de })` | o conteúdo que acabou de ser trocado (`de`: baixo, direita, esquerda, nada) |
+| `altura(el, abrir, { ate, aoFim })` | abrir e fechar medindo a altura; nenhuma altura fixa fica no fim |
+| `sair(el)` | saída antes de remover |
+| `destacar(el)` | um valor que mudou (fundo breve; o número já está certo) |
+| `lembrar(raiz)` / `continuar(raiz, foto)` | barras e números que atravessam um redesenho, da largura antiga à nova |
+| `flip(itens, mudar)` | reposicionar poucos itens (até 40) |
+| `apresentar(lista)` | primeira apresentação: os 8 primeiros em escada de no máximo 160 ms, uma vez por lista |
+| `animar(el, canal, quadros, opcoes)` | o núcleo: um canal por propósito |
+| `pararTudo()` | estado final em tudo (troca de estilo, preferência mudando) |
+
+**Interrompível:** cada elemento tem canais (`entrada`, `altura`, `abas`…); um
+movimento novo no mesmo canal cancela o anterior e parte do estado de agora.
+**Uma vez só:** toda promessa resolve uma vez — no fim, no cancelamento ou num
+prazo (duração + 120 ms) — e nenhuma função depende de um evento que talvez não
+venha (`animationend`, `onfinish`). **Apresentação, nunca dado:** o módulo não
+grava, não pede ao servidor e não decide sucesso; um teste confere.
+
+### Sem pedir nada à tela (delegação de evento)
+
+Três comportamentos ouvem o gesto da pessoa no documento — sem observar
+mutações — e só agem no Modern20 com movimento liberado:
+
+- **Abas** (`.r-abas`, `[role=tablist]`): no clique, guarda onde estava a aba
+  selecionada; no fim da propagação (a tela já trocou — às vezes redesenhando a
+  lista inteira, achada pelo lugar), um traço desliza da posição antiga à nova
+  e o painel da aba (`aria-controls`) entra. Clicar de novo no meio parte de
+  onde o traço está. O Perfil e as pastas laterais têm indicador próprio,
+  persistente, com transição CSS (interrompível por natureza); a troca de pasta
+  agora parte da posição visual do indicador, não do último destino.
+- **`<details>`**: abrir cresce a altura (open na hora); fechar encolhe e o
+  `open` cai no fim; clicar no meio inverte. `aria-expanded` acompanha a
+  intenção, na hora, e a seta segue ele. Desligar num trecho:
+  `data-sem-movimento`. Restaurar o estado depois de um redesenho
+  (`devolverTela` da ficha) muda `open` direto, sem animar.
+- **Capas** (`.capa-sistema`): inclinação leve sob o mouse, em `rotate`, com a
+  perspectiva no pai; volta ao repouso ao sair.
+
+### Pontos de integração nas telas
+
+| Onde | O quê |
+|---|---|
+| `RAMAUI.modal` | entrada de fundo e janela juntos; saída de toda janela (fundo `.r-fundo--saindo` sem clique na hora, removido por prazo). Pilha, foco, rolagem e `aoFechar` seguem imediatos e únicos; janelas empilhadas e a confirmação de clique fora continuam iguais |
+| `RAMAUI.aviso` | entrada e saída curtas (remoção por prazo, fechar duas vezes é inofensivo) |
+| `RAMAUI.menu` | surge do gatilho (`transform-origin` no canto do lado aberto) |
+| `RAMAUI.ocupar` | largura segura (já existia), a esteira aparece com fade; depois da resposta, `.r-botao--concluido` ou `--falhou` por 900 ms, só se a resposta disser `ok` |
+| barra de atividade e selo | a barra continua acendendo na hora; o selo de segundo plano e a tela de carregamento só aparecem depois de ~200 ms (sem pisca-pisca) |
+| Perfil | troca de seção e blocos que abrem pelo `entrar` |
+| Personagens / Campanhas | troca de pasta pelo `entrar`; primeira apresentação da lista pelo `apresentar` |
+| Ficha | `atualizar` lembra e continua barras e números; o ajuste manual destaca o número do resumo; as barras deslizam por transição de largura |
+| Criação de Ordem e importação do CRIS | só a troca de etapa (e de seção, no CRIS) anima: avançar entra da direita, voltar da esquerda; recalcular não anima |
+| Home e novidades | abertura em escada curta; o aviso de versão nova usa `--m20-mov-especial` |
+| Troca de estilo | `interface.js` chama `pararTudo()` e marca só o que está à vista com `.interface-entrou` |
+
+Para uma tela nova: use os componentes de `js/ui.js` (já animam), chame
+`RAMAMovimento.entrar(area)` só na navegação explícita e nunca numa atualização
+de dados ou de segundo plano, e use os tokens em qualquer transição CSS.
+
 ## Inventário de telas e componentes
 
 Levantado antes do redesenho, a partir das páginas (`js/paginas/*`) e das seções
@@ -181,6 +289,15 @@ das folhas. Cada linha diz onde o Modern20 a trata.
   prévia, troca de conta, outra aba) e o isolamento das folhas (ordem nas
   páginas, folhas do Legacy intocadas, regras do Modern20 presas ao atributo,
   nenhum `!important`).
+- `deno run --allow-read testes/executar-movimento.js` — o movimento (v9.17):
+  nada anima no Legacy nem com movimento reduzido (também mudando no meio),
+  interromper cancela o anterior no mesmo canal, cada fim roda uma vez (no
+  fim, no cancelamento ou no prazo, sem depender do evento), parar tudo limpa o
+  registro, a altura não deixa valor fixo, a primeira apresentação é limitada e
+  única, e as folhas e telas usam os tokens, `scale` na pressão e prazos em vez
+  de `animationend`. No navegador, `testes/janelas.html` roda a bateria de
+  janelas nos dois estilos e confere a saída com movimento (uma vez, sem
+  bloquear, removida por prazo).
 - `testes/tema-backend.js` (dentro de `executar-backend.js`) — o servidor
   aceita, devolve e recusa `estiloInterface`.
 - `deno run --allow-read testes/executar-feedback.js` — a janela de Feedback

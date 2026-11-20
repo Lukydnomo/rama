@@ -43,6 +43,8 @@
     campanhas = rc.dados || [];
     personagens = (rp.ok && rp.dados) || [];
     desenhar();
+    /* v9.17: primeira apresentação, uma vez (js/movimento.js). */
+    if (global.RAMAMovimento) global.RAMAMovimento.apresentar(painel.querySelector(".registros"));
   }
 
   function cabecalho() {

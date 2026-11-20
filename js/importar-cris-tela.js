@@ -797,11 +797,23 @@
 
     /* ------------------------------------------------------------ desenho */
 
+    /* v9.17: só a navegação explícita (outra etapa, outra seção) anima a
+       área; recalcular, conferir ou abrir um painel redesenham sem
+       movimento. Avançar entra da direita; voltar, da esquerda. */
+    var vistaAnterior = null;
+    var ORDEM_ETAPAS = { carregar: 0, revisar: 1, conferir: 2 };
     function desenhar() {
       desenharPassos();
       if (etapa === "revisar" && convertido()) U.trocar(area, telaRevisar());
       else if (etapa === "conferir" && convertido()) U.trocar(area, telaConferir());
       else U.trocar(area, telaCarregar());
+      var vista = { etapa: etapa, secao: etapa === "revisar" ? secao : 0 };
+      var Mv = global.RAMAMovimento;
+      if (Mv && vistaAnterior && (vistaAnterior.etapa !== vista.etapa || vistaAnterior.secao !== vista.secao)) {
+        var frente = ORDEM_ETAPAS[vista.etapa] > ORDEM_ETAPAS[vistaAnterior.etapa] || (vista.etapa === vistaAnterior.etapa && vista.secao > vistaAnterior.secao);
+        Mv.entrar(area, { de: frente ? "direita" : "esquerda" });
+      }
+      vistaAnterior = vista;
       if (focoDepois) { var k = focoDepois; focoDepois = ""; focar("#" + idSeguro(k)); }
     }
 

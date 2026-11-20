@@ -143,4 +143,27 @@
   & .home-passo__link:focus-visible { box-shadow: var(--m20-sombra-2); }
 
   & .home-aviso { border-top-color: var(--m20-borda); }
+
+  /* ---------- movimento (v9.17) ----------
+     A abertura chega uma vez, curta: o título, o texto e o leque de capas
+     sobem poucos pixels em escada de 40 ms. Nada espera para ser clicado
+     (só opacidade e deslocamento; a página já está toda lá). Com menos
+     movimento, os tokens valem 0. */
+  & .home-abertura__titulo,
+  & .home-abertura__texto,
+  & .home-leque { animation: m20-home-subir var(--m20-mov-especial) var(--m20-curva-sair) both; }
+  & .home-abertura__texto { animation-delay: 40ms; }
+  & .home-leque { animation-delay: 80ms; }
+  & .home-sistema { transition: box-shadow var(--tempo-seco) var(--curva), border-color var(--tempo-seco) var(--curva), translate var(--m20-mov-estado) var(--m20-curva-mover); }
+  @media (hover: hover) and (pointer: fine) {
+    & .home-sistema:hover { translate: 0 -2px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    & .home-abertura__titulo, & .home-abertura__texto, & .home-leque { animation: none; }
+  }
+}
+
+@keyframes m20-home-subir {
+  from { opacity: 0; translate: 0 var(--m20-desloc); }
+  to { opacity: 1; translate: 0 0; }
 }

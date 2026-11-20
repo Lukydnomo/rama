@@ -929,6 +929,18 @@ segredo nenhum — ele os lê das Script Properties. Publicá-lo não expõe nad
 
 ### Atualizar o backend
 
+**v9.17.0 — CADÊNCIA:** overhaul do movimento e das microinterações do
+Modern20 (tokens de movimento, `js/movimento.js`, abas, recolhíveis, janelas,
+menus, avisos, botões ocupados, recursos da ficha, etapas dos assistentes).
+**Só o site muda.** Site: `js/movimento.js` (novo, carregado antes de
+`js/ui.js` em todas as páginas), `js/ui.js`, `js/interface.js`,
+`js/paginas/perfil.js`, `js/paginas/personagens.js`, `js/paginas/campanhas.js`,
+`js/paginas/ficha.js`, `js/ordem/telas/ficha-ordem.js`,
+`js/ordem/telas/ordem-criar.js`, `js/importar-cris-tela.js`,
+`css/interface.css`, `css/modern20/tokens.css`, `componentes.css`,
+`ficha.css`, `home.css`, `layout.css`, os `index.html` das páginas e
+`js/versao.js`.
+
 **v9.16.0 — ESTRATIGRAFIA:** reconstrução da progressão na importação do CRIS
 (etapa por etapa, procedência de cada poder e ritual, entradas divididas em
 partes) e aquisições extras na aba Progressão. **Só o site muda** — o Apps
@@ -2117,7 +2129,7 @@ Três números diferentes, que não se misturam:
 
 | | Onde | O que é |
 |---|---|---|
-| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v9.16.0 |
+| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v9.17.0 |
 | `schemaVersion` | `js/ficha.js` | o formato da FICHA |
 | `versaoFormato` | `js/config.js` | o formato dos arquivos de importação |
 

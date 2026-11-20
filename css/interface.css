@@ -154,4 +154,4 @@
    O que já estava na tela quando o estilo trocou (js/interface.js marca
    com .interface-entrou) não repete a animação de entrada: a janela
    aberta continua aberta, sem "abrir de novo". A saída continua. */
-:root .interface-entrou:not(.r-fundo--saindo):not(.rolagem--saindo) { animation: none; }
+:root .interface-entrou:not(.r-fundo--saindo):not(.rolagem--saindo):not(.r-aviso--saindo) { animation: none; }

@@ -212,10 +212,20 @@
     if (animar) area.style.minHeight = area.offsetHeight + "px";
     U.trocar(area, [s.desenhar()]);
     if (!animar) return;
+    clearTimeout(soltarAltura);
+    /* v9.17: no Modern20, a entrada da família de movimento (js/movimento.js):
+       a próxima troca cancela esta e parte do estado de agora. No Legacy,
+       a de sempre. */
+    var Mv = global.RAMAMovimento;
+    if (Mv && Mv.ativo()) {
+      area.classList.remove("perfil-secao--entrando");
+      Mv.entrar(area.firstElementChild || area);
+      soltarAltura = setTimeout(function () { area.style.minHeight = ""; }, Mv.ms("navegar") + 20);
+      return;
+    }
     area.classList.remove("perfil-secao--entrando");
     void area.offsetWidth;
     area.classList.add("perfil-secao--entrando");
-    clearTimeout(soltarAltura);
     soltarAltura = setTimeout(function () { area.style.minHeight = ""; area.classList.remove("perfil-secao--entrando"); }, 220);
   }
 
@@ -232,6 +242,8 @@
   /* Só o bloco que mudou anima (abrir o nome, abrir a prévia de um tema). */
   function animarBloco(no) {
     if (!no) return;
+    var Mv = global.RAMAMovimento;
+    if (Mv && Mv.ativo()) { no.classList.remove("perfil-anima"); Mv.entrar(no, { de: "nada" }); return; }
     no.classList.remove("perfil-anima");
     void no.offsetWidth;
     no.classList.add("perfil-anima");

@@ -651,6 +651,11 @@
     var lista = (pedidas && pedidas.length ? pedidas : ["bloco", "conteudo"]).filter(function (n) { return !!regioes[n]; });
     sincronizarTema();
     var memoria = lembrarTela(estado.raiz);
+    /* v9.17: barras e números que atravessam o redesenho seguem da largura
+       de antes para a nova (Modern20, js/movimento.js). Nada recomeça do
+       zero e nenhuma outra parte da ficha anima de novo. */
+    var Mv = global.RAMAMovimento;
+    var fotoDoMovimento = Mv ? Mv.lembrar(estado.raiz) : null;
     var feitas = [];
 
     emCiclo(function () {
@@ -667,6 +672,7 @@
 
     devolverTela(memoria);
     manterNaTela();
+    if (Mv && fotoDoMovimento) Mv.continuar(estado.raiz, fotoDoMovimento);
     if (m) {
       m.contar("ficha.desenho.parcial");
       feitas.forEach(function (n) { m.contar("ficha.regiao." + n); });

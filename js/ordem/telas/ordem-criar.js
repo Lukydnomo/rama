@@ -159,13 +159,20 @@
       { chave: "revisao", titulo: "Revisão", desenhar: etapaRevisao, conferir: function () { return null; } },
     ];
 
+    /* v9.17: só a troca de etapa anima, e só o miolo dela (a trilha de
+       passos fica parada); escolher uma opção redesenha sem movimento. */
+    var etapaPintada = null;
     function pintar() {
       var e = ETAPAS[etapa];
+      var miolo = e.desenhar();
       U.trocar(corpo, [
         trilhaDeEtapas(),
         el("h3.t-secao", { texto: (etapa + 1) + ". " + e.titulo }),
-        e.desenhar(),
+        miolo,
       ]);
+      var Mv = global.RAMAMovimento;
+      if (Mv && etapaPintada !== null && etapaPintada !== etapa) Mv.entrar(miolo, { de: etapa > etapaPintada ? "direita" : "esquerda" });
+      etapaPintada = etapa;
       voltar.disabled = etapa === 0;
       avancar.textContent = etapa === ETAPAS.length - 1 ? "Criar personagem" : "Continuar";
       rodapeInfo.textContent = "";
