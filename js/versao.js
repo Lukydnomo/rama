@@ -119,7 +119,7 @@
   var CHANGELOG = [
     {
       versao: "9.18.2",
-      codinome: "ENXUTO",
+      codinome: "DESAPERTO",
       data: "20/11/2026",
       mudancas: {
         "Corrigido": [
