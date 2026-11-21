@@ -118,6 +118,16 @@
 
   var CHANGELOG = [
     {
+      versao: "9.17.4",
+      codinome: "PENEIRA",
+      data: "20/11/2026",
+      mudancas: {
+        "Adicionado": [
+          "Rolagem livre e fórmulas de dados: manter os maiores ou os menores. 3d20k1 rola três d20 e fica com o maior ([3, 10, 20] → 20); 3d20kl1 fica com o menor (→ 3); 4d6kh3 soma os três maiores. Sem número, mantém um. O resultado mostra todos os dados rolados e o que ficou.",
+        ],
+      },
+    },
+    {
       versao: "9.17.3",
       codinome: "CONSTÂNCIA",
       data: "20/11/2026",

@@ -5105,6 +5105,17 @@
       return k ? vals[k] : undefined;
     };
 
+    t.grupo("v9.17.4 · manter os maiores ou os menores (k, kh, kl)");
+    var k1 = comDados([3, 10, 20], function () { return D.formula({ formula: "3d20k1", contagem: "soma" }); });
+    t.ok("3d20k1 → [3, 10, 20] → 20", k1.ok && k1.total === 20 && /3d20k1 \(3, 10, 20 → 20\)/.test(k1.parcelas[0].detalhe));
+    var kl = comDados([3, 10, 20], function () { return D.formula({ formula: "3d20kl1", contagem: "soma" }); });
+    t.ok("3d20kl1 → [3, 10, 20] → 3", kl.ok && kl.total === 3);
+    var kh = comDados([5, 1, 6, 2], function () { return D.formula({ formula: "4d6kh3 + 1", contagem: "soma" }); });
+    t.ok("4d6kh3 + 1 → os três maiores (13) + 1", kh.ok && kh.total === 14);
+    var sem = comDados([4, 9], function () { return D.formula({ formula: "2d20kl", contagem: "soma" }); });
+    t.ok("sem número, mantém um", sem.ok && sem.total === 4);
+    t.ok("manter 0 é recusado com explicação", !D.formula({ formula: "3d20k0", contagem: "soma" }).ok);
+
     t.grupo("v2.43 · leitura das fórmulas");
     t.iguais("prévias com os valores de agora", [
       "(@FOR/2 + 1)d6 + @INT", "@FOR d20", "@FORd20", "d20+3", "@{Força Bruta}d4", "teto(@INT/3)d8 + 1d4 - 2", "max(1, @FOR - 5)d10", "piso(@AGI/2)d6",

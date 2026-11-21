@@ -229,7 +229,7 @@
     var entrada = el("input.r-entrada.rolagem-livre__entrada", {
       id: id, type: "text", autocomplete: "off", spellcheck: "false",
       maxlength: global.RAMADados ? global.RAMADados.MAX_FORMULA : 200,
-      placeholder: "1d20+5, 2d6*2, max(1d8, 1d8)…",
+      placeholder: "1d20+5, 2d6*2, 3d20k1, 3d20kl1…",
       "aria-describedby": id + "-erro",
     });
     var erro = el("p.t-mini.t-erro.rolagem-livre__erro", { id: id + "-erro", role: "alert" });

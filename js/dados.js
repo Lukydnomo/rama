@@ -561,6 +561,8 @@
        números        3   2.5
        atributos      @FOR (sigla ou nome de uma palavra), @{Nome Longo}
        dados          2d6   d20   (@FOR)d6   @FOR d6   (@FOR/2+1)d(4+2)
+       manter         3d20k1 (fica com o maior)   3d20kh2 (os 2 maiores)
+                      3d20kl1 (fica com o menor)  — o número é opcional (1)
        contas         + − * / e parênteses
        funções        piso() teto() arred() abs() min(a, b…) max(a, b…)
 
@@ -706,7 +708,21 @@
       if (temDado(q) || temDado(f)) { falha = "A quantidade e as faces de um dado não podem ter outro dado."; return null; }
       dados++;
       if (dados > MAX_DADOS_FORMULA && !falha) falha = "Dados demais numa fórmula só (até " + MAX_DADOS_FORMULA + ").";
-      return no({ k: "dado", q: q || no({ k: "num", v: 1 }), f: f });
+      /* Manter (v9.17.4): k ou kh fica com os maiores, kl com os menores;
+         sem número, fica com um. 3d20k1 → [3, 10, 20] → 20. */
+      var manter = null;
+      if (ve("id") && /^k[hl]?$/.test(t[p].v)) {
+        var modo = t[p].v === "kl" ? "l" : "h";
+        p++;
+        var n = 1;
+        if (ve("num")) {
+          n = t[p].v;
+          p++;
+          if (n < 1 || Math.floor(n) !== n) { falha = "Quantos dados manter precisa ser um número inteiro de 1 para cima (3d20k1)."; return null; }
+        }
+        manter = { modo: modo, n: n };
+      }
+      return no({ k: "dado", q: q || no({ k: "num", v: 1 }), f: f, manter: manter });
     }
     function primario() {
       if (falha) return null;
@@ -804,7 +820,7 @@
     if (x.k === "dado") {
       var r = rolados ? rolados.shift() : null;
       var qf = quantidadeEFaces(x, valorDe);
-      var base = qf.q + "d" + qf.f;
+      var base = qf.q + "d" + qf.f + (x.manter ? (x.manter.modo === "l" ? "kl" : "k") + x.manter.n : "");
       if (!r) return base;
       return base + " (" + (r.rolagens.length ? r.rolagens.join(", ") : "nenhum") + (r.eleito !== undefined ? " → " + r.eleito : "") + ")";
     }
@@ -863,7 +879,14 @@
         for (var i = 0; i < qf.q; i++) rolagens.push(sorteio(qf.f));
         var r = { rolagens: rolagens };
         var v;
-        if (contagem !== "soma" && !rolados.length) {
+        if (x.manter) {
+          /* Manter: os n maiores (ou menores) somam; o resto fica de fora. */
+          var ordenados = rolagens.slice().sort(function (a, b) { return x.manter.modo === "l" ? a - b : b - a; });
+          var mantidos = ordenados.slice(0, Math.min(x.manter.n, ordenados.length));
+          v = mantidos.reduce(function (s, n) { return s + n; }, 0);
+          if (rolagens.length > mantidos.length) r.eleito = v;
+          if (contagem !== "soma" && !rolados.length && mantidos.length === 1) natural = v;
+        } else if (contagem !== "soma" && !rolados.length) {
           v = rolagens.length ? (contagem === "menor" ? Math.min.apply(null, rolagens) : Math.max.apply(null, rolagens)) : 0;
           natural = v;
           if (rolagens.length > 1) r.eleito = v;
