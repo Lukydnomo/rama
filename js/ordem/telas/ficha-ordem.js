@@ -3000,6 +3000,7 @@
     }
 
     /* ---- grau ---- */
+    function indiceDoGrau(k) { var n = -1; C.GRAUS.forEach(function (x, i) { if (x.chave === k) n = i; }); return n; }
     var celulaGrau = edicao
       ? el("span.ordem-pericia__grau-edicao", {}, [
           el("select.r-selecao.ordem-pericia__seletor", {
@@ -3010,10 +3011,16 @@
               else o.pericias[p.chave] = ev.target.value;
               mudouPericia(ctx, "grau-" + p.chave);
             },
-          }, C.GRAUS.map(function (x) {
-            return el("option", { value: x.chave, selected: x.chave === base, texto: x.nome });
+          /* v9.17.2: o seletor mostra o grau que a perícia TEM (o de
+             criação mais o que a progressão e os poderes deram), não só o da
+             criação com um "efetivo" ao lado. Graus abaixo do que as fontes
+             já dão ficam visíveis, mas não escolhíveis: baixar ali não
+             mudaria nada. Escolher um grau acima grava esse grau na ficha. */
+          }, C.GRAUS.map(function (x, i) {
+            var iEfetivo = indiceDoGrau(g), iBase = indiceDoGrau(base);
+            var abaixoDasFontes = !!(fontes.length && i < iEfetivo && iEfetivo > iBase);
+            return el("option", { value: x.chave, selected: x.chave === g, disabled: abaixoDasFontes, texto: x.nome });
           })),
-          fontes.length ? el("span.t-mini", { texto: "efetivo: " + grau.nome }) : null,
         ])
       : el("span.ordem-pericia__grau.grau--" + g, {
           texto: grau.nome,

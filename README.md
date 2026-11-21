@@ -929,6 +929,10 @@ segredo nenhum — ele os lê das Script Properties. Publicá-lo não expõe nad
 
 ### Atualizar o backend
 
+**v9.17.2 — FRANQUEZA:** no modo edição das perícias de Ordem, o seletor de
+grau mostra o grau efetivo (sem o “efetivo:” à parte). **Só o site muda.**
+Site: `js/ordem/telas/ficha-ordem.js` e `js/versao.js`.
+
 **v9.17.1 — DISCRIÇÃO:** a infecção da Apóstata sai da faixa de botões da
 seção Condições e entra na janela “+ Adicionar condição”. **Só o site muda.**
 Site: `js/ordem/telas/efeitos-janela.js`, `js/ordem/telas/ficha-arquivo7.js`,
@@ -2134,7 +2138,7 @@ Três números diferentes, que não se misturam:
 
 | | Onde | O que é |
 |---|---|---|
-| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v9.17.1 |
+| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v9.17.2 |
 | `schemaVersion` | `js/ficha.js` | o formato da FICHA |
 | `versaoFormato` | `js/config.js` | o formato dos arquivos de importação |
 

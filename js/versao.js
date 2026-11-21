@@ -118,6 +118,16 @@
 
   var CHANGELOG = [
     {
+      versao: "9.17.2",
+      codinome: "FRANQUEZA",
+      data: "20/11/2026",
+      mudancas: {
+        "Alterado": [
+          "Ficha de Ordem, Perícias no modo edição: o seletor de grau mostra o grau que a perícia tem de verdade — o da criação somado ao que a progressão e os poderes deram (uma perícia Expert aparece como Expert), sem o “efetivo:” embaixo. Os graus abaixo do que a progressão já dá continuam na lista, mas não podem ser escolhidos; escolher um grau acima grava esse grau na ficha.",
+        ],
+      },
+    },
+    {
       versao: "9.17.1",
       codinome: "DISCRIÇÃO",
       data: "20/11/2026",
