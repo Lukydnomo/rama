@@ -118,6 +118,16 @@
 
   var CHANGELOG = [
     {
+      versao: "9.18.4",
+      codinome: "INTERRUPTOR",
+      data: "20/11/2026",
+      mudancas: {
+        "Alterado": [
+          "Regras opcionais (aba Regras da ficha de Ordem, regras de patente e a criação guiada): o interruptor liga e desliga na hora, sem janela de confirmação — nenhuma regra converte, apaga ou reconfigura nada. O que muda ao ligar ou desligar está escrito no próprio cartão da regra; na criação, com decisões já tomadas, um aviso passageiro diz o que mudou.",
+        ],
+      },
+    },
+    {
       versao: "9.18.3",
       codinome: "ELÁSTICO",
       data: "20/11/2026",

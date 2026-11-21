@@ -4530,18 +4530,9 @@
     aoMudarOrdem(ctx);
   }
 
-  async function alternarPatente(ctx, o, aplicar) {
-    var certeza = await UI.confirmar({
-      titulo: (aplicar ? "Ligar" : "Desligar") + " as regras de patente?",
-      texto: aplicar
-        ? "A patente volta a sair dos pontos de prestígio, com o limite de crédito e os limites de itens da Tabela 3.1."
-        : "A patente, o limite de crédito e os limites da Tabela 3.1 deixam de ser calculados. Os limites por categoria passam a ser os definidos pela mesa.",
-      detalhe: "Nenhum item é apagado. " + (aplicar
-        ? "Os limites manuais ficam guardados para quando a regra for desligada de novo."
-        : (o.patente && o.patente.limites ? "Os limites manuais guardados antes voltam a valer." : "Os limites manuais começam iguais aos da patente atual.")),
-      rotuloConfirmar: aplicar ? "Ligar" : "Desligar",
-    });
-    if (!certeza) return;
+  /* v9.18.4: na hora, sem confirmação — nada é apagado e os limites
+     manuais ficam guardados nos dois sentidos. */
+  function alternarPatente(ctx, o, aplicar) {
     var r = R.definirRegraDePatente(o, aplicar);
     if (r.aviso) UI.aviso(r.aviso);
     aoMudarOrdem(ctx);
@@ -4578,6 +4569,14 @@
 
     if (bloqueada) {
       corpo.push(el("p.t-mini.t-erro", { texto: problemas.map(function (p) { return p.texto; }).join(" ") }));
+    }
+
+    /* O que o interruptor faz, escrito aqui em vez de numa janela. */
+    var muda = r.afetaFicha ? OP.consequenciasDe(o, r.chave, !ligada) : [];
+    if (muda.length) {
+      corpo.push(el("div.ordem-regra__muda", {}, [
+        el("p.t-mini", {}, [el("strong", { texto: ligada ? "Ao desligar: " : "Ao ligar: " }), el("span", { texto: muda.join(" ") })]),
+      ]));
     }
 
     /* Arquivos Secretos 2 (v2.31): dados de antes, guardados — avisar,
@@ -4622,19 +4621,11 @@
     ], chave, corpo, ligada, false, [r.resumo, fonte, r.fonte]);
   }
 
-  async function alternarRegra(ctx, o, r, ligar) {
-    var consequencias = OP.consequenciasDe(o, r.chave, ligar);
-
-    if (consequencias.length) {
-      var certeza = await UI.confirmar({
-        titulo: (ligar ? "Ligar" : "Desligar") + " “" + r.nome + "”?",
-        texto: consequencias[0],
-        detalhe: consequencias.slice(1).join(" "),
-        rotuloConfirmar: ligar ? "Ligar" : "Desligar",
-      });
-      if (!certeza) return;
-    }
-
+  /* v9.18.4: o interruptor liga e desliga na hora, sem janela de
+     confirmação — nenhuma regra converte, apaga ou reconfigura nada, e
+     desligar devolve tudo como estava. O que muda está escrito no próprio
+     cartão ("Ao ligar" / "Ao desligar"). */
+  function alternarRegra(ctx, o, r, ligar) {
     var resultado = OP.definir(o, r.chave, ligar);
 
     if (!resultado.ok) {

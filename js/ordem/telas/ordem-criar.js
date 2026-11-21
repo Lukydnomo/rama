@@ -1205,19 +1205,12 @@
       /* Com decisões já tomadas, avisa antes — como a aba Regras. Num
          rascunho sem nada decidido não há o que perder, e o cartão já
          diz o que a regra faz. */
+      /* v9.18.4: sem janela de confirmação — nada do que já foi decidido é
+         apagado. Com decisões tomadas, um aviso passageiro diz o que mudou
+         (sem travar o interruptor). */
       var decidiu = (d.escolhas || []).length > 0 || !!d.trilha ||
                     !!(d.afinidade && (d.afinidade.elemento || d.afinidade.adiada));
-      if (decidiu) {
-        var mudanca = textoDaMudanca(r, ligar);
-        var certeza = await UI.confirmar({
-          titulo: (ligar ? "Ligar" : "Desligar") + " “" + r.nome + "”?",
-          texto: mudanca.texto,
-          detalhe: mudanca.detalhe + " Nada do que você já decidiu nesta revisão é apagado; o que " +
-                   "ficar numa etapa que o personagem não alcança fica guardado, sem efeito.",
-          rotuloConfirmar: ligar ? "Ligar" : "Desligar",
-        });
-        if (!certeza) return;
-      }
+      var mudancaDecidida = decidiu ? textoDaMudanca(r, ligar) : null;
 
       var ordem = rascunhoParaRegras();
       /* No rascunho, o nível parte sempre do NEX escolhido agora — não de
@@ -1266,6 +1259,7 @@
       d.nex = ordem.nex;
 
       pintarFocando("criacao-regra-" + r.chave);
+      if (!aviso && mudancaDecidida) aviso = mudancaDecidida.texto + " Nada do que você já decidiu foi apagado.";
       if (aviso) UI.aviso(aviso);
     }
 
