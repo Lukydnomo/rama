@@ -1975,6 +1975,8 @@
       rituaisDaFicha: (ctx.ficha.rituais && ctx.ficha.rituais.itens) || [],
       cena: cond.cena.id,
       aplicadoPor: quemAplica(ctx),
+      /* Condições com registro próprio de suplemento (AS7: a Apóstata). */
+      especiais: global.RAMAFichaArquivo7 && global.RAMAFichaArquivo7.condicoesEspeciais ? global.RAMAFichaArquivo7.condicoesEspeciais(ctx) : [],
       aoRastreador: function (chave) {
         var r = CD().ativar(cond, chave);
         if (!r.mudou) return { ok: false, motivo: "Já está ativa." };

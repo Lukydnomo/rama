@@ -731,8 +731,23 @@
     var o = ordemDe(ctx);
     var l = [];
     if (A7().regraSubaquatica(o) && !A7().dados(o).submerso.ativo) l.push(el("button.r-botao.r-botao--mini", { type: "button", texto: "Entrar na água…", onclick: function () { entrarNaAgua(ctx); } }));
-    if (liberado() && !A7().dados(o).infeccao.ativa) l.push(el("button.r-botao.r-botao--mini.r-botao--fantasma", { type: "button", texto: "Infectado pela Apóstata…", onclick: function () { infectar(ctx); } }));
     return l;
+  }
+
+  /* A infecção da Apóstata não tem botão próprio na seção (v9.17.1): ela
+     aparece na janela "+ Adicionar condição", entre as condições, e abre
+     o registro dela de lá. */
+  function condicoesEspeciais(ctx) {
+    if (!A7() || !permitido(ctx)) return [];
+    permitidoGlobal = true;
+    var o = ordemDe(ctx);
+    if (!liberado() || A7().dados(o).infeccao.ativa) return [];
+    return [{
+      nome: "Infectado pela Apóstata (Mentem Corrumpere)",
+      etiqueta: "doença", referencia: "AS7 p. 70",
+      texto: "A apóstata contaminou a mente em vez de causar dano mental. Registra o estágio, as condições de cada estágio e o teste diário.",
+      aoEscolher: function () { infectar(ctx); },
+    }];
   }
 
   function entrarNaAgua(ctx) {
@@ -1272,6 +1287,7 @@
     danoExtraDoAtaque: danoExtraDoAtaque,
     condicoes: condicoes,
     botoesDeCondicoes: botoesDeCondicoes,
+    condicoesEspeciais: condicoesEspeciais,
     alertasDoResumo: alertasDoResumo,
     aoTrocarDeCena: aoTrocarDeCena,
     painelDeRituais: painelDeRituais,

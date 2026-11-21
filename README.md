@@ -929,6 +929,11 @@ segredo nenhum — ele os lê das Script Properties. Publicá-lo não expõe nad
 
 ### Atualizar o backend
 
+**v9.17.1 — DISCRIÇÃO:** a infecção da Apóstata sai da faixa de botões da
+seção Condições e entra na janela “+ Adicionar condição”. **Só o site muda.**
+Site: `js/ordem/telas/efeitos-janela.js`, `js/ordem/telas/ficha-arquivo7.js`,
+`js/ordem/telas/ficha-ordem.js` e `js/versao.js`.
+
 **v9.17.0 — CADÊNCIA:** overhaul do movimento e das microinterações do
 Modern20 (tokens de movimento, `js/movimento.js`, abas, recolhíveis, janelas,
 menus, avisos, botões ocupados, recursos da ficha, etapas dos assistentes).
@@ -2129,7 +2134,7 @@ Três números diferentes, que não se misturam:
 
 | | Onde | O que é |
 |---|---|---|
-| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v9.17.0 |
+| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v9.17.1 |
 | `schemaVersion` | `js/ficha.js` | o formato da FICHA |
 | `versaoFormato` | `js/config.js` | o formato dos arquivos de importação |
 

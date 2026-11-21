@@ -118,6 +118,16 @@
 
   var CHANGELOG = [
     {
+      versao: "9.17.1",
+      codinome: "DISCRIÇÃO",
+      data: "20/11/2026",
+      mudancas: {
+        "Alterado": [
+          "Ficha de Ordem, Condições: “Infectado pela Apóstata” (Arquivos Secretos 7) não tem mais um botão próprio na seção. Ele aparece na janela “+ Adicionar condição”, no topo da lista de condições, e abre o mesmo registro de antes.",
+        ],
+      },
+    },
+    {
       versao: "9.17.0",
       codinome: "CADÊNCIA",
       data: "19/11/2026",

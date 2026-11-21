@@ -134,10 +134,31 @@
       return !b || U.chaveDeBusca(texto || "").indexOf(b) >= 0;
     }
 
+    /* v9.17.1: condições com registro próprio de um suplemento (a infecção
+       da Apóstata, AS7), oferecidas aqui no meio das outras em vez de um
+       botão solto na seção. Escolher fecha esta janela e abre a delas. */
+    function especiais() {
+      return (o.especiais || []).filter(function (x) { return casa(x.nome + " " + (x.texto || "")); }).map(function (x) {
+        return el("div.efeitos-item", { role: "listitem" }, [
+          el("div.efeitos-item__topo", {}, [
+            el("span.efeitos-item__nome", { texto: x.nome }),
+            x.etiqueta ? el("span.r-etiqueta", { texto: x.etiqueta }) : null,
+            x.referencia ? el("span.t-mini", { texto: x.referencia }) : null,
+          ]),
+          x.texto ? el("p.t-mini.efeitos-item__texto", { texto: x.texto }) : null,
+          el("button.r-botao.r-botao--mini", {
+            type: "button", texto: "Escolher", "aria-label": "Escolher " + x.nome,
+            onclick: function () { janela.fechar(); x.aoEscolher(); },
+          }),
+        ]);
+      });
+    }
+
     function listaDeCondicoes() {
       var itens = EF().CONDICOES.filter(function (c) { return casa(c.nome + " " + c.texto + " " + (c.categoria || "")); });
-      if (!itens.length) return [el("p.t-mini", { texto: "Nenhuma condição com esse nome." })];
-      return itens.map(function (c) {
+      var extras = especiais();
+      if (!itens.length && !extras.length) return [el("p.t-mini", { texto: "Nenhuma condição com esse nome." })];
+      return extras.concat(itens.map(function (c) {
         var imune = o.cond && EF().imune(o.cond, c.chave);
         var aviso = c.automatica
           ? "Automática: a ficha mostra sozinha, pelo " + (c.automatica === "pv" ? "PV" : "recurso") + "."
@@ -164,7 +185,7 @@
             },
           }),
         ]);
-      });
+      }));
     }
 
     function ativarRastreador(c) {
