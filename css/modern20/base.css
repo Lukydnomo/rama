@@ -71,7 +71,7 @@
   & a:hover { text-decoration-color: currentColor; }
   /* Âncoras que são componente (marca, cartão inteiro, botão) não levam
      sublinhado: o desenho delas já diz que são clicáveis. */
-  & .marca,
+  & a.marca,
   & .registro__link,
   & a.r-cartao,
   & a.r-botao,

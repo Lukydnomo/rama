@@ -118,6 +118,19 @@
 
   var CHANGELOG = [
     {
+      versao: "9.18.8",
+      codinome: "EIXO",
+      data: "21/11/2026",
+      mudancas: {
+        "Corrigido": [
+          "Modern20: o símbolo do R.A.M.A. na tela de abertura (e nas telas de entrada) ficava deslocado para a esquerda dentro do quadro. Agora fica centralizado.",
+        ],
+        "Técnico": [
+          "O svg da marca usa a classe .marca, a mesma do link da marca no topo; as regras do topo (margem à direita no Modern20, flex e espaçamento) passam a valer só para a.marca.",
+        ],
+      },
+    },
+    {
       versao: "9.18.7",
       codinome: "MOLA",
       data: "20/11/2026",

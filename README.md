@@ -929,6 +929,11 @@ segredo nenhum — ele os lê das Script Properties. Publicá-lo não expõe nad
 
 ### Atualizar o backend
 
+**v9.18.8 — EIXO:** o símbolo do R.A.M.A. fica centralizado no quadro da
+abertura no Modern20 (antes ficava deslocado para a esquerda). **Só o site
+muda.** Site: `css/layout.css`, `css/modern20/layout.css`,
+`css/modern20/base.css` e `js/versao.js`.
+
 **v9.18.7 — MOLA:** interruptores do Modern20 sem piscar, com movimento
 contínuo de mola e a bola esticando ao apertar. **Só o site muda.** Site:
 `js/movimento.js`, `css/modern20/tokens.css`, `css/modern20/componentes.css`
@@ -2181,7 +2186,7 @@ Três números diferentes, que não se misturam:
 
 | | Onde | O que é |
 |---|---|---|
-| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v9.18.7 |
+| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v9.18.8 |
 | `schemaVersion` | `js/ficha.js` | o formato da FICHA |
 | `versaoFormato` | `js/config.js` | o formato dos arquivos de importação |
 

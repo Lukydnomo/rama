@@ -31,7 +31,7 @@
   & .app-topo__faixa { display: contents; }
 
   & .app-nav__alternar { order: 0; }
-  & .marca { order: 1; margin-right: var(--e3); }
+  & a.marca { order: 1; margin-right: var(--e3); }
   & .app-nav { order: 2; flex: 0 1 auto; min-width: 0; border: 0; }
   & .app-topo__espaco { order: 3; }
   & .agente { order: 4; }
@@ -107,7 +107,7 @@
 
   @media (max-width: 760px) {
     & .app-topo { min-height: 56px; column-gap: var(--e2); padding: var(--e2) var(--e3); }
-    & .marca { margin-right: 0; }
+    & a.marca { margin-right: 0; }
     & .app-nav { order: 10; flex: 1 1 100%; }
     & .app-nav__lista {
       flex-direction: column;

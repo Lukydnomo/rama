@@ -29,14 +29,14 @@
 
 /* ---------- a marca ---------- */
 
-.marca {
+a.marca {
   display: flex;
   align-items: center;
   gap: var(--e3);
   border: none;
   min-width: 0;
 }
-.marca:hover { border: none; }
+a.marca:hover { border: none; }
 
 .marca__simbolo {
   flex: 0 0 auto;
@@ -160,7 +160,7 @@
   .app-nav__link { justify-content: flex-start; width: 100%; }
 
   .marca__extenso { display: none; }
-  .marca { gap: var(--e2); }
+  a.marca { gap: var(--e2); }
   .marca__simbolo { width: 22px; height: 22px; }
 
   /* Sobra pouca largura: o avatar já identifica quem está, e o nome
