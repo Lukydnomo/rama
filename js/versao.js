@@ -118,6 +118,16 @@
 
   var CHANGELOG = [
     {
+      versao: "9.18.2",
+      codinome: "ENXUTO",
+      data: "20/11/2026",
+      mudancas: {
+        "Corrigido": [
+          "Recursos da ficha de Ordem: o campo de temporários alargava a coluna do valor atual e espremia “Aplicar com as regras” (rótulo quebrado e botões empilhados). Agora ele é uma linha compacta (“Temp.” e o controle), com a explicação na dica, e Dano, Cura e Gastar voltam a caber lado a lado.",
+        ],
+      },
+    },
+    {
       versao: "9.18.1",
       codinome: "AGUÇADO",
       data: "20/11/2026",

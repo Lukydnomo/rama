@@ -1408,11 +1408,10 @@ body.pagina-ficha .app-corpo {
 .ordem-recurso .r-passo__valor { font-size: var(--texto-grande); padding: 0 var(--e1); }
 .ordem-recurso__de { font-size: var(--texto-medio); color: var(--cor-texto-3); font-variant-numeric: tabular-nums; white-space: nowrap; }
 /* Pontos temporários (v9.17.5): um controle pequeno abaixo do atual. */
-.ordem-recurso__temp { display: flex; flex-wrap: wrap; align-items: center; gap: 2px var(--e2); margin-top: var(--e1); }
-.ordem-recurso__temp .ordem-recurso__legenda { flex: 0 0 100%; }
-.ordem-recurso .ordem-recurso__temp .r-passo { width: 7.5rem; }
-.ordem-recurso .ordem-recurso__temp .r-passo__valor { font-size: var(--texto-base); }
-.ordem-recurso__temp-ajuda { color: var(--cor-texto-3); }
+.ordem-recurso__temp { display: flex; align-items: center; gap: var(--e2); margin-top: var(--e1); }
+.ordem-recurso .ordem-recurso__temp .r-passo { width: 7rem; }
+.ordem-recurso .ordem-recurso__temp .r-passo__botao { min-height: 28px; }
+.ordem-recurso .ordem-recurso__temp .r-passo__valor { font-size: var(--texto-base); min-height: 28px; }
 .ordem-resumo__temp { font-size: var(--texto-mini); font-weight: 600; color: var(--cor-ok); margin-left: 2px; font-variant-numeric: tabular-nums; }
 .ordem-resumo__temp:empty { display: none; }
 

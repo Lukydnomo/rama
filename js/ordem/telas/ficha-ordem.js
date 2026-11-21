@@ -1649,10 +1649,12 @@
     passoT.classList.add("r-passo--mini");
     var campo = passoT.querySelector("input");
     if (campo) campo.dataset.foco = "temporario-" + item.chave;
-    return el("div.ordem-recurso__temp", {}, [
-      el("span.ordem-recurso__legenda", { "aria-hidden": "true", texto: "Temporários" }),
+    /* Compacto (v9.18.2): rótulo e controle numa linha só, sem texto de
+       ajuda ao lado — ele alargava a coluna e espremia "Aplicar com as
+       regras". A explicação fica na dica do rótulo. */
+    return el("div.ordem-recurso__temp", { title: "Temporários: somem primeiro e podem passar do máximo." }, [
+      el("span.ordem-recurso__legenda", { "aria-hidden": "true", texto: "Temp." }),
       passoT,
-      el("span.t-mini.ordem-recurso__temp-ajuda", { texto: "somem primeiro, podem passar do máximo" }),
     ]);
   }
 

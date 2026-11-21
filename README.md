@@ -929,6 +929,10 @@ segredo nenhum — ele os lê das Script Properties. Publicá-lo não expõe nad
 
 ### Atualizar o backend
 
+**v9.18.2 — ENXUTO:** o campo de temporários dos recursos fica compacto e
+não espreme mais “Aplicar com as regras”. **Só o site muda.** Site:
+`js/ordem/telas/ficha-ordem.js`, `css/ficha.css` e `js/versao.js`.
+
 **v9.18.1 — AGUÇADO:** Fortalecimento Sensorial como efeito de ritual
 aplicável. **Só o site muda.** Site: `js/ordem/efeitos.js` e `js/versao.js`.
 
@@ -2155,7 +2159,7 @@ Três números diferentes, que não se misturam:
 
 | | Onde | O que é |
 |---|---|---|
-| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v9.18.1 |
+| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v9.18.2 |
 | `schemaVersion` | `js/ficha.js` | o formato da FICHA |
 | `versaoFormato` | `js/config.js` | o formato dos arquivos de importação |
 
