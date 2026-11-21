@@ -7918,6 +7918,22 @@
     function nomes(lista) { return lista.map(function (x) { return x.id; }).join(""); }
 
     /* ---------------------------------------------------------------- */
+    t.grupo("Pontos temporários (v9.17.5): somem primeiro e podem passar do máximo");
+    var ct = CD.vazio();
+    var temps = { pv: 10, pe: 3, san: 4 };
+    var d1 = CD.aplicarAcao("pv", "dano", { cond: ct, temporarios: temps, atual: 20, maximo: 20, valor: 6 });
+    t.ok("dano menor que os temporários: o PV normal não muda", d1.ok && d1.valor === 20 && temps.pv === 4);
+    var d2 = CD.aplicarAcao("pv", "dano", { cond: ct, temporarios: temps, atual: 3, maximo: 20, valor: 7 });
+    t.ok("  o que sobra do dano chega ao PV (e liga morrendo em 0)", d2.valor === 0 && temps.pv === 0 && ct.morrendo.ativa);
+    var g1 = CD.aplicarAcao("pe", "gastar", { cond: ct, temporarios: temps, atual: 2, maximo: 10, valor: 4 });
+    t.ok("gastar PE usa os temporários antes (3 + 1 normal)", g1.ok && g1.valor === 1 && temps.pe === 0);
+    t.ok("  sem PE suficientes, nada é gasto", !CD.aplicarAcao("pe", "gastar", { cond: ct, temporarios: temps, atual: 1, maximo: 10, valor: 5 }).ok && temps.pe === 0);
+    CD.aplicarAcao("san", "danoMental", { cond: ct, temporarios: temps, atual: 30, maximo: 30, valor: 3 });
+    t.igual("dano mental tira da SAN temporária primeiro", temps.san, 1);
+    CD.aplicarAcao("pv", "cura", { cond: ct, temporarios: temps, atual: 10, maximo: 20, valor: 5 });
+    t.igual("cura não enche temporários", temps.pv, 0);
+
+    /* ---------------------------------------------------------------- */
     t.grupo("Condições · morrendo (Ordem Paranormal RPG, p. 88)");
 
     var c1 = CD.vazio();

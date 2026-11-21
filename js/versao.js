@@ -118,6 +118,16 @@
 
   var CHANGELOG = [
     {
+      versao: "9.18.0",
+      codinome: "SOBREPESO",
+      data: "20/11/2026",
+      mudancas: {
+        "Adicionado": [
+          "Ficha de Ordem: PV, PE e Sanidade temporários. Cada recurso ganhou o campo “Temporários”, logo abaixo do atual, que pode passar do máximo. Dano, Dano mental e Gastar (inclusive o custo de rituais e poderes) tiram primeiro dos temporários e só o resto chega ao valor normal — com o aviso de quanto foi absorvido. Cura e recuperação não enchem os temporários. O resumo do topo mostra “+N” ao lado do recurso.",
+        ],
+      },
+    },
+    {
       versao: "9.17.4",
       codinome: "PENEIRA",
       data: "20/11/2026",

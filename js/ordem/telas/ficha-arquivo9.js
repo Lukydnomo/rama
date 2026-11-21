@@ -102,7 +102,7 @@
     var o = ordemDe(ctx);
     var c = calc(ctx);
     var qual = c.determinacao ? "pd" : "pe";
-    var r = CD() ? CD().aplicarAcao(qual, "gastar", { cond: o.condicoes, atual: c.atual[qual], maximo: maximoDe(c, qual), valor: quanto, pd: c.determinacao }) : null;
+    var r = CD() ? CD().aplicarAcao(qual, "gastar", { cond: o.condicoes, temporarios: o.temporarios, atual: c.atual[qual], maximo: maximoDe(c, qual), valor: quanto, pd: c.determinacao }) : null;
     if (!r || !r.ok) { UI.avisoAtencao((r && r.motivo) || "Sem " + qual.toUpperCase() + " suficientes."); return null; }
     if (!o.recursos) o.recursos = { pv: null, pe: null, san: null, pd: null };
     var antes = c.atual[qual];
@@ -112,7 +112,7 @@
   function curaEmMim(ctx, valor) {
     var o = ordemDe(ctx);
     var c = calc(ctx);
-    var r = CD().aplicarAcao("pv", "cura", { cond: o.condicoes, atual: c.atual.pv, maximo: c.pv.total, valor: Math.max(1, valor) });
+    var r = CD().aplicarAcao("pv", "cura", { cond: o.condicoes, temporarios: o.temporarios, atual: c.atual.pv, maximo: c.pv.total, valor: Math.max(1, valor) });
     if (!r.ok) return null;
     if (!o.recursos) o.recursos = { pv: null, pe: null, san: null, pd: null };
     var antes = c.atual.pv;

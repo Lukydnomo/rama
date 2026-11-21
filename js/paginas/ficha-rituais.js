@@ -1085,7 +1085,7 @@
       var c = R.calcular(o, ctx.ficha.inventario);
       var qual = c.determinacao ? "pd" : "pe";
       var maximo = qual === "pd" ? c.pd.total : c.pe.total;
-      var r = CD ? CD.aplicarAcao(qual, "gastar", { cond: o.condicoes, atual: c.atual[qual], maximo: maximo, valor: custo, pd: c.determinacao }) : null;
+      var r = CD ? CD.aplicarAcao(qual, "gastar", { cond: o.condicoes, temporarios: o.temporarios, atual: c.atual[qual], maximo: maximo, valor: custo, pd: c.determinacao }) : null;
       if (!r || !r.ok) { UI.avisoAtencao((r && r.motivo) || "Sem " + qual.toUpperCase() + " para mudar a duração."); return; }
       if (!o.recursos) o.recursos = { pv: null, pe: null, san: null, pd: null };
       o.recursos[qual] = r.valor;

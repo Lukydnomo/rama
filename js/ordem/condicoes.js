@@ -526,10 +526,27 @@
       if (r.mudou) { mudouCondicao = true; mensagens.push(frase); }
     }
 
+    /* Pontos temporários (v9.17.5): PV, PE e SAN temporários são perdidos
+       e gastos ANTES dos normais e podem passar do máximo. Quem chama
+       passa `temporarios` (ordem.temporarios); o que foi absorvido sai
+       dali, e só o resto chega ao recurso. Cura e recuperação não mexem
+       neles. */
+    var temps = c.temporarios && typeof c.temporarios === "object" && (recurso === "pv" || recurso === "pe" || recurso === "san") ? c.temporarios : null;
+    var temp = temps ? Math.max(0, Math.round(Number(temps[recurso])) || 0) : 0;
+    var absorvido = 0;
+    function absorver() {
+      if (!temp) return v;
+      absorvido = Math.min(temp, v);
+      temps[recurso] = temp - absorvido;
+      mensagens.push(absorvido + " " + recurso.toUpperCase() + " temporário" + (absorvido === 1 ? "" : "s") + " absorvido" + (absorvido === 1 ? "" : "s") + " primeiro" + (temps[recurso] ? " (sobram " + temps[recurso] + ")" : "") + ".");
+      return v - absorvido;
+    }
+
     if (acao === "gastar") {
-      if (v > atual) return { ok: false, motivo: "Não há " + (recurso === "pd" ? "PD" : "PE") + " suficientes: sobram " + atual + "." };
-      novo = atual - v;
-      return { ok: true, valor: novo, mensagens: mensagens, mudouCondicao: mudouCondicao };
+      if (v > atual + temp) return { ok: false, motivo: "Não há " + (recurso === "pd" ? "PD" : "PE") + " suficientes: sobram " + (atual + temp) + "." };
+      var restoG = absorver();
+      novo = atual - restoG;
+      return { ok: true, valor: novo, mensagens: mensagens, mudouCondicao: mudouCondicao, absorvido: absorvido };
     }
 
     if (acao === "cura" || acao === "recuperar") {
@@ -549,6 +566,7 @@
     }
 
     if (acao === "dano") {
+      v = absorver();
       novo = Math.max(0, atual - v);
       if (atual > 0 && novo === 0) {
         ligar("morrendo", "Reduzido a 0 PV: inconsciente e morrendo (OPRPG p. 88).");
@@ -557,6 +575,7 @@
     }
 
     /* dano mental */
+    v = absorver();
     novo = Math.max(0, atual - v);
     if (recurso === "san") {
       if (atual > 0 && novo === 0) ligar("enlouquecendo", "Sanidade reduzida a 0: enlouquecendo (OPRPG p. 88).");

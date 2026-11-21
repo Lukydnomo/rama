@@ -444,6 +444,7 @@
         el("span.ordem-resumo__valor", {}, [
           el("span.ordem-resumo__atual", { texto: String(r.atual) }),
           el("span.ordem-resumo__max", { texto: "/" + maximo }),
+          el("span.ordem-resumo__temp", { texto: temporarioDe(o, r.chave) ? "+" + temporarioDe(o, r.chave) : "", title: "Temporários" }),
         ]),
       ]);
     });
@@ -520,6 +521,8 @@
       if (item) {
         item.dataset.nivel = nivel;
         item.setAttribute("aria-label", r.nome + ": " + r.atual + " de " + maximo + ". Ir para o recurso.");
+        var tempEl = item.querySelector(".ordem-resumo__temp");
+        if (tempEl) tempEl.textContent = temporarioDe(ordemDe(ctx), r.chave) ? "+" + temporarioDe(ordemDe(ctx), r.chave) : "";
         var atual = item.querySelector(".ordem-resumo__atual");
         if (atual && atual.textContent !== String(r.atual)) {
           atual.textContent = String(r.atual);
@@ -1573,6 +1576,7 @@
               passo,
               el("span.ordem-recurso__de", { "aria-hidden": "true", texto: "/ " + maximo }),
             ]),
+            campoTemporario(ctx, o, item),
           ]),
           el("div.ordem-recurso__barra", { "aria-hidden": "true", dataset: { nivel: nivelDoRecurso(item.atual, maximo) } }, [
             el("span", { estilo: { width: porcentagem(item.atual, maximo) + "%" } }),
@@ -1620,13 +1624,45 @@
     ]);
   }
 
+  /* Pontos temporários (v9.17.5): PV, PE e SAN a mais, por cima do
+     atual, que PODEM passar do máximo. São perdidos e gastos antes dos
+     normais (Dano, Dano mental e Gastar, em js/ordem/condicoes.js); cura
+     e recuperação não os enchem. Ficam em ordem.temporarios, que a ficha
+     já guardava. Com Jogando sem Sanidade, a PD não tem temporários. */
+  var RECURSOS_COM_TEMPORARIO = { pv: true, pe: true, san: true };
+  function temporarioDe(o, chave) {
+    return RECURSOS_COM_TEMPORARIO[chave] && o.temporarios ? Math.max(0, Math.round(Number(o.temporarios[chave])) || 0) : 0;
+  }
+  function campoTemporario(ctx, o, item) {
+    if (!RECURSOS_COM_TEMPORARIO[item.chave]) return null;
+    var temp = temporarioDe(o, item.chave);
+    var passoT = UI.passo({
+      valor: temp, minimo: 0, maximo: 999,
+      rotulo: item.nome + " temporários",
+      aoMudar: function (v) {
+        if (!o.temporarios) o.temporarios = { pv: 0, pe: 0, san: 0, defesa: 0, capacidade: 0 };
+        o.temporarios[item.chave] = v;
+        ctx.alterou();
+        sincronizarRecursos(ctx);
+      },
+    });
+    passoT.classList.add("r-passo--mini");
+    var campo = passoT.querySelector("input");
+    if (campo) campo.dataset.foco = "temporario-" + item.chave;
+    return el("div.ordem-recurso__temp", {}, [
+      el("span.ordem-recurso__legenda", { "aria-hidden": "true", texto: "Temporários" }),
+      passoT,
+      el("span.t-mini.ordem-recurso__temp-ajuda", { texto: "somem primeiro, podem passar do máximo" }),
+    ]);
+  }
+
   function aplicarAcaoDeRecurso(ctx, o, c0, item0, acao, valor) {
     /* O valor de AGORA: um ajuste manual não redesenha a ficha, então o
        que o botão guardou ao ser desenhado pode estar velho (v6.4). */
     var c = calculo(ctx);
     var item = recursosEmJogo(c).filter(function (x) { return x.chave === item0.chave; })[0] || item0;
     var r = CD().aplicarAcao(item.chave, acao, {
-      cond: o.condicoes, atual: item.atual, maximo: item.conta.total, valor: valor, pd: c.determinacao,
+      cond: o.condicoes, temporarios: o.temporarios, atual: item.atual, maximo: item.conta.total, valor: valor, pd: c.determinacao,
     });
     if (!r.ok) { UI.avisoAtencao(r.motivo); return; }
     if (!o.recursos) o.recursos = { pv: null, pe: null, san: null, pd: null };
@@ -3191,7 +3227,7 @@
         var qual = c.determinacao ? "pd" : "pe";
         var maximo = qual === "pd" ? c.pd.total : c.pe.total;
         var atual = c.atual[qual];
-        var gasto = CD() ? CD().aplicarAcao(qual, "gastar", { cond: o.condicoes, atual: atual, maximo: maximo, valor: 1, pd: c.determinacao }) : null;
+        var gasto = CD() ? CD().aplicarAcao(qual, "gastar", { cond: o.condicoes, temporarios: o.temporarios, atual: atual, maximo: maximo, valor: 1, pd: c.determinacao }) : null;
         if (!gasto || !gasto.ok) { UI.avisoAtencao((gasto && gasto.motivo) || "Sem " + qual.toUpperCase() + " para o Empenho."); return; }
         usado = true;
         if (!o.recursos) o.recursos = { pv: null, pe: null, san: null, pd: null };
@@ -3399,7 +3435,7 @@
       var c = calculo(ctx);
       var maximo = qual === "pv" ? c.pv.total : c.pd.total;
       var atual = c.atual[qual];
-      var r = CD().aplicarAcao(qual, qual === "pv" ? "cura" : "recuperar", { cond: o.condicoes, atual: atual, maximo: maximo, valor: pt.recuperacao, pd: qual === "pd" });
+      var r = CD().aplicarAcao(qual, qual === "pv" ? "cura" : "recuperar", { cond: o.condicoes, temporarios: o.temporarios, atual: atual, maximo: maximo, valor: pt.recuperacao, pd: qual === "pd" });
       if (!r || !r.ok) { UI.avisoAtencao((r && r.motivo) || "Não deu para recuperar."); return; }
       if (!o.recursos) o.recursos = { pv: null, pe: null, san: null, pd: null };
       o.recursos[qual] = r.valor;

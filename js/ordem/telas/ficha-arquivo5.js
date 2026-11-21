@@ -80,7 +80,7 @@
     var qual = c.determinacao ? "pd" : "pe";
     var maximo = qual === "pd" ? c.pd.total : c.pe.total;
     var atual = c.atual[qual];
-    var r = CD() ? CD().aplicarAcao(qual, "gastar", { cond: o.condicoes, atual: atual, maximo: maximo, valor: quanto, pd: c.determinacao }) : null;
+    var r = CD() ? CD().aplicarAcao(qual, "gastar", { cond: o.condicoes, temporarios: o.temporarios, atual: atual, maximo: maximo, valor: quanto, pd: c.determinacao }) : null;
     if (!r || !r.ok) { UI.avisoAtencao((r && r.motivo) || "Sem " + qual.toUpperCase() + " suficientes."); return null; }
     if (!o.recursos) o.recursos = { pv: null, pe: null, san: null, pd: null };
     o.recursos[qual] = r.valor;
