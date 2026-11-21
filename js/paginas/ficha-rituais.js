@@ -600,6 +600,11 @@
     return (r.expressao || "") + (r.extra ? (r.expressao ? "+" : "") + r.extra : "");
   }
 
+  /* Uma rolagem sem nenhum dado (só um valor, como "30") é um valor fixo. */
+  function semDados(r) {
+    return !/\d*d\d+/i.test(expressaoDe(r));
+  }
+
   function formasAvancadas(ritual) {
     return (ritual.versoes || []).slice(1).map(function (v) {
       var linhas = [];
@@ -880,6 +885,10 @@
       }
     }
 
+    if (!r.ok && semDados(rolagem)) {
+      UI.aviso(rolagem.rotulo + " de " + ritual.nome + " · " + versao.nome + ": " + expressaoDe(rolagem) + " (valor fixo, sem rolagem).");
+      return;
+    }
     if (!r.ok) {
       UI.avisoErro(
         "A rolagem “" + rolagem.rotulo + "” de " + ritual.nome + " · " + versao.nome +
@@ -1116,11 +1125,14 @@
       F.rolagensDaVersao(v).forEach(function (rolagem) {
         var expressao = expressaoDe(rolagem);
         if (!expressao) return;
+        /* v9.17.3: valor fixo (os 30 PV temporários de Tela de Ruído): não
+           há dado para rolar — mostra o número, sem o botão de rolagem. */
+        var fixo = !semDados(rolagem) ? null : expressao;
         itens.push(el("div.ritual-dano", { class: "ritual-dano--" + (rolagem.tipo || "outra") }, [
           el("span.ritual-dano__tipo", { texto: rotuloDaRolagem(rolagem) }),
           el("div.ritual-dano__linha", {}, [
-            el("span.ritual-dano__expressao", { texto: expressao }),
-            el("button.r-icone.ritual-dano__rolar", {
+            el("span.ritual-dano__expressao", { texto: expressao, title: fixo ? "Valor fixo, sem rolagem" : null }),
+            fixo ? null : el("button.r-icone.ritual-dano__rolar", {
               type: "button",
               "aria-label": "Rolar " + rotuloDaRolagem(rolagem).toLowerCase() + " de " + ritual.nome + ", versão " + v.nome + ", " + expressao,
               title: "Rolar " + expressao,

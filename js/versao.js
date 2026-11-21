@@ -118,6 +118,16 @@
 
   var CHANGELOG = [
     {
+      versao: "9.17.3",
+      codinome: "CONSTÂNCIA",
+      data: "20/11/2026",
+      mudancas: {
+        "Corrigido": [
+          "Rituais com valor fixo em vez de dado (os PV temporários de Tela de Ruído e de outros dois rituais do livro): o botão de rolar dava o erro “não é uma expressão válida”. Agora o valor aparece sozinho na faixa do ritual, sem botão de rolagem, porque não há o que rolar.",
+        ],
+      },
+    },
+    {
       versao: "9.17.2",
       codinome: "FRANQUEZA",
       data: "20/11/2026",
