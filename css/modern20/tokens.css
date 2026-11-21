@@ -72,6 +72,15 @@
   --m20-curva-sair: cubic-bezier(0.16, 1, 0.3, 1);
   --m20-curva-mover: cubic-bezier(0.3, 0, 0, 1);
   --m20-curva-fechar: cubic-bezier(0.4, 0, 1, 1);
+  /* Uma mola de verdade (rigidez 400, amortecimento 28: passa 4% do
+     ponto e assenta em ~360 ms), amostrada em linear() — a mesma ideia do
+     spring do Animate UI. Só no que desliza solto (a bola do
+     interruptor). Sem suporte a linear(), uma curva parecida. */
+  --m20-mov-mola: 360ms;
+  --m20-curva-mola: cubic-bezier(0.3, 1.18, 0.5, 1);
+  @supports (transition-timing-function: linear(0, 1)) {
+    --m20-curva-mola: linear(0, 0.055, 0.184, 0.344, 0.507, 0.655, 0.78, 0.877, 0.948, 0.996, 1.026, 1.041, 1.046, 1.044, 1.039, 1.032, 1.024, 1.017, 1.011, 1.006, 1);
+  }
   /* Distâncias: poucos pixels no que é frequente. */
   --m20-desloc-curto: 4px;
   --m20-desloc: 8px;
@@ -100,6 +109,7 @@
     --m20-mov-navegar: 0ms;
     --m20-mov-janela: 0ms;
     --m20-mov-especial: 0ms;
+    --m20-mov-mola: 0ms;
     --m20-pressao: 1;
     --m20-inclinacao: 0;
   }

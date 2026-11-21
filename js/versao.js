@@ -118,6 +118,19 @@
 
   var CHANGELOG = [
     {
+      versao: "9.18.7",
+      codinome: "MOLA",
+      data: "20/11/2026",
+      mudancas: {
+        "Corrigido": [
+          "Modern20: os interruptores piscavam ao ligar e desligar — nas telas que redesenham o cartão, o interruptor novo aparecia por um quadro já na posição final antes de começar a se mover. Agora o movimento é um só, contínuo, do ponto em que a bola está até o fim, mesmo com redesenhos no meio e cliques seguidos.",
+        ],
+        "Melhorado": [
+          "Interruptores no estilo do Switch do Animate UI: a bola desliza com uma mola de verdade (passa um quase nada do ponto e assenta), estica enquanto você aperta, e o trilho muda de cor junto. Com “reduzir movimento”, muda na hora.",
+        ],
+      },
+    },
+    {
       versao: "9.18.6",
       codinome: "GANGORRA",
       data: "20/11/2026",

@@ -56,7 +56,7 @@
 
   /* ---------- tokens ---------- */
 
-  var PADRAO = { toque: 100, estado: 150, navegar: 200, janela: 240, especial: 340 };
+  var PADRAO = { toque: 100, estado: 150, navegar: 200, janela: 240, especial: 340, mola: 360 };
   var CURVAS = {
     sair: "cubic-bezier(0.16, 1, 0.3, 1)",
     mover: "cubic-bezier(0.3, 0, 0, 1)",
@@ -321,6 +321,7 @@
       deslizar(novaLista, r0, nova, vertical);
       painelDaAba(nova, r0);
     }
+    aba.addEventListener("click", seguir, { once: true });
     global.addEventListener("click", seguir, false);
     setTimeout(seguir, 0);
   }
@@ -459,47 +460,87 @@
     inclinada = null;
   }
 
-  /* ---------- interruptores: a bola corre mesmo com redesenho ----------
-     Muitas telas redesenham o cartão inteiro ao ligar uma regra (a aba
-     Regras da ficha, a criação, a mesa): o interruptor que aparece já é
-     outro elemento, e a transição CSS não tem de onde partir. No clique,
-     guarda onde a bola estava e a cor do trilho; depois da troca, acha o
-     interruptor no mesmo lugar (data-foco ou a posição) e faz a bola
-     correr da posição antiga para a nova, com o trilho mudando de cor.
-     Se o mesmo elemento continua na tela, a transição CSS já cuida. */
+  /* ---------- interruptores: um movimento só, contínuo ----------
+     A referência é o Switch do Animate UI: a bola desliza com uma mola
+     curta e estica enquanto o dedo/mouse aperta (CSS, tokens.css e
+     componentes.css). O problema é que várias telas redesenham o cartão
+     inteiro ao ligar uma regra — o interruptor novo é OUTRO elemento, e
+     a transição recomeçaria do zero (ou pularia para o fim: o "flick").
+     Então, só para o interruptor clicado e só durante o movimento: a
+     cada quadro guarda onde a bola e a cor do trilho ESTÃO; quando um
+     elemento novo aparece no lugar (um redesenho, ou dois), ele nasce
+     exatamente nesse ponto e a MESMA transição CSS segue dali até o fim.
+     Nada é animado por cima; quem anima é sempre a transição do CSS,
+     que o próprio navegador interrompe e retoma sem saltos. */
+  var BOLA = ".r-interruptor__bola";
+
+  function visualDo(chave) {
+    var b = chave.querySelector(BOLA);
+    if (!b) return null;
+    return { transform: global.getComputedStyle(b).transform, fundo: global.getComputedStyle(chave).backgroundColor };
+  }
+
+  function nascerDe(chave, v) {
+    var b = chave.querySelector(BOLA);
+    if (!b || !v) return;
+    b.style.transition = "none";
+    chave.style.transition = "none";
+    b.style.transform = v.transform === "none" ? "none" : v.transform;
+    chave.style.backgroundColor = v.fundo;
+    void chave.offsetWidth;
+    b.style.transition = "";
+    chave.style.transition = "";
+    b.style.transform = "";
+    chave.style.backgroundColor = "";
+  }
+
   function aoClicarInterruptor(ev) {
     if (!ativo() || ev.button > 0 || ev.defaultPrevented) return;
     var chave = ev.target && ev.target.closest ? ev.target.closest(".r-interruptor") : null;
     if (!chave || chave.disabled) return;
-    var bola = chave.querySelector(".r-interruptor__bola");
-    if (!bola) return;
-    var rb = bola.getBoundingClientRect(), rc = chave.getBoundingClientRect();
-    var corAntes = global.getComputedStyle(chave).backgroundColor;
     var foco = chave.getAttribute("data-foco");
+    var rc = chave.getBoundingClientRect();
+    var atual = chave;
+    var visual = visualDo(chave);
+    var ate = Date.now() + Math.max(ms("janela"), ms("mola")) + 160;
+
+    function vivo() {
+      if (atual.isConnected) return atual;
+      var n = foco ? doc.querySelector('.r-interruptor[data-foco="' + foco.replace(/"/g, '\\"') + '"]') : null;
+      if (!n) {
+        var sob = doc.elementFromPoint(rc.left + rc.width / 2, rc.top + rc.height / 2);
+        n = sob && sob.closest ? sob.closest(".r-interruptor") : null;
+      }
+      return n;
+    }
+    function conferir() {
+      if (!ativo()) return;
+      var n = vivo();
+      if (n && n !== atual) { nascerDe(n, visual); atual = n; }
+      if (n) visual = visualDo(n) || visual;
+    }
+    function quadro() {
+      conferir();
+      if (Date.now() < ate) global.requestAnimationFrame(quadro);
+    }
+    /* No fim da propagação o redesenho síncrono já aconteceu: o novo nasce
+       no ponto de partida ANTES da primeira pintura. Depois, um quadro por
+       vez até o movimento acabar (redesenhos que chegam depois). */
+    /* O próprio interruptor também ouve (fase do alvo, depois do clique
+       da tela): um cartão que para a propagação (o cabeçalho de um
+       <details>) não deixa o evento chegar à window, e esperar o
+       setTimeout deixaria um quadro pintado na posição final — o
+       "flick". */
     var feito = false;
     function seguir() {
       if (feito) return;
       feito = true;
       global.removeEventListener("click", seguir, false);
-      if (chave.isConnected) return;   /* o mesmo elemento: a transição CSS */
-      var nova = null;
-      if (foco) nova = doc.querySelector('.r-interruptor[data-foco="' + foco.replace(/"/g, '\\"') + '"]');
-      if (!nova) {
-        var sob = doc.elementFromPoint(rc.left + rc.width / 2, rc.top + rc.height / 2);
-        nova = sob && sob.closest ? sob.closest(".r-interruptor") : null;
-      }
-      var bolaNova = nova && nova.querySelector(".r-interruptor__bola");
-      if (!bolaNova) return;
-      var rn = bolaNova.getBoundingClientRect();
-      var dx = rb.left - rn.left;
-      if (Math.abs(dx) >= 1) {
-        animar(bolaNova, "interruptor", [{ translate: dx + "px 0" }, { translate: "0 0" }], { duracao: ms("navegar"), curva: curva("mover") });
-      }
-      var corDepois = global.getComputedStyle(nova).backgroundColor;
-      if (corAntes && corDepois && corAntes !== corDepois) {
-        animar(nova, "interruptor", [{ backgroundColor: corAntes }, { backgroundColor: corDepois }], { duracao: ms("navegar"), curva: curva("mover") });
-      }
+      chave.removeEventListener("click", seguir, false);
+      conferir();
+      global.requestAnimationFrame(quadro);
     }
+    chave.addEventListener("click", seguir, false);
     global.addEventListener("click", seguir, false);
     setTimeout(seguir, 0);
   }

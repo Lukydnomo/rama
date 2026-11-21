@@ -929,6 +929,11 @@ segredo nenhum — ele os lê das Script Properties. Publicá-lo não expõe nad
 
 ### Atualizar o backend
 
+**v9.18.7 — MOLA:** interruptores do Modern20 sem piscar, com movimento
+contínuo de mola e a bola esticando ao apertar. **Só o site muda.** Site:
+`js/movimento.js`, `css/modern20/tokens.css`, `css/modern20/componentes.css`
+e `js/versao.js`.
+
 **v9.18.6 — GANGORRA:** no Modern20 os interruptores animam mesmo quando a
 tela redesenha o cartão. **Só o site muda.** Site: `js/movimento.js` e
 `js/versao.js`.
@@ -2176,7 +2181,7 @@ Três números diferentes, que não se misturam:
 
 | | Onde | O que é |
 |---|---|---|
-| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v9.18.6 |
+| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v9.18.7 |
 | `schemaVersion` | `js/ficha.js` | o formato da FICHA |
 | `versaoFormato` | `js/config.js` | o formato dos arquivos de importação |
 

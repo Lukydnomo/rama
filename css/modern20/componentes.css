@@ -1216,9 +1216,18 @@
 
   /* ---------- marcar ---------- */
   & .r-marca input:checked::after { animation: m20-visto var(--m20-mov-navegar) var(--m20-curva-sair); }
-  & .r-interruptor__bola { transition: transform var(--m20-mov-navegar) var(--m20-curva-mover), scale var(--m20-mov-toque) var(--m20-curva-mover); }
-  & .r-interruptor { transition: background var(--m20-mov-navegar) var(--m20-curva-mover); }
-  & .r-interruptor:active .r-interruptor__bola { scale: 0.92; }
+  /* O interruptor (referência: Switch do Animate UI): a bola desliza com
+     uma mola curta e, enquanto aperta, estica para o lado em que vai
+     correr — esquerda presa quando desligado, direita quando ligado. O
+     trilho muda de cor junto. js/movimento.js garante que um redesenho
+     no meio não reinicie nem pule o movimento. */
+  & .r-interruptor { transition: background-color var(--m20-mov-janela) var(--m20-curva-mover); }
+  & .r-interruptor__bola {
+    transform-origin: left center;
+    transition: transform var(--m20-mov-mola) var(--m20-curva-mola), scale var(--m20-mov-navegar) var(--m20-curva-mover);
+  }
+  & .r-interruptor--ligado .r-interruptor__bola { transform-origin: right center; }
+  & .r-interruptor:active:not(:disabled) .r-interruptor__bola { scale: 1.22 1; }
 
   /* ---------- campos: foco e validação ---------- */
   & .r-entrada--erro,
@@ -1323,6 +1332,7 @@
     & .r-entrada--erro, & .r-area--erro, & .r-ajuda--erro,
     & .r-sincronia:not([hidden]), & .r-carregando { animation: none; }
     & .r-botao--ocupado::after { animation: none; }
+    & .r-interruptor:active:not(:disabled) .r-interruptor__bola { scale: 1; }
   }
 }
 
