@@ -356,6 +356,16 @@
       Discente: [mod("defesa", "bonus", 10)],
       Verdadeiro: [mod("defesa", "bonus", 16)],
     }, nota: "O bônus cai 2 a cada cópia destruída: ajuste o valor na aplicação." },
+    /* Fortalecimento Sensorial (OPRPG p. 133): +1 dado em Investigação,
+       Luta, Percepção e Pontaria; o Verdadeiro soma +10 na Defesa e em
+       Reflexos. O −1 dado dos inimigos (Discente) é deles, e a imunidade
+       a surpreendido e desprevenido (Verdadeiro) fica na nota. */
+    "op.ritual.fortalecimento-sensorial": { pagina: 133, versoes: {
+      Normal: [mod("pericia:investigacao", "dados", 1), mod("pericia:luta", "dados", 1), mod("pericia:percepcao", "dados", 1), mod("pericia:pontaria", "dados", 1)],
+      Discente: [mod("pericia:investigacao", "dados", 1), mod("pericia:luta", "dados", 1), mod("pericia:percepcao", "dados", 1), mod("pericia:pontaria", "dados", 1)],
+      Verdadeiro: [mod("pericia:investigacao", "dados", 1), mod("pericia:luta", "dados", 1), mod("pericia:percepcao", "dados", 1), mod("pericia:pontaria", "dados", 1),
+        mod("defesa", "bonus", 10), mod("pericia:reflexos", "bonus", 10)],
+    }, nota: "Discente: os inimigos sofrem −1 dado nos ataques contra você (aplique neles). Verdadeiro: imunidade a surpreendido e desprevenido, acompanhada pela mesa." },
     "op.ritual.odio-incontrolavel": { pagina: 136, versoes: {
       Normal: [mod("ataques:corpo", "bonus", 2), mod("dano:corpo", "bonus", 2)],
     } },

@@ -929,6 +929,9 @@ segredo nenhum — ele os lê das Script Properties. Publicá-lo não expõe nad
 
 ### Atualizar o backend
 
+**v9.18.1 — AGUÇADO:** Fortalecimento Sensorial como efeito de ritual
+aplicável. **Só o site muda.** Site: `js/ordem/efeitos.js` e `js/versao.js`.
+
 **v9.18.0 — SOBREPESO:** PV, PE e Sanidade temporários na ficha de Ordem
 (passam do máximo e são perdidos e gastos primeiro). **Só o site muda.** Site:
 `js/ordem/condicoes.js`, `js/ordem/telas/ficha-ordem.js`, as telas que gastam
@@ -2152,7 +2155,7 @@ Três números diferentes, que não se misturam:
 
 | | Onde | O que é |
 |---|---|---|
-| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v9.18.0 |
+| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v9.18.1 |
 | `schemaVersion` | `js/ficha.js` | o formato da FICHA |
 | `versaoFormato` | `js/config.js` | o formato dos arquivos de importação |
 

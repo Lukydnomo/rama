@@ -118,6 +118,16 @@
 
   var CHANGELOG = [
     {
+      versao: "9.18.1",
+      codinome: "AGUÇADO",
+      data: "20/11/2026",
+      mudancas: {
+        "Adicionado": [
+          "Fortalecimento Sensorial (OPRPG p. 133) entra como efeito de ritual em “+ Adicionar condição → Efeito de ritual”: +1 dado em Investigação, Luta, Percepção e Pontaria até o fim da cena; o Verdadeiro soma +10 na Defesa e em Reflexos. O −1 dado dos inimigos (Discente) e a imunidade a surpreendido e desprevenido (Verdadeiro) ficam escritos no efeito, para a mesa acompanhar.",
+        ],
+      },
+    },
+    {
       versao: "9.18.0",
       codinome: "SOBREPESO",
       data: "20/11/2026",
