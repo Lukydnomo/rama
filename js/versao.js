@@ -118,6 +118,16 @@
 
   var CHANGELOG = [
     {
+      versao: "9.18.6",
+      codinome: "GANGORRA",
+      data: "20/11/2026",
+      mudancas: {
+        "Corrigido": [
+          "Modern20: os interruptores (regras da ficha de Ordem, regras de patente, criação guiada, mesa da campanha, editor de temas) agora animam ao ligar e desligar — a bola corre e o trilho muda de cor —, mesmo nas telas que redesenham o cartão inteiro ao mudar a regra. Clicar de novo no meio segue de onde a bola está. No Legacy e com “reduzir movimento”, muda na hora como antes.",
+        ],
+      },
+    },
+    {
       versao: "9.18.5",
       codinome: "PRUMO",
       data: "20/11/2026",

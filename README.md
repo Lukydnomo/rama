@@ -929,6 +929,10 @@ segredo nenhum — ele os lê das Script Properties. Publicá-lo não expõe nad
 
 ### Atualizar o backend
 
+**v9.18.6 — GANGORRA:** no Modern20 os interruptores animam mesmo quando a
+tela redesenha o cartão. **Só o site muda.** Site: `js/movimento.js` e
+`js/versao.js`.
+
 **v9.18.5 — PRUMO:** a marca animada do carregamento some inteira no fim da
 volta, sem ficar só com os nós soltos. **Só o site muda.** Site:
 `css/componentes.css` e `js/versao.js`.
@@ -2172,7 +2176,7 @@ Três números diferentes, que não se misturam:
 
 | | Onde | O que é |
 |---|---|---|
-| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v9.18.5 |
+| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v9.18.6 |
 | `schemaVersion` | `js/ficha.js` | o formato da FICHA |
 | `versaoFormato` | `js/config.js` | o formato dos arquivos de importação |
 

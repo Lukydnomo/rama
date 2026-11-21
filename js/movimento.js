@@ -459,8 +459,54 @@
     inclinada = null;
   }
 
+  /* ---------- interruptores: a bola corre mesmo com redesenho ----------
+     Muitas telas redesenham o cartão inteiro ao ligar uma regra (a aba
+     Regras da ficha, a criação, a mesa): o interruptor que aparece já é
+     outro elemento, e a transição CSS não tem de onde partir. No clique,
+     guarda onde a bola estava e a cor do trilho; depois da troca, acha o
+     interruptor no mesmo lugar (data-foco ou a posição) e faz a bola
+     correr da posição antiga para a nova, com o trilho mudando de cor.
+     Se o mesmo elemento continua na tela, a transição CSS já cuida. */
+  function aoClicarInterruptor(ev) {
+    if (!ativo() || ev.button > 0 || ev.defaultPrevented) return;
+    var chave = ev.target && ev.target.closest ? ev.target.closest(".r-interruptor") : null;
+    if (!chave || chave.disabled) return;
+    var bola = chave.querySelector(".r-interruptor__bola");
+    if (!bola) return;
+    var rb = bola.getBoundingClientRect(), rc = chave.getBoundingClientRect();
+    var corAntes = global.getComputedStyle(chave).backgroundColor;
+    var foco = chave.getAttribute("data-foco");
+    var feito = false;
+    function seguir() {
+      if (feito) return;
+      feito = true;
+      global.removeEventListener("click", seguir, false);
+      if (chave.isConnected) return;   /* o mesmo elemento: a transição CSS */
+      var nova = null;
+      if (foco) nova = doc.querySelector('.r-interruptor[data-foco="' + foco.replace(/"/g, '\\"') + '"]');
+      if (!nova) {
+        var sob = doc.elementFromPoint(rc.left + rc.width / 2, rc.top + rc.height / 2);
+        nova = sob && sob.closest ? sob.closest(".r-interruptor") : null;
+      }
+      var bolaNova = nova && nova.querySelector(".r-interruptor__bola");
+      if (!bolaNova) return;
+      var rn = bolaNova.getBoundingClientRect();
+      var dx = rb.left - rn.left;
+      if (Math.abs(dx) >= 1) {
+        animar(bolaNova, "interruptor", [{ translate: dx + "px 0" }, { translate: "0 0" }], { duracao: ms("navegar"), curva: curva("mover") });
+      }
+      var corDepois = global.getComputedStyle(nova).backgroundColor;
+      if (corAntes && corDepois && corAntes !== corDepois) {
+        animar(nova, "interruptor", [{ backgroundColor: corAntes }, { backgroundColor: corDepois }], { duracao: ms("navegar"), curva: curva("mover") });
+      }
+    }
+    global.addEventListener("click", seguir, false);
+    setTimeout(seguir, 0);
+  }
+
   function ligarDelegacao() {
     if (!doc || !doc.addEventListener) return;
+    doc.addEventListener("click", aoClicarInterruptor, true);
     doc.addEventListener("click", aoClicarAba, true);
     doc.addEventListener("click", aoClicarResumo, false);
     doc.addEventListener("pointermove", aoMoverSobreCapa, { passive: true });
