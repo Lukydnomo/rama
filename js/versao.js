@@ -118,6 +118,16 @@
 
   var CHANGELOG = [
     {
+      versao: "9.18.5",
+      codinome: "PRUMO",
+      data: "20/11/2026",
+      mudancas: {
+        "Corrigido": [
+          "Marca animada do carregamento: no fim de cada volta os ramos se apagavam antes dos nós, e a marca aparecia por um instante só com os quadrados soltos, parecendo torta. Agora ela se desenha, fica inteira e some toda junta antes de recomeçar.",
+        ],
+      },
+    },
+    {
       versao: "9.18.4",
       codinome: "INTERRUPTOR",
       data: "20/11/2026",
