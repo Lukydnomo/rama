@@ -118,6 +118,16 @@
 
   var CHANGELOG = [
     {
+      versao: "9.18.3",
+      codinome: "ELÁSTICO",
+      data: "20/11/2026",
+      mudancas: {
+        "Corrigido": [
+          "Recursos da ficha de Ordem: o número dos temporários cortava já com dois dígitos. Agora o campo acompanha o tamanho do número, de 1 a 5 dígitos (até 99999), nos dois estilos.",
+        ],
+      },
+    },
+    {
       versao: "9.18.2",
       codinome: "DESAPERTO",
       data: "20/11/2026",

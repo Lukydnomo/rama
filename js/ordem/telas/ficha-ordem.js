@@ -1637,18 +1637,30 @@
     if (!RECURSOS_COM_TEMPORARIO[item.chave]) return null;
     var temp = temporarioDe(o, item.chave);
     var passoT = UI.passo({
-      valor: temp, minimo: 0, maximo: 999,
+      valor: temp, minimo: 0, maximo: 99999,
       rotulo: item.nome + " temporários",
       aoMudar: function (v) {
         if (!o.temporarios) o.temporarios = { pv: 0, pe: 0, san: 0, defesa: 0, capacidade: 0 };
         o.temporarios[item.chave] = v;
         ctx.alterou();
         sincronizarRecursos(ctx);
+        ajustarLargura();
       },
     });
     passoT.classList.add("r-passo--mini");
     var campo = passoT.querySelector("input");
-    if (campo) campo.dataset.foco = "temporario-" + item.chave;
+    if (campo) {
+      campo.dataset.foco = "temporario-" + item.chave;
+      campo.maxLength = 5;
+      campo.addEventListener("input", ajustarLargura);
+    }
+    /* v9.18.3: o campo acompanha o número, de 1 a 5 dígitos — nada corta. */
+    function ajustarLargura() {
+      if (!campo) return;
+      var n = Math.max(1, Math.min(5, String(campo.value || "").length));
+      campo.style.width = "calc(" + (n * 1.15).toFixed(2) + "ch + 1.5em)";
+    }
+    ajustarLargura();
     /* Compacto (v9.18.2): rótulo e controle numa linha só, sem texto de
        ajuda ao lado — ele alargava a coluna e espremia "Aplicar com as
        regras". A explicação fica na dica do rótulo. */

@@ -1409,9 +1409,10 @@ body.pagina-ficha .app-corpo {
 .ordem-recurso__de { font-size: var(--texto-medio); color: var(--cor-texto-3); font-variant-numeric: tabular-nums; white-space: nowrap; }
 /* Pontos temporários (v9.17.5): um controle pequeno abaixo do atual. */
 .ordem-recurso__temp { display: flex; align-items: center; gap: var(--e2); margin-top: var(--e1); }
-.ordem-recurso .ordem-recurso__temp .r-passo { width: 7rem; }
+/* A largura acompanha o número (o JS ajusta o campo de 1 a 5 dígitos). */
+.ordem-recurso .ordem-recurso__temp .r-passo { width: auto; flex: 0 0 auto; }
 .ordem-recurso .ordem-recurso__temp .r-passo__botao { min-height: 28px; }
-.ordem-recurso .ordem-recurso__temp .r-passo__valor { font-size: var(--texto-base); min-height: 28px; }
+.ordem-recurso .ordem-recurso__temp .r-passo__valor { flex: 0 0 auto; min-width: 0; font-size: var(--texto-base); min-height: 28px; padding: 0 0.6em; font-variant-numeric: tabular-nums; text-align: center; }
 .ordem-resumo__temp { font-size: var(--texto-mini); font-weight: 600; color: var(--cor-ok); margin-left: 2px; font-variant-numeric: tabular-nums; }
 .ordem-resumo__temp:empty { display: none; }
 
