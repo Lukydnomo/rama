@@ -63,7 +63,7 @@ export function testarImagensDaFichaBackend({ t, preparar, novaConta, comoFn }) 
   r = salvar(A, { ref: "ano-lim-0014", tipo: "anotacao", alvo: nota, imagem: PNG });
   t.recusa("a 13ª imagem da mesma nota é recusada com o limite", r, "limite");
   t.igual("  e nada do que existia muda", A({ acao: "listar_imagens_personagem", personagemId: p, tipo: "anotacao" }).dados.imagens.length, 12);
-  t.recusa("imagem grande demais", salvar(A, { ref: "ret-gr-0001", tipo: "retrato", imagem: "data:image/png;base64," + "A".repeat(95000) }), "dados_grandes");
+  t.recusa("imagem grande demais", salvar(A, { ref: "ret-gr-0001", tipo: "retrato", imagem: "data:image/png;base64," + "A".repeat(32 * 45000) }), "dados_grandes");
 
   const copia = A({ acao: "duplicar_personagem", personagemId: p });
   t.ok("(duplicada)", copia.ok);

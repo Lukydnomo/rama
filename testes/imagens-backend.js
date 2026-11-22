@@ -18,8 +18,8 @@ export function testarGifBackend({ t, preparar, novaConta, comoFn }) {
   t.ok("capa GIF é aceita", D({ acao: "salvar_capa_campanha", campanhaId: mesa, imagem: gif, largura: 32, altura: 16 }).ok);
   t.igual("capa reabre sem alterar bytes", D({ acao: "ler_capa_campanha", campanhaId: mesa }).dados.imagem, gif);
   t.recusa("terceiro não troca capa GIF", X({ acao: "salvar_capa_campanha", campanhaId: mesa, imagem: gif, largura: 32, altura: 16 }));
-  t.recusa("GIF acima do limite de duas células é recusado", D({ acao: "salvar_capa_campanha", campanhaId: mesa,
-    imagem: "data:image/gif;base64," + "A".repeat(90000), largura: 32, altura: 16 }), "dados_grandes");
+  t.recusa("GIF acima do limite (32 células, v9.19.2) é recusado", D({ acao: "salvar_capa_campanha", campanhaId: mesa,
+    imagem: "data:image/gif;base64," + "A".repeat(32 * 45000), largura: 32, altura: 16 }), "dados_grandes");
   t.igual("falha não destrói a capa anterior", D({ acao: "ler_capa_campanha", campanhaId: mesa }).dados.imagem, gif);
   const doc = D({ acao: "salvar_documento", campanhaId: mesa, dados: { nome: "Documento animado", visiveis: [] } }).dados.id;
   t.ok("documento aceita GIF", D({ acao: "salvar_imagem_documento", campanhaId: mesa, documentoId: doc, imagem: gif }).ok);
@@ -40,6 +40,22 @@ export function testarGifBackend({ t, preparar, novaConta, comoFn }) {
     D({ acao: "ler_capa_campanha", campanhaId: mesa }).dados.imagem === gif50);
   t.ok("documento de 50 KB", D({ acao: "salvar_imagem_documento", campanhaId: mesa, documentoId: doc, imagem: gif50 }).ok &&
     D({ acao: "ler_imagem_documento", campanhaId: mesa, documentoId: doc }).dados.imagem === gif50);
+  /* v9.19.2: GIF de 1 MB (~1,4 milhão de caracteres) em até 32 células,
+     em todos os destinos, voltando byte a byte. */
+  const gif1mb = "data:image/gif;base64," + pedaco.repeat(18).slice(0, Math.ceil(1048576 / 3) * 4);
+  t.ok("(o GIF de 1 MB precisa de 32 células)", gif1mb.length > 31 * 45000 && gif1mb.length < 32 * 45000);
+  t.ok("foto de 1 MB é aceita e volta inteira", D({ acao: "salvar_foto", personagemId: ficha, imagem: gif1mb }).ok &&
+    D({ acao: "ler_foto", personagemId: ficha }).dados.imagem === gif1mb);
+  t.ok("avatar de 1 MB", D({ acao: "salvar_perfil", dados: { avatar: gif1mb } }).ok &&
+    D({ acao: "ler_avatares", userIds: [dona.id] }).dados[dona.id].imagem === gif1mb);
+  t.ok("criatura de 1 MB", D({ acao: "salvar_imagem_criatura", criaturaId: criatura, imagem: gif1mb }).ok &&
+    D({ acao: "ler_imagem_criatura", criaturaId: criatura }).dados.imagem === gif1mb);
+  t.ok("capa de 1 MB", D({ acao: "salvar_capa_campanha", campanhaId: mesa, imagem: gif1mb, largura: 32, altura: 16 }).ok &&
+    D({ acao: "ler_capa_campanha", campanhaId: mesa }).dados.imagem === gif1mb);
+  t.ok("documento de 1 MB", D({ acao: "salvar_imagem_documento", campanhaId: mesa, documentoId: doc, imagem: gif1mb }).ok &&
+    D({ acao: "ler_imagem_documento", campanhaId: mesa, documentoId: doc }).dados.imagem === gif1mb);
+  t.ok("de 1 MB para 50 KB: as células do fim ficam vazias", D({ acao: "salvar_foto", personagemId: ficha, imagem: gif50 }).ok &&
+    D({ acao: "ler_foto", personagemId: ficha }).dados.imagem === gif50);
   t.ok("voltar para um GIF pequeno limpa a segunda célula", D({ acao: "salvar_foto", personagemId: ficha, imagem: gif }).ok &&
     D({ acao: "ler_foto", personagemId: ficha }).dados.imagem === gif);
 }

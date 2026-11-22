@@ -102,11 +102,11 @@ var ABAS = {
     /* O avatar é base64 e vem logo na segunda coluna. Varrer PERFIS
        para achar um userId não pode arrastar o avatar de todo mundo. */
     nome: 'PERFIS',
-    colunas: ['userId', 'avatar', 'preferenciasJson', 'atualizadoEm', 'avatarCont'],
+    colunas: ['userId', 'avatar', 'preferenciasJson', 'atualizadoEm', 'avatarCont'].concat(continuacoesExtras('avatar')),
     chave: 'userId',
     leves: 1,
-    pesadas: ['avatar', 'avatarCont'],
-    somenteTexto: ['avatarCont'],
+    pesadas: ['avatar', 'avatarCont'].concat(continuacoesExtras('avatar')),
+    somenteTexto: ['avatarCont'].concat(continuacoesExtras('avatar')),
   },
   DESBLOQUEIOS: {
     /* As recompensas de cada conta (v2.40) — hoje, temas de dados. Uma
@@ -161,11 +161,11 @@ var ABAS = {
        que menos muda. Junto no fichaJson, cada tecla digitada numa
        anotação reenviaria a imagem inteira — e a célula tem limite. */
     nome: 'PERSONAGENS_FOTOS',
-    colunas: ['personagemId', 'ownerId', 'imagem', 'atualizadoEm', 'imagemCont'],
+    colunas: ['personagemId', 'ownerId', 'imagem', 'atualizadoEm', 'imagemCont'].concat(continuacoesExtras('imagem')),
     chave: 'personagemId',
     leves: 2,
-    pesadas: ['imagem', 'imagemCont'],
-    somenteTexto: ['imagemCont'],
+    pesadas: ['imagem', 'imagemCont'].concat(continuacoesExtras('imagem')),
+    somenteTexto: ['imagemCont'].concat(continuacoesExtras('imagem')),
   },
   PERSONAGENS_IMAGENS: {
     /* As imagens da ficha (v9.13): a biblioteca de retratos e as imagens
@@ -177,11 +177,11 @@ var ABAS = {
        nota de uma imagem de anotação. Ler segue a leitura da ficha;
        gravar, a edição — conferidas pelo personagem em cada pedido. */
     nome: 'PERSONAGENS_IMAGENS',
-    colunas: ['id', 'personagemId', 'ref', 'ownerId', 'tipo', 'nome', 'alvo', 'criadoEm', 'atualizadoEm', 'imagem', 'imagemCont'],
+    colunas: ['id', 'personagemId', 'ref', 'ownerId', 'tipo', 'nome', 'alvo', 'criadoEm', 'atualizadoEm', 'imagem', 'imagemCont'].concat(continuacoesExtras('imagem')),
     chave: 'id',
     leves: 9,
-    pesadas: ['imagem', 'imagemCont'],
-    somenteTexto: ['imagemCont'],
+    pesadas: ['imagem', 'imagemCont'].concat(continuacoesExtras('imagem')),
+    somenteTexto: ['imagemCont'].concat(continuacoesExtras('imagem')),
   },
   PERSONAGENS_BLOCOS: {
     /* A ficha em pedaços, cada um abaixo do limite seguro da célula
@@ -256,11 +256,11 @@ var ABAS = {
        versão pequena que as listas pedem em lote; um retrato antigo sem
        ela serve a imagem inteira. */
     nome: 'CRIATURAS_IMAGENS',
-    colunas: ['criaturaId', 'ownerId', 'imagem', 'atualizadoEm', 'imagemCont', 'miniatura'],
+    colunas: ['criaturaId', 'ownerId', 'imagem', 'atualizadoEm', 'imagemCont', 'miniatura'].concat(continuacoesExtras('imagem')),
     chave: 'criaturaId',
     leves: 2,
-    pesadas: ['imagem', 'imagemCont', 'miniatura'],
-    somenteTexto: ['imagemCont'],
+    pesadas: ['imagem', 'imagemCont', 'miniatura'].concat(continuacoesExtras('imagem')),
+    somenteTexto: ['imagemCont'].concat(continuacoesExtras('imagem')),
   },
   PACOTES_HOMEBREW: {
     /* Pacotes de Homebrew (v9.6, HomebrewPacotes.gs): os metadados LEVES
@@ -293,11 +293,11 @@ var ABAS = {
     /* A imagem de uma criatura que entrou num pacote — cópia da
        CRIATURAS_IMAGENS daquele momento, para a importação levar junto. */
     nome: 'PACOTES_HOMEBREW_IMAGENS',
-    colunas: ['entradaId', 'pacoteId', 'imagem', 'atualizadoEm', 'imagemCont', 'miniatura'],
+    colunas: ['entradaId', 'pacoteId', 'imagem', 'atualizadoEm', 'imagemCont', 'miniatura'].concat(continuacoesExtras('imagem')),
     chave: 'entradaId',
     leves: 2,
-    pesadas: ['imagem', 'imagemCont', 'miniatura'],
-    somenteTexto: ['imagemCont'],
+    pesadas: ['imagem', 'imagemCont', 'miniatura'].concat(continuacoesExtras('imagem')),
+    somenteTexto: ['imagemCont'].concat(continuacoesExtras('imagem')),
   },
   PACOTES_HOMEBREW_CAPAS: {
     /* A capa do pacote, já recortada na moldura 2:3 (320 × 480). Fora dos
@@ -305,11 +305,11 @@ var ABAS = {
        visíveis em lote (ler_capas_pacotes), com a mesma permissão do
        pacote. */
     nome: 'PACOTES_HOMEBREW_CAPAS',
-    colunas: ['pacoteId', 'ownerId', 'atualizadoEm', 'largura', 'altura', 'imagem', 'imagemCont'],
+    colunas: ['pacoteId', 'ownerId', 'atualizadoEm', 'largura', 'altura', 'imagem', 'imagemCont'].concat(continuacoesExtras('imagem')),
     chave: 'pacoteId',
     leves: 5,
-    pesadas: ['imagem', 'imagemCont'],
-    somenteTexto: ['imagemCont'],
+    pesadas: ['imagem', 'imagemCont'].concat(continuacoesExtras('imagem')),
+    somenteTexto: ['imagemCont'].concat(continuacoesExtras('imagem')),
   },
   PACOTES_HOMEBREW_IMPORTACOES: {
     /* O recibo de cada cópia importada: quem, de qual pacote e entrada,
@@ -366,11 +366,11 @@ var ABAS = {
   },
   CAMPANHA_DOCUMENTOS_IMAGENS: {
     nome: 'CAMPANHA_DOCUMENTOS_IMAGENS',
-    colunas: ['documentoId', 'campanhaId', 'imagem', 'atualizadoEm', 'imagemCont'],
+    colunas: ['documentoId', 'campanhaId', 'imagem', 'atualizadoEm', 'imagemCont'].concat(continuacoesExtras('imagem')),
     chave: 'documentoId',
     leves: 2,
-    pesadas: ['imagem', 'imagemCont'],
-    somenteTexto: ['imagemCont'],
+    pesadas: ['imagem', 'imagemCont'].concat(continuacoesExtras('imagem')),
+    somenteTexto: ['imagemCont'].concat(continuacoesExtras('imagem')),
   },
   CAMPANHA_NOTAS: {
     /* Privadas do mestre. Nenhuma resposta destinada a jogador toca
@@ -558,11 +558,11 @@ var ABAS = {
        saber se existe capa, de que tamanho e de quando, sem ler a
        imagem. */
     nome: 'CAMPANHA_CAPAS',
-    colunas: ['campanhaId', 'atualizadoEm', 'largura', 'altura', 'imagem', 'imagemCont'],
+    colunas: ['campanhaId', 'atualizadoEm', 'largura', 'altura', 'imagem', 'imagemCont'].concat(continuacoesExtras('imagem')),
     chave: 'campanhaId',
     leves: 4,
-    pesadas: ['imagem', 'imagemCont'],
-    somenteTexto: ['imagemCont'],
+    pesadas: ['imagem', 'imagemCont'].concat(continuacoesExtras('imagem')),
+    somenteTexto: ['imagemCont'].concat(continuacoesExtras('imagem')),
   },
 };
 
@@ -611,10 +611,43 @@ var MAX_CELULA = 45000;
    como sempre — nenhuma imagem antiga muda.
    ===================================================================== */
 
-var MAX_IMAGEM = 2 * MAX_CELULA - 1;
+/* v9.19.2: até 1 MB de arquivo. A mesma ideia, em mais células: a
+   coluna de sempre e até 31 de continuação (`imagemCont`, `imagemCont2`
+   … `imagemCont31`), cada uma com o "~" na frente. Um GIF de 1 MB em
+   data URL dá ~1,4 milhão de caracteres: 32 células de 45 mil cabem com
+   folga. Imagem menor ocupa só as células de que precisa (as outras
+   ficam vazias), e nada do que já estava gravado muda. Sem o setupRama()
+   desta versão, só as colunas que já existem valem: uma imagem que
+   precise de mais é recusada (instalacao_incompleta), nunca cortada. */
+function maxPartesImagem() { return 32; }
+var MAX_PARTES_IMAGEM = maxPartesImagem();
+var MAX_IMAGEM = MAX_PARTES_IMAGEM * MAX_CELULA - 1;
 var MARCA_CONTINUACAO = '~';
 
-function colunaContinuacao(coluna) { return coluna + 'Cont'; }
+/* colunaContinuacao('imagem') → imagemCont; (…, 2) → imagemCont2. */
+function colunaContinuacao(coluna, i) { return coluna + 'Cont' + (i > 1 ? String(i) : ''); }
+
+/* As colunas que a v9.19.2 acrescenta às abas de imagem (Cont2…Cont31).
+   Função, e não variável, porque as definições das abas vêm antes. */
+function continuacoesExtras(coluna) {
+  var lista = [];
+  for (var i = 2; i < maxPartesImagem(); i++) lista.push(colunaContinuacao(coluna, i));
+  return lista;
+}
+
+/* Quantas colunas de continuação a aba tem de verdade, em sequência. */
+function continuacoesDisponiveis(definicao, coluna) {
+  var n = 0;
+  while (n < MAX_PARTES_IMAGEM - 1 && temColuna(definicao, colunaContinuacao(coluna, n + 1))) n++;
+  return n;
+}
+
+/* A imagem cabe nesta aba como ela está agora (antes do setupRama, só
+   nas colunas que já existem)? */
+function cabeImagem(definicao, coluna, texto) {
+  var partes = Math.max(1, Math.ceil(String(texto || '').length / MAX_CELULA));
+  return partes <= MAX_PARTES_IMAGEM && partes - 1 <= continuacoesDisponiveis(definicao, coluna);
+}
 
 function temColuna(definicao, nome) {
   try { return !!cabecalho(definicao).mapa[nome]; } catch (erro) { return false; }
@@ -623,8 +656,13 @@ function temColuna(definicao, nome) {
 /* A imagem inteira de um registro lido com as colunas pesadas. */
 function imagemDe(registro, coluna) {
   if (!registro) return '';
-  var cont = String(registro[colunaContinuacao(coluna)] || '');
-  return String(registro[coluna] || '') + (cont.charAt(0) === MARCA_CONTINUACAO ? cont.slice(1) : '');
+  var texto = String(registro[coluna] || '');
+  for (var i = 1; i < MAX_PARTES_IMAGEM; i++) {
+    var cont = String(registro[colunaContinuacao(coluna, i)] || '');
+    if (cont.charAt(0) !== MARCA_CONTINUACAO) break;
+    texto += cont.slice(1);
+  }
+  return texto;
 }
 
 /* Põe a imagem no registro, em uma ou duas células. Devolve a lista de
@@ -633,25 +671,42 @@ function imagemDe(registro, coluna) {
    recusa em vez de gravar a imagem cortada. */
 function aplicarImagem(definicao, registro, coluna, texto) {
   var t = String(texto || '');
-  var cont = colunaContinuacao(coluna);
-  var resto = t.length > MAX_CELULA ? t.slice(MAX_CELULA) : '';
-  var existe = temColuna(definicao, cont);
-  if (resto && !existe) return null;
+  if (!cabeImagem(definicao, coluna, t)) return null;
+  var disponiveis = continuacoesDisponiveis(definicao, coluna);
   registro[coluna] = t.slice(0, MAX_CELULA);
-  if (existe) registro[cont] = resto ? MARCA_CONTINUACAO + resto : '';
-  return existe ? [coluna, cont] : [coluna];
+  var gravar = [coluna];
+  /* Toda continuação que existe é escrita: as que sobram ficam vazias,
+     para um GIF menor não herdar o fim do anterior. */
+  for (var i = 1; i <= disponiveis; i++) {
+    var pedaco = t.slice(i * MAX_CELULA, (i + 1) * MAX_CELULA);
+    registro[colunaContinuacao(coluna, i)] = pedaco ? MARCA_CONTINUACAO + pedaco : '';
+    gravar.push(colunaContinuacao(coluna, i));
+  }
+  return gravar;
 }
 
 /* A imagem de várias linhas, lendo as duas colunas. */
+/* A primeira continuação é lida para todas as linhas (como sempre); da
+   segunda em diante, só para as linhas cuja célula anterior veio CHEIA —
+   uma imagem pequena não custa leitura nenhuma a mais. */
 function imagensDasLinhas(definicao, linhas, coluna) {
   var inicio = lerCelulas(definicao, linhas, coluna);
-  var cont = temColuna(definicao, colunaContinuacao(coluna))
-    ? lerCelulas(definicao, linhas, colunaContinuacao(coluna)) : {};
   var saida = {};
-  linhas.forEach(function (l) {
-    var c = String(cont[l._linha] || '');
-    saida[l._linha] = String(inicio[l._linha] || '') + (c.charAt(0) === MARCA_CONTINUACAO ? c.slice(1) : '');
-  });
+  linhas.forEach(function (l) { saida[l._linha] = String(inicio[l._linha] || ''); });
+  var pendentes = linhas;
+  for (var i = 1; i < MAX_PARTES_IMAGEM && pendentes.length; i++) {
+    var nome = colunaContinuacao(coluna, i);
+    if (!temColuna(definicao, nome)) break;
+    var cont = lerCelulas(definicao, pendentes, nome);
+    var cheias = [];
+    pendentes.forEach(function (l) {
+      var c = String(cont[l._linha] || '');
+      if (c.charAt(0) !== MARCA_CONTINUACAO) return;
+      saida[l._linha] += c.slice(1);
+      if (c.length - 1 >= MAX_CELULA) cheias.push(l);
+    });
+    pendentes = cheias;
+  }
   return saida;
 }
 var LIMITE_TOTAL_FICHA = 1000000;

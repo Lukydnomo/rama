@@ -40,11 +40,11 @@
      aceita até 50.000 caracteres por célula; 40.000 deixa margem. */
   var MAX_SAIDA = 40000;
   var PREFIXO_GIF = "data:image/gif;base64,";
-  /* O GIF animado vai inteiro, sem recompressão: até 50 KB de arquivo
-     (v2.28.1). Em data URL isso passa de uma célula (~68 mil caracteres),
-     e o servidor guarda a imagem em duas — ver partirImagem em Dados.gs.
-     MAX_SAIDA_GIF é o teto do data URL, com folga sobre os 50 KB. */
-  var MAX_GIF = 50 * 1024;
+  /* O GIF animado vai inteiro, sem recompressão: até 1 MB de arquivo
+     (v9.19.2; antes, 50 KB). Em data URL isso dá ~1,4 milhão de
+     caracteres, e o servidor guarda a imagem em até 32 células — ver
+     aplicarImagem em Dados.gs. MAX_SAIDA_GIF é o teto do data URL. */
+  var MAX_GIF = 1024 * 1024;
   var MAX_SAIDA_GIF = PREFIXO_GIF.length + Math.ceil(MAX_GIF / 3) * 4;
 
   /* Resolução máxima aceita para abrir (80 megapixels). Acima disso o
@@ -52,8 +52,8 @@
      antes. */
   var MAX_PIXELS = 80 * 1000 * 1000;
 
-  var MENSAGEM_GIF_GRANDE = "Para preservar a animação, o GIF precisa ter até " +
-    MAX_GIF.toLocaleString("pt-BR") + " bytes (50 KB). Escolha uma versão menor ou com menos quadros.";
+  var MENSAGEM_GIF_GRANDE = "Para preservar a animação, o GIF precisa ter até 1 MB (" +
+    MAX_GIF.toLocaleString("pt-BR") + " bytes). Escolha uma versão menor ou com menos quadros.";
 
   function config() { return global.RAMA_CONFIG || {}; }
 

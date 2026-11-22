@@ -935,6 +935,11 @@ segredo nenhum — ele os lê das Script Properties. Publicá-lo não expõe nad
 
 ### Atualizar o backend
 
+**v9.19.2 — FÔLEGO:** GIF animado até 1 MB (antes, 50 KB). **Backend muda:**
+atualize `Dados.gs` e `Codigo.gs`, rode `setupRama()` (cria as colunas
+`imagemCont2`…`imagemCont31` e `avatarCont2`…`avatarCont31`) e crie uma nova
+versão da implantação. Site: `js/imagem.js` e `js/versao.js`.
+
 **v9.19.1 — PISO:** na ficha de Ordem, apagar os PV/PE/SAN temporários
 deixa 0. **Só o site muda.** Site: `js/ui.js`, `js/ordem/telas/ficha-ordem.js`
 e `js/versao.js`.
@@ -2213,7 +2218,7 @@ Três números diferentes, que não se misturam:
 
 | | Onde | O que é |
 |---|---|---|
-| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v9.19.1 |
+| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v9.19.2 |
 | `schemaVersion` | `js/ficha.js` | o formato da FICHA |
 | `versaoFormato` | `js/config.js` | o formato dos arquivos de importação |
 

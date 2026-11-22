@@ -3997,7 +3997,7 @@ function acaoSalvarPerfil(corpo, usuario) {
     var img = String(dados.avatar || '');
     if (img && img.indexOf('data:image/') !== 0) return { ok: false, erro: 'dados_invalidos' };
     if (img.length > MAX_IMAGEM) return { ok: false, erro: 'dados_grandes' };
-    if (img.length > MAX_CELULA && !temColuna(ABAS.PERFIS, 'avatarCont')) return { ok: false, erro: 'instalacao_incompleta', detalhe: 'imagemCont' };
+    if (!cabeImagem(ABAS.PERFIS, 'avatar', img)) return { ok: false, erro: 'instalacao_incompleta', detalhe: 'imagemCont' };
   }
 
   /* A conta é sempre a da sessão (`usuario`); o corpo não escolhe. */

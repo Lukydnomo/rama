@@ -479,6 +479,22 @@ colunas leves (`ativo`, `dia`) respondem a `ler_campanha` sem abrir o estado. Os
 lançamentos na ficha vão no bloco `ordem.hexatombe` da própria ficha (nos blocos
 dela), não nesta aba.
 
+## Imagem em até 32 células — v9.19.2
+
+O GIF animado passou a ir até **1 MB** (~1,4 milhão de caracteres em data URL).
+As oito abas de imagem (`PERFIS` com `avatar`; `PERSONAGENS_FOTOS`,
+`PERSONAGENS_IMAGENS`, `CRIATURAS_IMAGENS`, `PACOTES_HOMEBREW_IMAGENS`,
+`PACOTES_HOMEBREW_CAPAS`, `CAMPANHA_DOCUMENTOS_IMAGENS` e `CAMPANHA_CAPAS` com
+`imagem`) ganharam as colunas `…Cont2` a `…Cont31`, depois da `…Cont` de sempre
+(rode `setupRama()`; ele cria as colunas e as deixa como texto puro). Cada
+continuação leva o `~` na frente; a imagem ocupa só as células de que precisa e
+as outras ficam vazias. Limite: 32 × 45.000 − 1 caracteres. Na leitura em lote,
+da segunda continuação em diante só se lê a célula seguinte das imagens cuja
+anterior veio cheia — imagem pequena não custa leitura a mais. Sem o
+`setupRama()` desta versão valem as colunas que existem: imagem que precise de
+mais é recusada (`instalacao_incompleta`), nunca cortada. Nada do que já estava
+gravado muda.
+
 ## Imagem em duas células — v2.28.1
 
 GIF animado vai inteiro, com até 50 KB — ~68 mil caracteres em data URL, mais que

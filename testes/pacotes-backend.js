@@ -169,7 +169,7 @@ export function testarPacotesBackend({ t, preparar, novaConta, comoFn }) {
   const conserto = salvar(A, { pacoteId: pid, rev: 5, dados: dados("Dossiê do hospital", "ordem"), conteudo: { manter: A({ acao: "ler_pacote", pacoteId: pid }).dados.entradas.map((e) => e.id), adicionar: [], atualizar: [] } });
   t.ok("  salvar de novo o deixa pronto", conserto.ok && conserto.dados.estado === "pronto" && B({ acao: "abrir_pacote_codigo", codigo: c4 }).ok);
   t.recusa("capa que não é imagem", salvar(A, { pacoteId: pid, rev: 6, dados: dados("D", "ordem"), capa: { acao: "trocar", imagem: "javascript:alert(1)" } }), "dados_invalidos");
-  t.recusa("capa grande demais", salvar(A, { pacoteId: pid, rev: 6, dados: dados("D", "ordem"), capa: { acao: "trocar", imagem: "data:image/png;base64," + "A".repeat(100000) } }), "dados_grandes");
+  t.recusa("capa grande demais", salvar(A, { pacoteId: pid, rev: 6, dados: dados("D", "ordem"), capa: { acao: "trocar", imagem: "data:image/png;base64," + "A".repeat(32 * 45000) } }), "dados_grandes");
   const semCapa = salvar(A, { pacoteId: pid, rev: 6, dados: dados("Dossiê do hospital", "ordem"), capa: { acao: "remover" } });
   t.ok("remover a capa", semCapa.ok && semCapa.dados.temCapa === false && !A({ acao: "ler_capas_pacotes", pacoteIds: [pid] }).dados[pid]);
   const muitos = Array.from({ length: 41 }, (_, i) => hb(A, { tipo: "item", nome: "Item " + i }));

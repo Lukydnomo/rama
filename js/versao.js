@@ -118,6 +118,19 @@
 
   var CHANGELOG = [
     {
+      versao: "9.19.2",
+      codinome: "FÔLEGO",
+      data: "22/11/2026",
+      mudancas: {
+        "Melhorado": [
+          "GIF animado agora pode ter até 1 MB (antes, 50 KB), em todos os lugares que aceitam imagem: avatar, foto e imagens do personagem, criatura, aliado, capa da campanha, documento e pacotes Homebrew. Continua indo inteiro, sem recompressão; acima de 1 MB, o aviso pede uma versão menor.",
+        ],
+        "Técnico": [
+          "Atualizar Dados.gs e Codigo.gs, rodar setupRama() (colunas imagemCont2 a imagemCont31, e avatarCont2 a avatarCont31 em PERFIS, nas oito abas de imagem) e criar nova versão da implantação. A imagem passa a caber em até 32 células; a leitura só busca as células extras das imagens que precisam delas. Sem o setupRama(), uma imagem que precise de mais colunas é recusada (instalacao_incompleta), nunca cortada. Testes: GIF de 1 MB em todos os destinos (backend 2217).",
+        ],
+      },
+    },
+    {
       versao: "9.19.1",
       codinome: "PISO",
       data: "22/11/2026",
