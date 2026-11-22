@@ -42,7 +42,7 @@
   function num(v) { return v === null || v === undefined ? "—" : String(v); }
 
   function aba(ctx) {
-    var alvo = el("div.pilha.gob-covil", {}, [UI.carregando("Abrindo o Covil")]);
+    var alvo = el("div.pilha.gob-covil", {}, [UI.carregando("Abrindo o Covil", { forma: "mesa", recursos: 2 })]);
     var mem = { estado: null, vista: null, mestre: ctx.ehMestre(), rev: 0, ocupado: false, personagens: [] };
 
     async function carregar(segundoPlano) {

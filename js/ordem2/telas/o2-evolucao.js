@@ -108,7 +108,7 @@
      ================================================================= */
   function aba(ctx) {
     var c = contexto(ctx);
-    if (c.modo === "carregando" && ctx.ficha.campanhaId) return UI().carregando("Abrindo a mesa");
+    if (c.modo === "carregando" && ctx.ficha.campanhaId) return UI().carregando("Abrindo a mesa", { forma: "painel", secoes: 1, tamanho: "curto" });
     var x = c.x, s = situacao(c);
     var partes = [];
     partes.push(el("section.o2-evo-topo", { "aria-label": "Situação" }, [

@@ -328,7 +328,7 @@
     var topo = janela.janela.querySelector(".r-modal__topo h2");
     if (topo) topo.appendChild(seloSimulacao());
 
-    U.trocar(corpo, UI.carregando("Abrindo os planos"));
+    U.trocar(corpo, UI.carregando("Abrindo os planos", { forma: "lista", plana: true, retrato: false, linhas: 1, tamanho: "medio" }));
     carregar(ctx, true).then(function (c) {
       s.doc = copiar(c.doc);
       if (!s.selecionado && s.doc.planos.length) s.selecionado = s.doc.planos[0].id;

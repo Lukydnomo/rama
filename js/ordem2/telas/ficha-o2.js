@@ -434,7 +434,7 @@
   function abaInvestigacao(ctx) {
     var x = b(ctx);
     var m = J().modo(ctx);
-    if (m === "carregando") return UI().carregando("Abrindo a mesa");
+    if (m === "carregando") return UI().carregando("Abrindo a mesa", { forma: "painel", secoes: 1, tamanho: "curto" });
     if (m !== "campanha") return el("div.o2-aba", {}, [UI().painel("Investigação", el("div.pilha", {}, [
       el("p.t-mini", { texto: "Pontos de interesse, pistas e as ações de investigação moram na mesa da campanha (o Mestre guarda as soluções). Sem campanha, use os testes da aba Ficha." }),
       referenciaInvestigacao(),

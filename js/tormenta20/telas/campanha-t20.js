@@ -34,7 +34,7 @@
   function nomeCond(id) { return D().CONDICAO[id] ? D().CONDICAO[id].nome : id; }
 
   function aba(ctx) {
-    var alvo = el("div.pilha.t20-mesa", {}, [UI.carregando("Abrindo a mesa")]);
+    var alvo = el("div.pilha.t20-mesa", {}, [UI.carregando("Abrindo a mesa", { forma: "mesa", recursos: 2 })]);
     var mem = { estado: null, vista: null, mestre: ctx.ehMestre(), rev: 0, ocupado: false, personagens: [], tesouroAtual: null, distribuicao: null, filtro: { busca: "", ndMax: "" } };
 
     async function carregar(segundoPlano) {

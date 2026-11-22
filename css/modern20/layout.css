@@ -296,6 +296,27 @@
     box-shadow: var(--m20-sombra-2);
   }
   & .abertura__extenso { font-family: var(--fonte-mono); letter-spacing: .04em; text-transform: none; }
+
+  /* Skeleton Loading (v9.19.0): a abertura protegida vira um esqueleto
+     neutro de página, alinhado à largura do site. */
+  & .abertura--esqueleto { place-items: start stretch; overflow: hidden; }
+  & .abertura--esqueleto::before { display: none; }
+  & .abertura__pagina {
+    width: min(var(--largura-max), 100%);
+    margin: 0 auto;
+    padding: var(--e3) var(--e4) var(--e6);
+    display: flex;
+    flex-direction: column;
+    gap: var(--e5);
+    animation: m20-surgir var(--m20-mov-navegar) var(--m20-curva-sair) 160ms both;
+  }
+  & .abertura__esqueleto { gap: var(--e6); }
+  & .abertura__topo { display: flex; align-items: center; gap: var(--e3); padding-bottom: var(--e3); border-bottom: 1px solid var(--m20-borda); }
+  & .abertura__vao { flex: 1 1 auto; }
+  & .abertura__pagina > .t-mini { align-self: center; max-width: 40ch; text-align: center; color: var(--cor-texto-2); }
+  @media (prefers-reduced-motion: reduce) {
+    & .abertura__pagina { animation: none; }
+  }
   & .abertura__estado .r-carregando__rotulo { font-weight: 550; letter-spacing: 0; text-transform: none; }
 
   /* =================================================================

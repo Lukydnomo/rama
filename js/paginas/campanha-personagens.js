@@ -108,7 +108,7 @@
       ctx.aoAtualizar("campanha", function () { pintarOcultacao(ctx); });
 
       if (!ctx.temPersonagens() && !ctx.falhaPersonagens) {
-        return UI.carregando("Carregando a mesa");
+        return UI.carregando("Carregando a mesa", { forma: "mesa", recursos: 3, tamanho: "medio" });
       }
 
       if (ctx.falhaPersonagens) {
@@ -789,7 +789,7 @@
     carregar();
 
     async function carregar() {
-      U.trocar(corpo, UI.carregando("Buscando seus personagens"));
+      U.trocar(corpo, UI.carregando("Buscando seus personagens", { forma: "lista", etiquetas: 1, tamanho: "curto" }));
       var r = await global.RAMAApi.listarPersonagens();
       if (!document.body.contains(corpo)) return;
       if (!r.ok) {

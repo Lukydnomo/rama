@@ -52,7 +52,7 @@
   function abrir(opcoes) {
     var o = opcoes || {};
     var eu = global.RAMAAuth && global.RAMAAuth.agente ? global.RAMAAuth.agente() : null;
-    var caixa = el("div.compartilhar.pilha", { "aria-busy": "true" }, [UI.carregando("Carregando acessos")]);
+    var caixa = el("div.compartilhar.pilha", { "aria-busy": "true" }, [UI.carregando("Carregando acessos", { forma: "lista", plana: true, linhas: 1, tamanho: "curto" })]);
 
     var st = {
       carregado: false,
@@ -87,7 +87,7 @@
 
     async function carregar() {
       caixa.setAttribute("aria-busy", "true");
-      U.trocar(caixa, UI.carregando("Carregando acessos"));
+      U.trocar(caixa, UI.carregando("Carregando acessos", { forma: "lista", plana: true, linhas: 1, tamanho: "curto" }));
       var rs = await Promise.all([
         global.RAMAApi.listarCompartilhamentos(o.personagemId),
         global.RAMAApi.listarUsuarios(),

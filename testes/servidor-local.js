@@ -29,6 +29,9 @@
      /__backend                 contadores do backend (chamadas ao Sheets,
                                 células, leituras) desde a partida
      /__backend/zerar           zera esses contadores
+     /__atraso?ms=…             rede lenta simulada: cada /exec espera
+                                tantos ms antes de responder (0 desliga;
+                                v9.19.0, para conferir o Skeleton Loading)
      /__feedback?modo=…         o Discord SIMULADO do feedback: ok, 429,
                                 500, 404, rede ou sem-webhook (padrão:
                                 sem-webhook, como uma implantação nova);
@@ -166,16 +169,23 @@ function somar(acao) {
 
 const json = (v) => new Response(JSON.stringify(v), { headers: { "content-type": "application/json", "cache-control": "no-store" } });
 
+let atrasoMs = 0;
+
 Deno.serve({ port: PORTA, onListen: () => console.log("R.A.M.A. local em http://localhost:" + PORTA) }, async (req) => {
   const url = new URL(req.url);
   if (url.pathname === "/exec" && req.method === "POST") {
     const corpo = JSON.parse(await req.text());
+    if (atrasoMs > 0) await new Promise((ok) => setTimeout(ok, atrasoMs));
     const r = chamar(globalThis, corpo);
     somar(corpo.acao === "lote" ? "lote:" + (corpo.pedidos || []).map((p) => p.acao).join("+") : corpo.acao);
     return json(r);
   }
   if (url.pathname === "/__ids") return json({ ordem, universal, campanha, contas: Object.fromEntries(Object.entries(contas).map(([k, v]) => [k, v.id])) });
   if (url.pathname === "/__backend") return json(somaBackend);
+  if (url.pathname === "/__atraso") {
+    atrasoMs = Math.max(0, Math.min(60000, Number(url.searchParams.get("ms")) || 0));
+    return json({ ok: true, ms: atrasoMs });
+  }
   if (url.pathname === "/__backend/zerar") {
     Object.assign(somaBackend, { requisicoes: 0, porAcao: {}, chamadas: 0, leituras: 0, escritas: 0, celulas: 0 });
     return json({ ok: true });

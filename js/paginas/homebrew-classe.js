@@ -68,7 +68,7 @@
     /* Os poderes de classe Homebrew: os feitos só para esta classe entram
        sempre; os das classes oficiais, a mesa marca. */
     function blocoPoderesHb() {
-      if (!poderesHb) return el("p.t-mini", { texto: "Carregando os seus poderes de classe Homebrew…" });
+      if (!poderesHb) return UI.carregando("Carregando os seus poderes de classe Homebrew", { forma: "lista", plana: true, retrato: false, linhas: 1, tamanho: "curto", legado: function () { return el("p.t-mini", { texto: "Carregando os seus poderes de classe Homebrew…" }); } });
       var minha = reg ? reg.id : "";
       var proprios = poderesHb.filter(function (p) { return minha && p.classeHomebrew === minha; });
       var livres = poderesHb.filter(function (p) { return !p.classeHomebrew; });
@@ -83,7 +83,7 @@
         .concat([el("p.r-ajuda", { texto: (proprios.length || livres.length ? "" : "Você ainda não tem poderes de classe Homebrew. ") + "Um poder criado \u201csó para esta classe\u201d (Habilidade → Poder de classe) entra sempre, em qualquer versão da classe" + (reg ? "." : " — salve a classe primeiro para ela aparecer lá.") })]));
     }
     function blocoTrilhasHb() {
-      if (!trilhasHb) return el("p.t-mini", { texto: "Carregando as suas trilhas Homebrew…" });
+      if (!trilhasHb) return UI.carregando("Carregando as suas trilhas Homebrew", { forma: "lista", plana: true, retrato: false, linhas: 1, tamanho: "curto", legado: function () { return el("p.t-mini", { texto: "Carregando as suas trilhas Homebrew…" }); } });
       var minha = reg ? reg.id : "";
       var proprias = trilhasHb.filter(function (t) { return minha && t.classeHomebrew === minha; });
       var livres = trilhasHb.filter(function (t) { return !t.classeHomebrew; });

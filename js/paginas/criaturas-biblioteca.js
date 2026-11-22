@@ -352,7 +352,7 @@
     }
 
     async function montarDetalhes(x, caixa) {
-      U.trocar(caixa, UI.carregando("Abrindo a ficha"));
+      U.trocar(caixa, UI.carregando("Abrindo a ficha", { forma: "painel", secoes: 2, linhas: 4 }));
       var f = await fichaDe(x);
       if (!f.ok) { U.trocar(caixa, el("p.t-mini.t-erro", { texto: "Não foi possível abrir esta criatura. Ela pode ter sido apagada ou deixado de ser pública." })); return; }
       var painel = global.RAMACriaturaPainel.criar(f.criatura, { consulta: true, rotulo: estado.aba === "oficial" ? "Catálogo" : "Homebrew" });
@@ -409,7 +409,7 @@
           ]));
           return;
         }
-        U.trocar(corpo, UI.carregando("Abrindo o catálogo de criaturas"));
+        U.trocar(corpo, UI.carregando("Abrindo o catálogo de criaturas", { forma: "lista", retrato: "quadrado", etiquetas: 2, linhas: 1, tamanho: "grande" }));
         if (!estado.carregando) carregarCatalogo();
         return;
       }
@@ -421,7 +421,7 @@
           ]));
           return;
         }
-        U.trocar(corpo, UI.carregando("Lendo as criaturas do Homebrew"));
+        U.trocar(corpo, UI.carregando("Lendo as criaturas do Homebrew", { forma: "lista", retrato: "quadrado", etiquetas: 2, linhas: 1, tamanho: "medio" }));
         if (!estado.carregandoHb) carregarHomebrew();
         return;
       }

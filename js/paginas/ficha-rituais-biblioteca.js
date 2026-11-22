@@ -473,7 +473,7 @@
     function carregarCatalogo(focar) {
       estado.carregandoCatalogo = true;
       estado.falhaCatalogo = null;
-      if (estado.origem === "oficial") U.trocar(corpo, UI.carregando("Abrindo o catálogo de rituais"));
+      if (estado.origem === "oficial") U.trocar(corpo, UI.carregando("Abrindo o catálogo de rituais", { forma: "lista", plana: true, retrato: "quadrado", etiquetas: 2, tamanho: "grande" }));
       RT().carregar().then(function (catalogo) {
         estado.catalogo = catalogo;
         estado.carregandoCatalogo = false;
@@ -504,7 +504,7 @@
           ]));
           return;
         }
-        U.trocar(corpo, UI.carregando("Abrindo o catálogo de rituais"));
+        U.trocar(corpo, UI.carregando("Abrindo o catálogo de rituais", { forma: "lista", plana: true, retrato: "quadrado", etiquetas: 2, tamanho: "grande" }));
         if (!estado.carregandoCatalogo) carregarCatalogo();
         return;
       }
@@ -875,7 +875,7 @@
 
     function carregarHomebrew(focar) {
       estado.homebrew = { carregando: true };
-      if (estado.origem === "homebrew") U.trocar(corpo, UI.carregando("Consultando a biblioteca Homebrew"));
+      if (estado.origem === "homebrew") U.trocar(corpo, UI.carregando("Consultando a biblioteca Homebrew", { forma: "lista", plana: true, retrato: "quadrado", etiquetas: 2, tamanho: "grande" }));
       global.RAMAApi.listarHomebrew({ escopo: "todos", tipos: TIPOS_DE_RITUAL }).then(function (r) {
         if (!r || !r.ok) {
           estado.homebrew = { falha: r || { ok: false, erro: "sem_resposta" } };
@@ -895,7 +895,7 @@
 
     function pintarHomebrew() {
       if (!estado.homebrew) { carregarHomebrew(); return; }
-      if (estado.homebrew.carregando) { U.trocar(corpo, UI.carregando("Consultando a biblioteca Homebrew")); return; }
+      if (estado.homebrew.carregando) { U.trocar(corpo, UI.carregando("Consultando a biblioteca Homebrew", { forma: "lista", plana: true, retrato: "quadrado", etiquetas: 2, tamanho: "grande" })); return; }
       if (estado.homebrew.falha) {
         U.trocar(corpo, UI.erroDeTela(estado.homebrew.falha, function () { carregarHomebrew(true); }));
         return;

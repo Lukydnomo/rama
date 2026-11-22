@@ -31,6 +31,29 @@
   & .perfil-tema__cabeca { border-radius: var(--m20-raio-cartao); }
   & .perfil-tema__cabeca:hover { background: var(--m20-realce); }
 
+  /* Skeleton Loading (v9.19.0): a coleção que ainda está chegando é um
+     esqueleto dos cartões de tema, com o brilho do Modern20 (o Legacy
+     mantém os contornos tracejados). */
+  & .perfil-tema--fantasma {
+    position: relative;
+    overflow: hidden;
+    border-style: solid;
+    border-color: var(--m20-borda);
+    opacity: 1;
+    background: color-mix(in srgb, var(--cor-texto) 6%, transparent);
+  }
+  & .perfil-tema--fantasma::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--cor-texto) 7%, transparent) 50%, transparent);
+    transform: translateX(-100%);
+    animation: m20-esq-brilho 1.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    & .perfil-tema--fantasma::after { animation: none; display: none; }
+  }
+
   @media (max-width: 760px) {
     & .perfil-nav__aba { border-color: var(--m20-borda); }
     & .perfil-nav__aba[aria-selected="true"] { border-color: var(--cor-selecao); }

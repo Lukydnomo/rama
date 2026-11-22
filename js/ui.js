@@ -709,12 +709,314 @@
      ESTADOS DE TELA
      ================================================================= */
 
-  function carregando(mensagem) {
-    return el("div.r-carregando", { role: "status" }, [
-      el("span.r-carregando__marca", { "aria-hidden": "true" }, [marca(32, { animada: true })]),
-      el("p.r-carregando__rotulo", { texto: mensagem || "Consultando arquivo" }),
-      el("div.r-barra", { "aria-hidden": "true" }, [el("div.r-barra__preenche")]),
-    ]);
+  /* =================================================================
+     CARREGANDO — Legacy intacto, Skeleton Loading só no Modern20 (v9.19.0)
+     -----------------------------------------------------------------
+     carregando(mensagem, opcoes) — a MESMA chamada nos dois estilos:
+
+     · Legacy (e interface ainda não identificada): exatamente o que
+       sempre foi — marca animada, mensagem e barra. Nenhum atributo,
+       classe ou filho a mais. Com `opcoes.legado`, o placeholder próprio
+       da tela (o texto "Carregando capa…", por exemplo) continua sendo o
+       dela; só ganha a classe-marcador .r-pendente, sem estilo nenhum.
+     · Modern20: um esqueleto da tela que vai chegar, montado das
+       primitivas abaixo, com uma mensagem curta só para leitor de tela
+       (role=status, aria-busy) e os desenhos ocultos (aria-hidden, inert:
+       nada recebe foco nem clique).
+
+     A FORMA vem de quem chama, nunca do texto da mensagem:
+       { forma: "lista" | "cartoes" | "icones" | "ficha" | "painel" |
+                "mesa" | "retratos" | "relatorio" | "imagem" | "blocos",
+         quantidade, tamanho: "curto" | "medio" | "grande",
+         retrato: true | false | "quadrado", capa, proporcao, linhas,
+         etiquetas, faixa, lateral, filtros, plana, secoes, abas,
+         recursos, atributos, sistema, legado }
+     Sem forma, o Modern20 mostra "blocos" (linhas neutras).
+
+     Trocar de estilo com a tela carregando (interface.js chama
+     readaptarCarregamentos): o MESMO elemento troca de apresentação — a
+     consulta segue, quem guardou a referência continua com ela e nada
+     é ouvido duas vezes. Um placeholder próprio (legado) é substituído
+     no lugar.
+
+     Quando o conteúdo chega por U.trocar no pai do esqueleto, o que
+     entrou no lugar dele aparece com uma transição curta de opacidade
+     (RAMAMovimento) — só se o esqueleto chegou a aparecer (a política
+     de ~160 ms contra pisca-pisca), sem esperar nada para liberar os
+     controles. Nenhum timer, ouvinte ou laço por bloco: o brilho é uma
+     animação de CSS, e o esqueleto sai junto com o nó.
+     ================================================================= */
+
+  var ESQ_MAX = 12;
+  var ESQ_APARECE_MS = 160;   /* o mesmo atraso do .r-carregando no Modern20 */
+  var LARGURAS = [62, 46, 74, 54, 68, 40, 58, 50];
+
+  function agoraMs() { return Date.now(); }
+  function estiloAtual() {
+    var raiz = global.document && global.document.documentElement;
+    return raiz && raiz.getAttribute("data-interface") === "modern20" ? "modern20" : "legacy";
+  }
+
+  /* ---------- primitivas ---------- */
+  function px(v) { return typeof v === "number" ? v + "px" : v; }
+  function bloquinho(classe, estilo) {
+    return el("span.r-esq__b" + classe, estilo ? { estilo: estilo } : {});
+  }
+  var esqueleto = {
+    /* linha de texto: largura (% ou px), tipo "titulo" | "mini" | "" */
+    linha: function (largura, tipo) {
+      return bloquinho(".r-esq__linha" + (tipo ? ".r-esq__linha--" + tipo : ""), { width: typeof largura === "number" ? largura + "%" : (largura || "100%") });
+    },
+    /* bloco livre: altura fixa ou proporção (aspect-ratio) */
+    bloco: function (altura, opcoes) {
+      var o = opcoes || {};
+      var estilo = {};
+      if (altura) estilo.height = px(altura);
+      if (o.largura) estilo.width = px(o.largura);
+      if (o.proporcao) estilo.aspectRatio = o.proporcao;
+      return bloquinho(".r-esq__bloco" + (o.classe ? "." + o.classe : ""), estilo);
+    },
+    /* retrato: redondo (padrão) ou "quadrado", em px */
+    retrato: function (tamanho, forma) {
+      var t = px(tamanho || 48);
+      return bloquinho(".r-esq__retrato" + (forma === "quadrado" ? ".r-esq__retrato--quadrado" : ""), { width: t, height: t });
+    },
+    /* capa: a proporção reservada da imagem que vai chegar */
+    capa: function (proporcao) {
+      return bloquinho(".r-esq__capa", { aspectRatio: proporcao || "16 / 9" });
+    },
+    etiqueta: function (largura) {
+      return bloquinho(".r-esq__etiqueta", { width: px(largura || 56) });
+    },
+    /* cartão: a moldura dos componentes (borda, raio, fundo) */
+    cartao: function (filhos, classe) {
+      return el("div.r-esq__cartao" + (classe ? "." + classe : ""), {}, filhos);
+    },
+  };
+
+  function quantos(o, padroes) {
+    var n = o.quantidade || padroes[o.tamanho || "medio"] || padroes.medio;
+    return Math.max(1, Math.min(ESQ_MAX, n | 0));
+  }
+  function repetir(n, fn) { var r = []; for (var i = 0; i < n; i++) r.push(fn(i)); return r; }
+  function largura(i, desvio) { return LARGURAS[(i + (desvio || 0)) % LARGURAS.length]; }
+
+  /* As formas por tela: recursos e atributos por sistema da ficha. Sem
+     sistema conhecido, a ficha é neutra (sem barras nem atributos). */
+  var FICHAS = {
+    ordem: { recursos: 3, atributos: 5 },
+    ordem2: { recursos: 3, atributos: 5 },
+    oblivio: { recursos: 2, atributos: 4 },
+    vampiro: { recursos: 3, atributos: 9 },
+    goblins: { recursos: 2, atributos: 4 },
+    brutal: { recursos: 2, atributos: 4 },
+    tormenta20: { recursos: 2, atributos: 6 },
+    universal: { recursos: 2, atributos: 0 },
+  };
+
+  function faixa(n) {
+    return el("div.r-esq__faixa", {}, repetir(Math.min(n, 8), function (i) { return esqueleto.etiqueta(56 + (largura(i) % 5) * 12); }));
+  }
+  function fila(o, i) {
+    var retrato = o.retrato === false ? null : esqueleto.retrato(o.tamanhoRetrato || (o.plana ? 32 : 48), o.retrato === "quadrado" ? "quadrado" : "");
+    var corpo = [esqueleto.linha(largura(i) * 0.6, "titulo")];
+    for (var k = 0; k < (o.linhas === undefined ? 1 : o.linhas); k++) corpo.push(esqueleto.linha(largura(i, k + 2) * 0.8, "mini"));
+    if (o.etiquetas) corpo.push(el("div.r-esq__etiquetas", {}, repetir(Math.min(o.etiquetas, 4), function (j) { return esqueleto.etiqueta(48 + j * 10); })));
+    return esqueleto.cartao([
+      retrato,
+      el("div.r-esq__corpo", {}, corpo),
+      o.lado === false ? null : el("div.r-esq__lado", {}, [esqueleto.linha(64, "mini")]),
+    ], "r-esq__fila" + (o.plana ? ".r-esq__fila--plana" : ""));
+  }
+  function lista(o) {
+    var n = quantos(o, { curto: 3, medio: 5, grande: 8 });
+    var linhas = el("div.r-esq__pilha", {}, repetir(n, function (i) { return fila(o, i); }));
+    var principal = [
+      o.filtros ? el("div.r-esq__filtros", {}, [esqueleto.bloco(null, { classe: "r-esq__controle" }), esqueleto.bloco(null, { classe: "r-esq__controle r-esq__controle--curto" })]) : null,
+      linhas,
+    ];
+    if (o.lateral) {
+      return [el("div.r-esq__lateral", {}, [
+        el("div.r-esq__lado-esq", {}, repetir(Math.min(o.lateral, 10), function (i) { return esqueleto.linha(largura(i, 1), "mini"); })),
+        el("div.r-esq__pilha", {}, principal),
+      ])];
+    }
+    return [o.faixa ? faixa(o.faixa) : null].concat(principal);
+  }
+  function cartoes(o) {
+    var n = quantos(o, { curto: 2, medio: 3, grande: 6 });
+    return [el("div.r-esq__grade", { class: o.capa === "livro" ? "r-esq__grade--livros" : "" }, repetir(n, function (i) {
+      return esqueleto.cartao([
+        o.capa === false ? null : esqueleto.capa(o.proporcao || (o.capa === "livro" ? "3 / 4" : "16 / 9")),
+        el("div.r-esq__corpo", {}, [
+          esqueleto.linha(largura(i) * 0.9, "titulo"),
+          esqueleto.linha(92, "mini"),
+          esqueleto.linha(largura(i, 3), "mini"),
+        ]),
+      ], "r-esq__cartao--capa");
+    }))];
+  }
+  function icones(o) {
+    var n = quantos(o, { curto: 4, medio: 6, grande: 9 });
+    return [el("div.r-esq__icones", {}, repetir(n, function (i) {
+      return el("div.r-esq__icone", {}, [esqueleto.bloco(null, { proporcao: "1 / 1", classe: "r-esq__icone-caixa" }), esqueleto.linha(largura(i), "mini")]);
+    }))];
+  }
+  function secoes(n, linhas) {
+    return el("div.r-esq__secoes", {}, repetir(n, function (i) {
+      return esqueleto.cartao([esqueleto.linha(largura(i) * 0.5, "titulo")].concat(repetir(linhas, function (k) { return esqueleto.linha(largura(i, k + 1) + 20, "mini"); })), "r-esq__secao");
+    }));
+  }
+  function ficha(o) {
+    var s = FICHAS[o.sistema] || null;
+    var recursos = o.recursos !== undefined ? o.recursos : (s ? s.recursos : 0);
+    var atributos = o.atributos !== undefined ? o.atributos : (s ? s.atributos : 0);
+    return [
+      el("div.r-esq__cabeca", {}, [
+        esqueleto.retrato(96, "quadrado"),
+        el("div.r-esq__corpo", {}, [esqueleto.linha(42, "grande"), esqueleto.linha(30, "mini"), el("div.r-esq__etiquetas", {}, [esqueleto.etiqueta(64), esqueleto.etiqueta(52)])]),
+      ]),
+      recursos ? el("div.r-esq__recursos", {}, repetir(Math.min(recursos, 4), function (i) {
+        return el("div.r-esq__recurso", {}, [esqueleto.linha(28 + i * 6, "mini"), esqueleto.bloco(null, { classe: "r-esq__barra" })]);
+      })) : null,
+      atributos ? el("div.r-esq__atributos", {}, repetir(Math.min(atributos, 9), function () { return esqueleto.retrato(44); })) : null,
+      faixa(o.abas || 5),
+      secoes(o.secoes || 2, 3),
+    ];
+  }
+  function painelEsq(o) {
+    return [
+      el("div.r-esq__titulo", {}, [esqueleto.linha(34, "grande"), esqueleto.linha(56, "mini")]),
+      o.abas ? faixa(o.abas) : null,
+      secoes(o.secoes || quantos(o, { curto: 1, medio: 2, grande: 3 }), o.linhas || 3),
+    ];
+  }
+  function mesa(o) {
+    var n = quantos(o, { curto: 2, medio: 4, grande: 6 });
+    var barras = o.recursos === undefined ? 2 : o.recursos;
+    return [o.abas ? faixa(o.abas) : null, el("div.r-esq__pilha", {}, repetir(n, function (i) {
+      return esqueleto.cartao([
+        esqueleto.retrato(48, o.retrato === "quadrado" ? "quadrado" : ""),
+        el("div.r-esq__corpo", {}, [esqueleto.linha(largura(i) * 0.5, "titulo")].concat(barras ? [el("div.r-esq__recursos.r-esq__recursos--linha", {}, repetir(Math.min(barras, 4), function () { return esqueleto.bloco(null, { classe: "r-esq__barra" }); }))] : [])),
+      ], "r-esq__fila");
+    }))];
+  }
+  function retratos(o) {
+    var n = quantos(o, { curto: 4, medio: 8, grande: 12 });
+    return [el("div.r-esq__miniaturas", {}, repetir(n, function () { return esqueleto.capa(o.proporcao || "1 / 1"); }))];
+  }
+  function relatorio(o) {
+    var grupos = quantos(o, { curto: 1, medio: 3, grande: 4 });
+    var linhas = o.linhas || 3;
+    return [o.cabeca ? el("div.r-esq__cabeca", {}, [
+      esqueleto.retrato(64),
+      el("div.r-esq__corpo", {}, [esqueleto.linha(36, "grande"), esqueleto.linha(24, "mini")]),
+    ]) : null, el("div.r-esq__pilha", {}, repetir(grupos, function (g) {
+      return esqueleto.cartao([esqueleto.linha(largura(g) * 0.4, "titulo")].concat(repetir(linhas, function (k) {
+        return el("div.r-esq__opcao", {}, [esqueleto.linha(largura(g, k) * 0.6, "mini"), esqueleto.bloco(null, { classe: "r-esq__controle r-esq__controle--curto" })]);
+      })), "r-esq__secao");
+    }))];
+  }
+  function blocos(o) {
+    var n = quantos(o, { curto: 2, medio: 3, grande: 5 });
+    return [el("div.r-esq__pilha.r-esq__pilha--texto", {}, repetir(n, function (i) { return esqueleto.linha(largura(i) + 24, "mini"); }))];
+  }
+  var FORMAS = { lista: lista, cartoes: cartoes, icones: icones, ficha: ficha, painel: painelEsq, mesa: mesa, retratos: retratos, relatorio: relatorio, blocos: blocos,
+    imagem: function () { return [esqueleto.bloco(null, { classe: "r-esq__imagem" })]; } };
+
+  function compor(forma, opcoes) {
+    var f = FORMAS[forma] ? forma : "blocos";
+    return el("div.r-esq.r-esq--" + f, { "aria-hidden": "true", inert: "" }, FORMAS[f](opcoes || {}));
+  }
+
+  /* ---------- o componente ---------- */
+  function pintarPadrao(raiz, info, estilo) {
+    if (raiz._rEstilo === estilo) return;
+    var m20 = estilo === "modern20";
+    var trocando = raiz._rEstilo !== undefined;
+    raiz._rEstilo = estilo;
+    while (raiz.firstChild) raiz.removeChild(raiz.firstChild);
+    if (m20) {
+      raiz.classList.add("r-carregando--esqueleto");
+      raiz.setAttribute("aria-busy", "true");
+      raiz.setAttribute("data-forma", FORMAS[info.opcoes.forma] ? info.opcoes.forma : "blocos");
+      raiz.appendChild(el("span.so-leitor", { texto: info.mensagem }));
+      raiz.appendChild(compor(info.opcoes.forma, info.opcoes));
+      return;
+    }
+    if (trocando) {
+      raiz.classList.remove("r-carregando--esqueleto");
+      raiz.removeAttribute("aria-busy");
+      raiz.removeAttribute("data-forma");
+    }
+    raiz.appendChild(el("span.r-carregando__marca", { "aria-hidden": "true" }, [marca(32, { animada: true })]));
+    raiz.appendChild(el("p.r-carregando__rotulo", { texto: info.mensagem }));
+    raiz.appendChild(el("div.r-barra", { "aria-hidden": "true" }, [el("div.r-barra__preenche")]));
+  }
+
+  function construirCarregando(info, estilo) {
+    var no;
+    if (estilo !== "modern20" && typeof info.opcoes.legado === "function") {
+      no = info.opcoes.legado();
+      no.classList.add("r-pendente");
+      no._rEstilo = estilo;
+    } else {
+      no = el("div.r-carregando", { role: "status" });
+      pintarPadrao(no, info, estilo);
+    }
+    no._rCarregando = info;
+    return no;
+  }
+
+  function carregando(mensagem, opcoes) {
+    var info = { mensagem: mensagem || "Consultando arquivo", opcoes: opcoes || {}, desde: agoraMs() };
+    return construirCarregando(info, estiloAtual());
+  }
+
+  /* A troca de estilo chega aqui (interface.js, depois de mudar o
+     atributo): cada carregamento à vista adota o estilo novo. */
+  function readaptarCarregamentos() {
+    var doc = global.document;
+    if (!doc || !doc.querySelectorAll) return 0;
+    var estilo = estiloAtual();
+    var n = 0;
+    Array.prototype.forEach.call(doc.querySelectorAll(".r-carregando, .r-pendente, .abertura"), function (no) {
+      var info = no._rCarregando;
+      if (!info || no._rEstilo === estilo) return;
+      n++;
+      if (typeof info.pintar === "function") { info.pintar(estilo); no._rEstilo = estilo; return; }
+      var proprio = typeof info.opcoes.legado === "function";
+      if (proprio) {
+        var novo = construirCarregando(info, estilo);
+        novo.classList.add("interface-entrou");
+        if (no.parentNode) no.parentNode.replaceChild(novo, no);
+        return;
+      }
+      pintarPadrao(no, info, estilo);
+    });
+    return n;
+  }
+
+  /* Chamado por U.trocar ANTES de limpar o nó: se o esqueleto é filho
+     direto e já estava à vista, o que entrar no lugar dele aparece com
+     uma transição curta. Devolve a função que roda depois de anexar. */
+  function antesDeTrocar(no) {
+    if (!no || !no.children || estiloAtual() !== "modern20") return null;
+    var M = global.RAMAMovimento;
+    if (!M || !M.ativo || !M.ativo()) return null;
+    var indice = -1, esq = null;
+    for (var i = 0; i < no.children.length; i++) {
+      var c = no.children[i];
+      if (c.classList && c.classList.contains("r-carregando--esqueleto")) { indice = i; esq = c; break; }
+    }
+    if (!esq || !esq._rCarregando || agoraMs() - esq._rCarregando.desde < ESQ_APARECE_MS) return null;
+    return function () {
+      var filhos = Array.prototype.slice.call(no.children, indice, indice + 8);
+      filhos.forEach(function (f) {
+        if (f.classList && (f.classList.contains("r-carregando") || f.classList.contains("r-pendente"))) return;
+        M.animar(f, "entrada", [{ opacity: 0 }, { opacity: 1 }], { duracao: M.ms("estado"), curva: M.curva("sair") });
+      });
+    };
   }
 
   /* vazio({ titulo, texto, acao, acaoSecundaria }) — cada ação é
@@ -1255,6 +1557,13 @@
     ocupar: ocupar,
     indicador: indicador,
     carregando: carregando,
+    esqueleto: {
+      linha: esqueleto.linha, bloco: esqueleto.bloco, retrato: esqueleto.retrato,
+      capa: esqueleto.capa, etiqueta: esqueleto.etiqueta, cartao: esqueleto.cartao,
+      compor: compor, formas: Object.keys(FORMAS), ficha: FICHAS,
+    },
+    readaptarCarregamentos: readaptarCarregamentos,
+    _antesDeTrocar: antesDeTrocar,
     vazio: vazio,
     erroDeTela: erroDeTela,
     marca: marca,

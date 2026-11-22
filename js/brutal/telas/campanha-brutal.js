@@ -39,7 +39,7 @@
   var COM_REV = ["configurarAssassino", "configurarLacunas", "vantagemDaMesa", "novoThriller"];
 
   function aba(ctx) {
-    var alvo = el("div.pilha.brt-mesa", {}, [UI.carregando("Abrindo a Mesa da Diretora")]);
+    var alvo = el("div.pilha.brt-mesa", {}, [UI.carregando("Abrindo a Mesa da Diretora", { forma: "mesa", recursos: 2 })]);
     var mem = { dados: null, ocupado: false, aba: "jogo" };
 
     async function carregar(segundoPlano) {

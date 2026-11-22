@@ -57,7 +57,7 @@
   };
 
   function aba(ctx) {
-    var alvo = el("div.pilha.vamp-cronica", {}, [UI.carregando("Abrindo a crônica")]);
+    var alvo = el("div.pilha.vamp-cronica", {}, [UI.carregando("Abrindo a crônica", { forma: "mesa", recursos: 3 })]);
     var mem = { estado: null, vista: null, mestre: ctx.ehMestre(), rev: 0, ocupado: false, personagens: [] };
 
     async function carregar(segundoPlano) {

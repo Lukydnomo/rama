@@ -101,7 +101,7 @@
       async function carregar(segundoPlano) {
         if (!carregado) {
           lista.setAttribute("aria-busy", "true");
-          U.trocar(lista, UI.carregando("Consultando combates"));
+          U.trocar(lista, UI.carregando("Consultando combates", { forma: "mesa", recursos: 2, tamanho: "medio" }));
         }
         var r = await global.RAMAApi.listarCombates(ctx.campanhaId, segundoPlano ? { segundoPlano: true } : null);
         lista.removeAttribute("aria-busy");

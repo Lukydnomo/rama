@@ -31,7 +31,7 @@
   });
 
   async function carregar() {
-    U.trocar(painel, [cabecalho(), UI.carregando("Consultando arquivo")]);
+    U.trocar(painel, [cabecalho(), UI.carregando("Consultando arquivo", { forma: "cartoes", capa: true, tamanho: "medio" })]);
 
     var [rc, rp] = await Promise.all([
       global.RAMAApi.listarCampanhas(),

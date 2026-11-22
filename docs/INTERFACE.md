@@ -252,6 +252,90 @@ Para uma tela nova: use os componentes de `js/ui.js` (já animam), chame
 `RAMAMovimento.entrar(area)` só na navegação explícita e nunca numa atualização
 de dados ou de segundo plano, e use os tokens em qualquer transição CSS.
 
+## Skeleton Loading exclusivo do Modern20 (v9.19.0)
+
+Enquanto o conteúdo de uma área ainda não chegou, o Modern20 mostra um
+esqueleto da tela que vai ocupá-la — retratos, capas, títulos, linhas,
+cartões, recursos e seções — em vez de marca, mensagem e barra. **O Legacy não
+muda:** `RAMAUI.carregando` devolve lá exatamente a estrutura de sempre, com ou
+sem opções, e o mesmo vale enquanto a interface ainda não foi identificada.
+
+### A chamada
+
+`RAMAUI.carregando(mensagem, opcoes)` — a mensagem continua sendo a de antes
+(no Modern20 ela vira o texto do `role="status"`, só para leitor de tela). A
+forma vem SEMPRE das opções, nunca do texto:
+
+| Forma | Para quê | Opções úteis |
+|---|---|---|
+| `lista` | personagens, catálogos, bibliotecas, histórico, acessos | `retrato` (`true`, `false`, `"quadrado"`), `linhas`, `etiquetas`, `plana` (linhas sem cartão), `faixa` (pastas em abas), `lateral` (pastas laterais), `filtros`, `lado` |
+| `cartoes` | campanhas, pacotes | `capa` (`true`, `false`, `"livro"`), `proporcao` |
+| `icones` | Personagens em Ícones, no celular | — |
+| `ficha` | a ficha de um personagem | `sistema` (recursos e atributos dele; sem sistema, neutra), `recursos`, `atributos`, `abas`, `secoes` |
+| `painel` | página de campanha, painéis de mesa dentro da ficha, ficha de criatura | `abas`, `secoes`, `linhas` |
+| `mesa` | mesas dos sistemas e combate | `recursos` (barras por participante), `abas` |
+| `retratos` | biblioteca de retratos e imagens | `proporcao` |
+| `relatorio` | Perfil (identificação e grupos de configuração) | `cabeca`, `linhas` |
+| `imagem` | uma imagem que chega depois (capa, documento) | — |
+| `blocos` | o padrão sem forma: linhas neutras | — |
+
+Comuns a todas: `quantidade` ou `tamanho` (`"curto"`, `"medio"`, `"grande"`),
+com no máximo 12 repetições. `legado: function () { return elemento; }` mantém,
+no Legacy, o placeholder próprio de uma tela (o texto "Carregando capa…", por
+exemplo) — ele só ganha a classe-marcador `.r-pendente`, sem estilo.
+
+As primitivas ficam em `RAMAUI.esqueleto` (`linha`, `bloco`, `retrato`, `capa`,
+`etiqueta`, `cartao`, `compor`); as formas são composições delas. As formas de
+ficha por sistema estão em `RAMAUI.esqueleto.ficha`.
+
+### Ciclo de vida
+
+- **Aparece sem piscar:** o `.r-carregando` do Modern20 já entra com ~160 ms de
+  atraso; uma resposta mais rápida nem mostra o esqueleto. Nada espera a
+  animação para mostrar dados.
+- **Chega com transição curta:** quando o conteúdo entra por `U.trocar` no pai
+  do esqueleto (o caminho de todas as telas), o que ocupou o lugar dele aparece
+  com opacidade (`RAMAMovimento`, `--m20-mov-estado`) — só se o esqueleto chegou
+  a aparecer. `U.trocar` continua síncrono.
+- **Troca de estilo com a tela carregando:** `interface.js` chama
+  `RAMAUI.readaptarCarregamentos()`; o MESMO nó troca de apresentação (a
+  consulta segue, referências continuam válidas, nada é ouvido de novo). O
+  placeholder próprio (`legado`) é trocado no lugar. A abertura protegida faz o
+  mesmo.
+- **Sem timers nem ouvintes:** o brilho é uma animação de CSS (`transform`,
+  `m20-esq-brilho`); o esqueleto sai junto com o nó. Vazio e erro substituem o
+  esqueleto como antes; a resposta antiga que não vale mais continua sendo
+  descartada pelas telas.
+- **Acessibilidade:** `role="status"` e `aria-busy="true"` no esqueleto, uma
+  mensagem curta por região, desenhos com `aria-hidden` e `inert` (nada
+  recebe foco nem clique).
+- **Movimento reduzido:** esqueleto parado, sem brilho nem entrada.
+
+### Onde está
+
+Abertura protegida (neutra: nada da conta antes da sessão conferida),
+Personagens (Abas com a faixa de pastas, Pastas laterais e Ícones),
+compartilhados, Campanhas, página da campanha e as seções dela (histórico,
+documentos com imagem, notas, agentes, mesa, combate), fichas (com o sistema
+que a lista deixou de dica em `sessionStorage`, só a forma; sem dica, neutra),
+mesas de Ordem, Ordem II, Oblívio, Vampiro, Goblins, BRUTAL e Tormenta20,
+painéis de mesa dentro das fichas, Catálogo, biblioteca de criaturas,
+Homebrew e pacotes, bibliotecas das fichas (habilidades, rituais, itens,
+Homebrew, classes e trilhas), Perfil (e a coleção, cujo esqueleto já existia e
+ganhou o brilho), compartilhamento, temas da conta, biblioteca de retratos e
+as imagens que chegam depois.
+
+**Imagens que chegam depois** (`RAMAImagens.aplicar`): a caixa ganha
+`.r-imagem--carregando` (o espaço reservado brilha, depois de ~160 ms),
+nenhuma classe quando a imagem é ausente (as iniciais de sempre) e
+`.r-imagem--falhou` quando ela não abre (moldura tracejada). Só o Modern20
+desenha essas classes; o carregamento sob demanda continua igual.
+
+**O que não vira esqueleto:** `RAMAUI.ocupar` (salvar, criar, excluir,
+enviar, importar continuam dizendo a ação no botão, com largura segura),
+uploads com progresso, a barra de atividade e o selo de sincronização, e as
+atualizações em segundo plano — conteúdo válido fica na tela.
+
 ## Inventário de telas e componentes
 
 Levantado antes do redesenho, a partir das páginas (`js/paginas/*`) e das seções
@@ -298,7 +382,17 @@ das folhas. Cada linha diz onde o Modern20 a trata.
   única, e as folhas e telas usam os tokens, `scale` na pressão e prazos em vez
   de `animationend`. No navegador, `testes/janelas.html` roda a bateria de
   janelas nos dois estilos e confere a saída com movimento (uma vez, sem
-  bloquear, removida por prazo).
+  bloquear, removida por prazo). Desde a v9.19.0, também confere na fonte o
+  Skeleton Loading: o Legacy montando marca, mensagem e barra, a forma vinda
+  das opções em todo carregamento das telas, a abertura neutra, os estados de
+  imagem e o movimento reduzido.
+- `testes/esqueleto.html` (navegador) — Skeleton Loading no DOM real: a
+  estrutura do Legacy idêntica à de antes (com e sem opções, e sem interface
+  identificada), o esqueleto acessível e limitado do Modern20, todas as formas
+  sem texto decorativo, a ficha neutra e por sistema, a troca de estilo no
+  mesmo nó, a concorrência entre regiões, vazio e erro substituindo o
+  esqueleto e a transição só depois do esqueleto à vista. Embaixo, uma galeria
+  das formas para conferir tema e densidade.
 - `testes/tema-backend.js` (dentro de `executar-backend.js`) — o servidor
   aceita, devolve e recusa `estiloInterface`.
 - `deno run --allow-read testes/executar-feedback.js` — a janela de Feedback

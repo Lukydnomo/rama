@@ -10,6 +10,14 @@
 
 :root[data-interface="modern20"] {
 
+  /* Skeleton Loading (v9.19.0): a mesma economia de espaço das listas e
+     cartões de verdade. */
+  &[data-densidade="compacta"] .r-esq { gap: var(--e3); }
+  &[data-densidade="compacta"] .r-esq__cartao { padding: var(--e2) var(--e3); gap: var(--e2); }
+  &[data-densidade="compacta"] .r-esq__pilha { gap: var(--e1); }
+  &[data-densidade="compacta"] .r-esq__corpo { gap: var(--e1); }
+  &[data-densidade="compacta"] .r-esq__cartao--capa { padding: var(--e2); }
+
   &[data-densidade="compacta"] .r-painel:not(.r-painel--solto) {
     padding: var(--e3);
   }

@@ -131,7 +131,13 @@
       return;
     }
 
-    U.trocar(alvo, UI.carregando("Acessando registro"));
+    /* v9.19.0: no Modern20, o esqueleto da ficha; com o sistema que a
+       lista de personagens deixou de dica, os recursos e atributos dele —
+       sem dica, a ficha neutra (nada de campos de Ordem como universais). */
+    var dicaSistema = null;
+    try { dicaSistema = global.sessionStorage ? global.sessionStorage.getItem("rama.ficha.sistema." + estado.personagemId) : null; }
+    catch (e) { dicaSistema = null; }
+    U.trocar(alvo, UI.carregando("Acessando registro", { forma: "ficha", sistema: dicaSistema || undefined }));
 
     /* Ficha, foto e campanhas já vieram junto com a conferência da
        sessão, numa requisição só — ver o `pedidos` no fim do arquivo.

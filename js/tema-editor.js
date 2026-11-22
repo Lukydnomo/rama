@@ -674,7 +674,7 @@
         itens.push(opcaoDado(selDados.id, conhecido(selDados.id) ? TD().tema(selDados.id).nome : selDados.id,
           conhecido(selDados.id) ? "Escolhido nesta ficha. Só a conta dona dele pode trocar por outro." : "Este tema não está disponível neste navegador agora: as rolagens usam o dado padrão até ele voltar."));
       }
-      if (desbloqueados === null) itens.push(el("p.r-ajuda", { texto: "Consultando os temas de dados da sua conta…" }));
+      if (desbloqueados === null) itens.push(UI.carregando("Consultando os temas de dados da sua conta", { forma: "retratos", proporcao: "1 / 1", tamanho: "curto", legado: function () { return el("p.r-ajuda", { texto: "Consultando os temas de dados da sua conta…" }); } }));
       else if (desbloqueados === false) itens.push(el("p.r-ajuda", { texto: "Não foi possível consultar os temas de dados da sua conta agora. O padrão continua disponível." }));
       else if (!ids.length) itens.push(el("p.r-ajuda", { texto: "Nenhum tema de dados desbloqueado. Códigos se resgatam no Perfil, em “Resgatar código”." }));
       if (!podeEscolherDados) itens.push(el("p.r-ajuda", { texto: "Só a conta dona desta ficha escolhe o tema dos dados." }));
@@ -698,7 +698,7 @@
     /* Ficha: os temas da conta entram como cópia. */
     function blocoDaConta() {
       var corpo;
-      if (temasDaConta === null) corpo = [el("p.r-ajuda", { texto: "Consultando os temas da sua conta…" })];
+      if (temasDaConta === null) corpo = [UI.carregando("Consultando os temas da sua conta", { forma: "lista", plana: true, retrato: "quadrado", linhas: 1, tamanho: "curto", legado: function () { return el("p.r-ajuda", { texto: "Consultando os temas da sua conta…" }); } })];
       else if (temasDaConta === false) corpo = [el("p.r-ajuda", { texto: "Não foi possível consultar os temas da sua conta agora. Os temas prontos continuam disponíveis." })];
       else if (!temasDaConta.length) corpo = [el("p.r-ajuda", { texto: "Sua conta não tem temas personalizados." })];
       else corpo = temasDaConta.map(function (t) {

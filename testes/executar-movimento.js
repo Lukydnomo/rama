@@ -266,7 +266,7 @@ t.grupo("As folhas e as telas");
   const mov = await ler("js/movimento.js");
   t.ok("nenhum observador de mutações e nenhuma chamada de API no módulo", !/MutationObserver/.test(mov) && !/RAMAApi|fetch\(|salvar|alterou\(/.test(mov));
   const util = await ler("js/util.js");
-  t.ok("U.trocar continua síncrono (limpa e anexa)", /function trocar\(node, filhos\) \{\s*limpar\(node\);\s*return anexar\(node, filhos\);\s*\}/.test(util));
+  t.ok("U.trocar continua síncrono (limpa e anexa, e a transição do esqueleto não segura nada)", /function trocar\(node, filhos\) \{[\s\S]{0,400}?limpar\(node\);\s*var r = anexar\(node, filhos\);\s*if \(depois\) depois\(\);\s*return r;\s*\}/.test(util) && !/function trocar[\s\S]{0,500}?(await|Promise|setTimeout)[\s\S]{0,50}?return r;/.test(util));
   const PAGINAS = ["index.html", "personagens/index.html", "campanhas/index.html", "campanha/index.html", "ficha/index.html", "homebrew/index.html", "perfil/index.html", "catalogo/index.html"];
   const sem = [];
   for (const p of PAGINAS) {
@@ -277,6 +277,27 @@ t.grupo("As folhas e as telas");
   t.ok("toda página carrega o movimento antes de ui.js", sem.length === 0, sem.join(", "));
   const iface = await ler("js/interface.js");
   t.ok("trocar de estilo para os movimentos em andamento", /RAMAMovimento\.pararTudo\(\)/.test(iface));
+  /* Skeleton Loading exclusivo do Modern20 (v9.19.0). O comportamento
+     no DOM real (isolamento, troca de estilo, concorrência, transição)
+     fica em testes/esqueleto.html. Aqui, o que dá para conferir na fonte. */
+  const uiJs = await ler("js/ui.js");
+  t.ok("Skeleton: o Legacy continua montando marca, mensagem e barra", /raiz\.appendChild\(el\("span\.r-carregando__marca", \{ "aria-hidden": "true" \}, \[marca\(32, \{ animada: true \}\)\]\)\);\s*raiz\.appendChild\(el\("p\.r-carregando__rotulo", \{ texto: info\.mensagem \}\)\);\s*raiz\.appendChild\(el\("div\.r-barra"/.test(uiJs));
+  t.ok("Skeleton: só com data-interface=\"modern20\" (sem estilo identificado, vale o Legacy)", /getAttribute\("data-interface"\) === "modern20" \? "modern20" : "legacy"/.test(uiJs));
+  t.ok("Skeleton: a forma vem da opção (nada lê o texto da mensagem para escolher)", !/mensagem[^\n]{0,40}(indexOf|match|test|includes)\(/.test(uiJs.slice(uiJs.indexOf("CARREGANDO —"), uiJs.indexOf("function vazio"))));
+  const telas = [];
+  for await (const arq of (async function* andar(dir) { for await (const e of Deno.readDir(new URL("../" + dir, import.meta.url))) { const c = dir + "/" + e.name; if (e.isDirectory) yield* andar(c); else if (c.endsWith(".js")) yield c; } })("js")) {
+    if (arq === "js/ui.js") continue;
+    const fonte = await ler(arq);
+    for (const m of fonte.matchAll(/\.carregando\(([^;\n]*)/g)) if (!/forma:/.test(m[1]) && !/^\s*\)/.test(m[1]) && /^\s*["']/.test(m[1]) && !/esqueletoDaLista\(\)/.test(m[1])) telas.push(arq);
+  }
+  t.ok("Skeleton: todo carregamento das telas diz a forma do que vai chegar", telas.length === 0, telas.join(", "));
+  const auth = await ler("js/auth.js");
+  t.ok("Skeleton: a abertura do Legacy é a mesma caixa de sempre; a do Modern20 é neutra (nada da conta antes da sessão)", /function caixaLegacy\(\)[\s\S]*abertura__marca[\s\S]*r-barra__preenche/.test(auth) && !/function paginaModern20\(\)[\s\S]{0,1200}(agente\(|localStorage|sessionStorage|rama\.sessao)/.test(auth));
+  const imgs = await ler("js/imagens.js");
+  t.ok("Skeleton: imagem carregando, ausente e com falha são estados distintos (só o Modern20 os desenha)", /marcar\("carregando"\)/.test(imgs) && /if \(!imagem\) \{ marcar\(null\); return; \}/.test(imgs) && /img\.onerror = function \(\) \{ marcar\("falhou"\); \}/.test(imgs));
+  t.ok("Skeleton: o brilho para com movimento reduzido", /prefers-reduced-motion: reduce\)[\s\S]*\.r-esq__b::after \{ animation: none; display: none; \}/.test(comp));
+  t.ok("Skeleton: trocar de estilo readapta os carregamentos à vista", /RAMAUI\.readaptarCarregamentos\(\)/.test(iface));
+  t.ok("Skeleton: o botão ocupado continua o de sempre (ocupar não monta esqueleto)", !/function ocupar[\s\S]{0,1500}carregando\(/.test(uiJs));
   const pers = await ler("js/paginas/personagens.js");
   t.ok("Personagens: trocar a exibição (Abas, Pastas laterais, Ícones) passa pelo rearranjo", /function trocarExibicao\(valor\) \{[\s\S]{0,200}rearranjarExibicao\(/.test(pers) && /rearranjarExibicao\(desenhar\)/.test(pers));
 }

@@ -514,9 +514,10 @@
     document.addEventListener("rama:servidor-demorando", aoDemorar);
 
     /* v6.3: a marca se desenha (o tronco cresce, os nós acendem), com o
-       nome por extenso embaixo e uma grade de arquivo bem leve no fundo. */
-    var tela = el("div.abertura", { role: "status" }, [
-      el("div.abertura__caixa", {}, [
+       nome por extenso embaixo e uma grade de arquivo bem leve no fundo.
+       É a abertura do Legacy, intacta. */
+    function caixaLegacy() {
+      return el("div.abertura__caixa", {}, [
         el("span.abertura__marca", { "aria-hidden": "true" }, [global.RAMAUI.marca(64, { animada: true })]),
         el("div.abertura__titulos", {}, [
           el("p.abertura__nome", { texto: "R.A.M.A." }),
@@ -527,8 +528,45 @@
           el("div.r-barra", { "aria-hidden": "true" }, [el("div.r-barra__preenche")]),
         ]),
         explicacao,
-      ]),
-    ]);
+      ]);
+    }
+
+    /* v9.19.0: no Modern20, um esqueleto NEUTRO de página — cabeçalho,
+       título e blocos —, porque a sessão ainda não foi conferida: nada
+       da conta (nem do cache dela) aparece antes disso. A mensagem fica
+       para leitor de tela; a explicação de servidor lento continua à
+       vista quando vier. */
+    function paginaModern20() {
+      var E = global.RAMAUI.esqueleto;
+      return [
+        el("span.so-leitor", { texto: "Acessando registro" }),
+        el("div.abertura__pagina", {}, [
+          el("div.r-esq.abertura__esqueleto", { "aria-hidden": "true", inert: "" }, [
+            el("div.abertura__topo", {}, [E.retrato(28, "quadrado"), E.linha("96px", "titulo"), el("span.abertura__vao"), E.retrato(32)]),
+            el("div.r-esq__titulo", {}, [E.linha(30, "grande"), E.linha(46, "mini")]),
+            el("div.r-esq__secoes", {}, [0, 1, 2].map(function (i) {
+              return E.cartao([E.linha(40 + i * 8, "titulo"), E.linha(88, "mini"), E.linha(64 - i * 6, "mini")], "r-esq__secao");
+            })),
+          ]),
+          explicacao,
+        ]),
+      ];
+    }
+
+    var tela = el("div.abertura", { role: "status" });
+    function pintar(estilo) {
+      while (tela.firstChild) tela.removeChild(tela.firstChild);
+      var m20 = estilo === "modern20" && !!(global.RAMAUI && global.RAMAUI.esqueleto);
+      tela.classList.toggle("abertura--esqueleto", m20);
+      if (m20) { tela.setAttribute("aria-busy", "true"); paginaModern20().forEach(function (n) { tela.appendChild(n); }); }
+      else { tela.removeAttribute("aria-busy"); tela.appendChild(caixaLegacy()); }
+      tela._rEstilo = estilo;
+    }
+    var raizDoc = document.documentElement;
+    pintar(raizDoc && raizDoc.getAttribute("data-interface") === "modern20" ? "modern20" : "legacy");
+    /* A troca de estilo durante a abertura (RAMAUI.readaptarCarregamentos)
+       repinta no lugar: a mesma consulta, o mesmo ouvinte de demora. */
+    tela._rCarregando = { pintar: pintar };
 
     document.body.appendChild(tela);
 

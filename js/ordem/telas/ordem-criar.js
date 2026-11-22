@@ -774,7 +774,7 @@
       if (!H) return null;
       if (!bibliotecaHb) {
         H.carregarBiblioteca().then(function (b) { bibliotecaHb = b; pintar(); });
-        return el("p.t-mini", { texto: "Consultando as Classes Homebrew…" });
+        return UI.carregando("Consultando as Classes Homebrew", { forma: "cartoes", capa: false, tamanho: "curto", legado: function () { return el("p.t-mini", { texto: "Consultando as Classes Homebrew…" }); } });
       }
       if (!bibliotecaHb.classes.length) return el("p.t-mini", { texto: "Nenhuma Classe Homebrew na sua biblioteca nem nas públicas. Crie em Homebrew → + Criar → Ordem Paranormal → Classe." });
       var trilho = R.trilho(rascunhoParaRegras());

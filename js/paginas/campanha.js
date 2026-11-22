@@ -109,7 +109,7 @@
       return;
     }
 
-    U.trocar(alvo, UI.carregando("Acessando campanha"));
+    U.trocar(alvo, UI.carregando("Acessando campanha", { forma: "painel", abas: 6, secoes: 2 }));
 
     /* A primeira carga usa o que veio junto com a sessão; recarregar
        depois volta a buscar do jeito normal. */
@@ -813,7 +813,7 @@
     var guardada = ctx.capa();
     if (guardada.imagem && guardada.atualizadoEm === meta.atualizadoEm) { mostrar(guardada.imagem); return; }
 
-    U.trocar(imagem, el("span.campanha-capa__carregando", { texto: "Carregando capa…" }));
+    U.trocar(imagem, UI.carregando("Carregando capa", { forma: "imagem", legado: function () { return el("span.campanha-capa__carregando", { texto: "Carregando capa…" }); } }));
     ctx.carregarCapa().then(function (r) {
       if (!document.body.contains(imagem)) return;
       if (r && r.ok && r.imagem) { mostrar(r.imagem); return; }
@@ -1283,12 +1283,12 @@
 
   function participantes(ctx) {
     var caixa = el("div.pilha--curta", { class: "pilha", "aria-busy": "true" }, [
-      UI.carregando("Carregando agentes"),
+      UI.carregando("Carregando agentes", { forma: "lista", plana: true, linhas: 1, tamanho: "curto" }),
     ]);
 
     function carregar() {
       caixa.setAttribute("aria-busy", "true");
-      U.trocar(caixa, UI.carregando("Carregando agentes"));
+      U.trocar(caixa, UI.carregando("Carregando agentes", { forma: "lista", plana: true, linhas: 1, tamanho: "curto" }));
       global.RAMAApi.listarUsuarios().then(montar);
     }
 

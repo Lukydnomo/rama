@@ -146,7 +146,7 @@
         })) : null,
         el("div.hb-imagem-campo__linha", {}, [
           el("div.hb-imagem-campo__previa" + (c.efetiva === "simbolo" ? ".hb-imagem--simbolo" : ""), { "aria-live": "polite" },
-            st.carregando ? [el("span.t-mini", { texto: "Carregando…" })]
+            st.carregando ? [UI().carregando("Carregando a imagem", { forma: "imagem", legado: function () { return el("span.t-mini", { texto: "Carregando…" }); } })]
               : src ? [el("img", { src: src, alt: "Prévia: " + minusc })] : [el("span.t-mini", { texto: "Sem " + minusc })]),
           el("div.faixa.hb-imagem-campo__acoes", {}, [
             el("button.r-botao.r-botao--mini", { type: "button", disabled: st.carregando || st.ocupado, texto: src ? "Trocar" : "Adicionar " + minusc,

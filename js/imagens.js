@@ -248,16 +248,29 @@
 
     var vivo = true;
 
+    /* v9.19.0: o estado da imagem fica na caixa, em classes que só o
+       Modern20 desenha (o esqueleto no espaço reservado; a moldura da
+       falha). No Legacy nenhuma delas tem estilo: nada muda por lá. */
+    var marcar = caixa.classList ? function (estado) {
+      caixa.classList.remove("r-imagem--carregando", "r-imagem--falhou");
+      if (estado) caixa.classList.add("r-imagem--" + estado);
+    } : function () {};
+    marcar("carregando");
+
     function colocar(imagem) {
-      if (!vivo || !imagem) return;
+      if (!vivo) return;
       /* Só troca o conteúdo se o elemento ainda estiver na tela e ainda
          for deste personagem: redesenhos acontecem. */
       if (caixa.dataset && caixa.dataset.imagemId && caixa.dataset.imagemId !== String(o.id)) return;
+      /* Sem imagem (ausente ou não veio): ficam as iniciais de sempre. */
+      if (!imagem) { marcar(null); return; }
       var img = global.document.createElement("img");
+      img.onerror = function () { marcar("falhou"); };
       img.src = imagem;
       img.alt = o.alt || "";
       caixa.textContent = "";
       caixa.appendChild(img);
+      marcar(null);
     }
 
     if (caixa.dataset) caixa.dataset.imagemId = String(o.id);

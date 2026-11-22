@@ -179,6 +179,12 @@
       Array.prototype.forEach.call(doc.querySelectorAll(ENTRADAS), function (el) { if (!el.hidden) el.classList.add("interface-entrou"); });
     }
     raiz.setAttribute("data-interface", novo);
+    /* v9.19.0: carregamentos à vista trocam de apresentação no lugar
+       (esqueleto no Modern20, marca e barra no Legacy), sem refazer a
+       consulta. */
+    if (global.RAMAUI && global.RAMAUI.readaptarCarregamentos) {
+      try { global.RAMAUI.readaptarCarregamentos(); } catch (e) { /* segue a troca */ }
+    }
     voltarAoLugar(lugar);
   }
 

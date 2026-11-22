@@ -1336,7 +1336,7 @@
       U.trocar(area, UI.vazio({ titulo: "O catálogo não carregou", texto: falhas[chave], acao: { rotulo: "Tentar de novo", aoClicar: function () { delete falhas[chave]; desenhar(); } } }));
       return;
     }
-    U.trocar(area, UI.carregando("Abrindo " + cat.nome.toLowerCase()));
+    U.trocar(area, UI.carregando("Abrindo " + cat.nome.toLowerCase(), { forma: "lista", retrato: "quadrado", etiquetas: 2, linhas: 1, filtros: true, tamanho: "grande" }));
     var sistema = estado.sistema, id = cat.id;
     cat.carregar().then(function () {
       carregados[chave] = true;

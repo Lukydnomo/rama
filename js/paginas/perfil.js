@@ -52,7 +52,7 @@
 
     U.trocar(painel, [
       global.RAMAApp.titulo({ titulo: "Perfil", trilha: [agente.nome || "Agente"] }),
-      UI.carregando("Consultando arquivo"),
+      UI.carregando("Consultando arquivo", { forma: "relatorio", cabeca: true, tamanho: "medio" }),
     ]);
 
     var r = await global.RAMAApi.lerPerfil();

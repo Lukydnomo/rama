@@ -32,7 +32,7 @@
     var corpo = el("div.pilha.hbf");
     var janela = UI.modal({ titulo: (grupo === "item" ? "Itens" : "Habilidades") + " do Homebrew", largo: true, conteudo: corpo, botoes: [{ rotulo: "Fechar", classe: "r-botao--fantasma" }] });
     var estado = { registros: null, busca: "" };
-    U.trocar(corpo, UI.carregando("Consultando a biblioteca Homebrew"));
+    U.trocar(corpo, UI.carregando("Consultando a biblioteca Homebrew", { forma: "lista", plana: true, retrato: false, linhas: 1, tamanho: "medio" }));
     global.RAMAApi.listarHomebrew({ escopo: "todos", tipos: TIPOS_POR_GRUPO[grupo] }).then(function (r) {
       if (!r || !r.ok) { U.trocar(corpo, UI.erroDeTela(r, function () { janela.fechar(); abrir(ctx, o); })); return; }
       estado.registros = (r.dados || []).filter(function (h) { return A().grupoDe(h) === grupo; });

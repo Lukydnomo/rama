@@ -471,6 +471,122 @@
   & .r-carregando__rotulo { font-weight: 550; color: var(--cor-texto-2); letter-spacing: 0; text-transform: none; font-size: var(--texto-base); }
   & .r-carregando__marca { color: var(--cor-texto-3); }
   & .r-carregando__rotulo::after { display: none; }
+
+  /* =================================================================
+     SKELETON LOADING (v9.19.0) — só no Modern20
+     -----------------------------------------------------------------
+     RAMAUI.carregando(mensagem, { forma, … }) monta, no Modern20, um
+     esqueleto da tela que vai chegar (js/ui.js). O Legacy nem recebe
+     esta estrutura. Cores dos tokens do tema (claro, escuro e
+     personalizado), molduras dos componentes, o atraso de ~160 ms do
+     .r-carregando contra pisca-pisca e um brilho só de transform.
+     ================================================================= */
+  & .r-carregando--esqueleto {
+    display: block;
+    padding: 0;
+    gap: 0;
+    color: inherit;
+  }
+  & .r-esq {
+    --esq-base: color-mix(in srgb, var(--cor-texto) 8%, transparent);
+    --esq-brilho: color-mix(in srgb, var(--cor-texto) 7%, transparent);
+    display: flex; flex-direction: column; gap: var(--e4); min-width: 0; pointer-events: none; user-select: none; }
+
+  /* ---------- primitivas ---------- */
+  & .r-esq__b {
+    position: relative;
+    display: block;
+    flex: 0 0 auto;
+    overflow: hidden;
+    background: var(--esq-base);
+    border-radius: var(--m20-raio-controle);
+  }
+  & .r-esq__b::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent, var(--esq-brilho) 50%, transparent);
+    transform: translateX(-100%);
+    animation: m20-esq-brilho 1.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  }
+  & .r-esq__linha { height: 0.8em; max-width: 100%; border-radius: 999px; }
+  & .r-esq__linha--titulo { height: 1em; }
+  & .r-esq__linha--grande { height: 1.5em; }
+  & .r-esq__linha--mini { height: 0.7em; }
+  & .r-esq__retrato { border-radius: 50%; }
+  & .r-esq__retrato--quadrado { border-radius: var(--m20-raio-cartao); }
+  & .r-esq__capa { width: 100%; border-radius: var(--m20-raio-controle); }
+  & .r-esq__etiqueta { height: 1.5em; border-radius: 999px; }
+  & .r-esq__barra { height: 8px; width: 100%; border-radius: 999px; }
+  & .r-esq__controle { height: var(--m20-controle); flex: 1 1 auto; }
+  & .r-esq__controle--curto { flex: 0 0 auto; width: min(160px, 40%); }
+  & .r-esq__imagem { width: 100%; height: 100%; min-height: inherit; border-radius: inherit; }
+  & .r-esq--imagem, & .r-carregando--esqueleto[data-forma="imagem"] { height: 100%; }
+  & .r-esq__cartao {
+    display: flex;
+    gap: var(--e3);
+    min-width: 0;
+    padding: var(--e3) var(--e4);
+    border: 1px solid var(--m20-borda);
+    border-radius: var(--m20-raio-cartao);
+    background: var(--fundo-superficie);
+  }
+
+  /* ---------- composições ---------- */
+  & .r-esq__corpo { display: flex; flex-direction: column; gap: var(--e2); flex: 1 1 auto; min-width: 0; justify-content: center; }
+  & .r-esq__lado { display: flex; flex-direction: column; align-items: flex-end; justify-content: center; flex: 0 0 18%; }
+  & .r-esq__etiquetas, & .r-esq__faixa { display: flex; flex-wrap: wrap; gap: var(--e2); }
+  & .r-esq__faixa .r-esq__etiqueta { height: calc(var(--m20-controle) - 4px); border-radius: var(--m20-raio-controle); }
+  & .r-esq__pilha { display: flex; flex-direction: column; gap: var(--e2); min-width: 0; }
+  & .r-esq__pilha--texto { gap: var(--e3); padding: var(--e2) 0; }
+  & .r-esq__fila { align-items: center; }
+  & .r-esq__fila--plana { padding: var(--e2) 0; border: 0; border-bottom: 1px solid var(--m20-borda); border-radius: 0; background: none; }
+  & .r-esq__filtros { display: flex; gap: var(--e3); }
+  & .r-esq__lateral { display: grid; grid-template-columns: 240px minmax(0, 1fr); gap: var(--e5); }
+  & .r-esq__lado-esq { display: flex; flex-direction: column; gap: var(--e4); padding: var(--e2) var(--e3); }
+  & .r-esq__grade { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: var(--e3); }
+  & .r-esq__grade--livros { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+  & .r-esq__cartao--capa { flex-direction: column; padding: var(--e2) var(--e2) var(--e3); }
+  & .r-esq__cartao--capa .r-esq__corpo { padding: 0 var(--e2); }
+  & .r-esq__icones { display: grid; grid-template-columns: repeat(auto-fill, minmax(6.75rem, 1fr)); gap: var(--e3); }
+  & .r-esq__icone { display: flex; flex-direction: column; align-items: center; gap: var(--e2); }
+  & .r-esq__icone-caixa { width: 100%; border-radius: var(--m20-raio-cartao); }
+  & .r-esq__cabeca { display: flex; gap: var(--e4); align-items: center; }
+  & .r-esq__recursos { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: var(--e3); }
+  & .r-esq__recursos--linha { grid-template-columns: repeat(auto-fit, minmax(80px, 1fr)); gap: var(--e2); }
+  & .r-esq__recurso { display: flex; flex-direction: column; gap: var(--e2); }
+  & .r-esq__atributos { display: flex; flex-wrap: wrap; gap: var(--e3); }
+  & .r-esq__titulo { display: flex; flex-direction: column; gap: var(--e2); }
+  & .r-esq__secoes { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: var(--e3); }
+  & .r-esq__secao { flex-direction: column; gap: var(--e3); }
+  & .r-esq__opcao { display: flex; align-items: center; justify-content: space-between; gap: var(--e3); }
+  & .r-esq__miniaturas { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: var(--e2); }
+
+  @media (max-width: 760px) {
+    & .r-esq__lateral { grid-template-columns: minmax(0, 1fr); }
+    & .r-esq__lado-esq { display: none; }
+    & .r-esq__lado { display: none; }
+    & .r-esq__filtros { flex-direction: column; }
+    & .r-esq__controle--curto { width: 100%; }
+    & .r-esq__cabeca .r-esq__retrato--quadrado { max-width: 72px; max-height: 72px; }
+  }
+
+  /* ---------- imagens que chegam depois (RAMAImagens.aplicar) ----------
+     Carregando: o espaço já reservado brilha (depois de ~160 ms, para não
+     piscar com a imagem guardada). Ausente: as iniciais de sempre. Falha:
+     moldura tracejada, sem imagem quebrada. */
+  & .r-imagem--carregando { position: relative; color: transparent; }
+  & .r-imagem--carregando::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--cor-texto) 9%, transparent) 50%, transparent) color-mix(in srgb, var(--cor-texto) 8%, transparent);
+    background-size: 200% 100%, auto;
+    animation: m20-surgir var(--m20-mov-estado) var(--m20-curva-sair) 160ms both;
+  }
+  & .r-imagem--falhou { outline: 1px dashed var(--cor-traco-media); outline-offset: -1px; }
+  & .r-imagem--falhou img { visibility: hidden; }
   & .r-barra {
     height: 4px;
     padding: 0;
@@ -1344,6 +1460,9 @@
     & .r-marca input:checked::after,
     & .r-entrada--erro, & .r-area--erro, & .r-ajuda--erro,
     & .r-sincronia:not([hidden]), & .r-carregando { animation: none; }
+    /* O esqueleto fica parado: sem brilho, sem deslocamento. */
+    & .r-esq__b::after { animation: none; display: none; }
+    & .r-imagem--carregando::after { animation: none; }
     & .r-botao--ocupado::after { animation: none; }
     & .r-interruptor:active:not(:disabled) .r-interruptor__bola { scale: 1; }
   }
@@ -1352,6 +1471,10 @@
 /* ---------- movimento ---------- */
 
 @keyframes m20-surgir { from { opacity: 0; } to { opacity: 1; } }
+@keyframes m20-esq-brilho {
+  0% { transform: translateX(-100%); }
+  60%, 100% { transform: translateX(100%); }
+}
 @keyframes m20-janela {
   from { opacity: 0; transform: translateY(8px) scale(0.985); }
   to { opacity: 1; transform: none; }

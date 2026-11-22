@@ -62,7 +62,7 @@
   }
 
   function aba(ctx) {
-    var alvo = el("div.pilha", {}, [UI.carregando("Consultando o Hacking")]);
+    var alvo = el("div.pilha", {}, [UI.carregando("Consultando o Hacking", { forma: "painel", secoes: 2 })]);
     var memoria = { estado: null, rev: 0, vista: null, mestre: ctx.ehMestre(), ocupado: false, aberta: "" };
 
     async function carregar(segundoPlano) {

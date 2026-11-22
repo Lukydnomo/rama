@@ -218,7 +218,7 @@
       if (focoAba && /^hb-aba-/.test(focoAba)) { var ab = painel.querySelector('[data-foco="' + focoAba + '"]'); if (ab) ab.focus(); }
       return;
     }
-    if (estado === "carregando") corpo = UI.carregando("Consultando biblioteca");
+    if (estado === "carregando") corpo = UI.carregando("Consultando biblioteca", { forma: "lista", retrato: "quadrado", etiquetas: 1, linhas: 1, tamanho: "medio" });
     else if (estado === "erro") corpo = UI.erroDeTela(falha, carregar);
     else if (!registros.length) corpo = bibliotecaVazia();
     else corpo = el("div.hb-conteudo", {}, [barra(), resultados = el("div.hb-lista", { role: "list" })]);

@@ -249,7 +249,7 @@
   function abaFicha(ctx) {
     var x = ctx.ficha.ordem2;
     var m = J().modo(ctx);
-    if (m === "carregando") return UI().carregando("Abrindo a mesa");
+    if (m === "carregando") return UI().carregando("Abrindo a mesa", { forma: "painel", secoes: 1, tamanho: "curto" });
     var e = J().estado(ctx);
     var cfg = P().configDaMesa(e);
     var local = m !== "campanha";

@@ -1130,7 +1130,7 @@
           if (estado.origem === "homebrew") pintar();
         });
       }
-      if (homebrew.carregando) return UI.carregando("Consultando biblioteca");
+      if (homebrew.carregando) return UI.carregando("Consultando biblioteca", { forma: "lista", plana: true, retrato: false, linhas: 1, tamanho: "medio" });
 
       if (homebrew.falha) {
         return UI.erroDeTela(homebrew.falha, function () { homebrew = null; pintar(); });

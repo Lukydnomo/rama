@@ -427,7 +427,7 @@
          Paranormal): a lista do catálogo, só daquele círculo. Escolher
          aqui não põe nada na aba Rituais. */
       case "ritualCatalogo": {
-        var caixa = el("div.pilha--curta", { class: "pilha" }, [el("p.t-mini", { texto: "Carregando o catálogo de rituais…" })]);
+        var caixa = el("div.pilha--curta", { class: "pilha" }, [UI.carregando("Carregando o catálogo de rituais", { forma: "lista", plana: true, retrato: "quadrado", etiquetas: 2, tamanho: "medio", legado: function () { return el("p.t-mini", { texto: "Carregando o catálogo de rituais…" }); } })]);
         var RTc = global.RAMAOrdemRituais;
         if (!RTc) return el("p.t-mini.t-aviso", { texto: "O catálogo de rituais não está disponível nesta página." });
         RTc.carregar().then(function (cat) {

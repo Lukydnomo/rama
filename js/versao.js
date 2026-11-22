@@ -118,6 +118,23 @@
 
   var CHANGELOG = [
     {
+      versao: "9.19.0",
+      codinome: "ESBOÇO",
+      data: "22/11/2026",
+      mudancas: {
+        "Melhorado": [
+          "Skeleton Loading exclusivo do Modern20: enquanto o conteúdo chega, cada tela mostra um esqueleto do que vai aparecer, no lugar de marca, mensagem e barra. Personagens antecipam personagens (com a faixa de pastas nas Abas, a lateral nas Pastas laterais e os ícones no celular), Campanhas e pacotes antecipam cartões com capa, a ficha antecipa retrato, recursos e blocos (com os do sistema quando ele já é conhecido, e neutra quando não), catálogos e bibliotecas antecipam registros, mesas antecipam participantes, o Perfil antecipa identificação e grupos de configuração, e a biblioteca de retratos reserva as miniaturas.",
+          "A abertura protegida do Modern20 virou um esqueleto neutro de página: nada da conta aparece antes de a sessão ser conferida. O aviso de servidor acordando continua.",
+          "O esqueleto só aparece se a espera passar de um instante (nada pisca em respostas rápidas), tem um brilho suave que atravessa os blocos, segue o tema (claro, escuro e personalizados) e a densidade, e fica parado com “reduzir movimento”. Quando o conteúdo chega, ele entra com uma transição curta, sem esperar nada para liberar os controles.",
+          "Imagens que chegam depois (retratos e capas) reservam o espaço e mostram o esqueleto só ali; imagem ausente continua com as iniciais e imagem com falha ganha uma moldura tracejada.",
+          "Trocar de estilo com a tela carregando adapta a apresentação na hora, sem recomeçar a consulta. O Legacy mantém exatamente os carregamentos de antes, e botões ocupados, uploads com progresso e o selo de sincronização continuam como eram.",
+        ],
+        "Técnico": [
+          "RAMAUI.carregando(mensagem, { forma, … }) com as formas lista, cartoes, icones, ficha, painel, mesa, retratos, relatorio, imagem e blocos, compostas das primitivas de RAMAUI.esqueleto; RAMAUI.readaptarCarregamentos (chamado por interface.js na troca de estilo); U.trocar dá a transição de chegada sem deixar de ser síncrono. Testes em testes/esqueleto.html (navegador) e testes/executar-movimento.js; o servidor de teste ganhou /__atraso para simular rede lenta. Documentado em docs/INTERFACE.md.",
+        ],
+      },
+    },
+    {
       versao: "9.18.9",
       codinome: "REARRANJO",
       data: "22/11/2026",

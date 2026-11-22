@@ -57,7 +57,7 @@
      ================================================================= */
 
   function aba(ctx) {
-    var alvo = el("div.pilha", {}, [UI.carregando("Consultando o Hexatombe")]);
+    var alvo = el("div.pilha", {}, [UI.carregando("Consultando o Hexatombe", { forma: "painel", secoes: 2 })]);
     var memoria = { estado: null, rev: 0, vista: null, mestre: ctx.ehMestre(), ocupado: false };
 
     async function carregar(segundoPlano) {

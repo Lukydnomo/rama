@@ -3600,7 +3600,7 @@
           !disp.ok ? el("span.criacao-opcao__texto.t-aviso", { texto: disp.motivo }) : null,
         ]);
       })));
-      if (bibliotecaHb === null) partes.push(el("p.t-mini", { texto: "Consultando as Classes Homebrew…" }));
+      if (bibliotecaHb === null) partes.push(UI.carregando("Consultando as Classes Homebrew", { forma: "lista", plana: true, retrato: false, linhas: 1, tamanho: "curto", legado: function () { return el("p.t-mini", { texto: "Consultando as Classes Homebrew…" }); } }));
       if (escolhida) partes.push(resumoDoPlano(E.planoDeTransicao(o, escolhida, contextoDe(ctx))));
       U.trocar(corpo, partes);
       botao.disabled = !escolhida;

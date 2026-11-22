@@ -52,7 +52,7 @@
     if (!b || !M()) return el("p", { texto: "O motor de BRUTAL não está carregado nesta página." });
     var x = contexto(ctx);
     var cor = x.a ? x.a.cor : "#c0392b";
-    if (x.modo === "carregando") return el("div.brt-ficha.brt-ficha--carregando", { style: "--brt-cor: " + cor }, [UI().carregando("Abrindo o Thriller da campanha")]);
+    if (x.modo === "carregando") return el("div.brt-ficha.brt-ficha--carregando", { style: "--brt-cor: " + cor }, [UI().carregando("Abrindo o Thriller da campanha", { forma: "painel", secoes: 2 })]);
     if (!x.s) {
       return el("div.brt-ficha", { style: "--brt-cor: " + cor }, [el("div.brt-aviso", { role: "status" }, [
         el("p", { texto: "Esta Sobrevivente ainda não aparece no Thriller da campanha. Salve a ficha e recarregue; se continuar, confira se ela está vinculada à campanha." }),
@@ -634,7 +634,7 @@
      ================================================================= */
   function abaThriller(ctx) {
     var x = contexto(ctx);
-    if (x.modo === "carregando") return UI().carregando("Abrindo o Thriller");
+    if (x.modo === "carregando") return UI().carregando("Abrindo o Thriller", { forma: "painel", secoes: 1, tamanho: "curto" });
     if (!x.s) return el("p", { texto: "Esta Sobrevivente não está no Thriller." });
     var e = x.e, s = x.s;
     var treino = x.modo !== "campanha";

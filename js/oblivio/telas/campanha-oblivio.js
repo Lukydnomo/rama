@@ -82,7 +82,7 @@
   }
 
   function aba(ctx) {
-    var alvo = el("div.pilha.oblivio-mesa", {}, [UI.carregando("Abrindo a mesa de Oblívio")]);
+    var alvo = el("div.pilha.oblivio-mesa", {}, [UI.carregando("Abrindo a mesa de Oblívio", { forma: "mesa", recursos: 2 })]);
     var mem = { estado: null, vista: null, mestre: ctx.ehMestre(), rev: 0, ocupado: false, buracoAberto: "" };
 
     async function carregar(segundoPlano) {

@@ -43,7 +43,7 @@
   function marca(rotulo, marcado, aoMudar) { return el("label.r-marca", {}, [el("input", { type: "checkbox", checked: !!marcado, onchange: function (ev) { aoMudar(ev.currentTarget.checked); } }), el("span", { texto: rotulo })]); }
 
   function aba(ctx) {
-    var alvo = el("div.pilha.o2-mesa", {}, [UI.carregando("Abrindo a mesa de Ordem II")]);
+    var alvo = el("div.pilha.o2-mesa", {}, [UI.carregando("Abrindo a mesa de Ordem II", { forma: "mesa", recursos: 3 })]);
     var mem = { dados: null, ocupado: false, aba: "cena", editandoPonto: null };
 
     async function carregar(segundoPlano) {

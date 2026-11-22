@@ -28,7 +28,7 @@
 
   global.RAMACampanhaRolagens = {
     aba: function (ctx) {
-      var lista = el("div.pilha--curta", { class: "pilha" }, [UI.carregando("Consultando histórico")]);
+      var lista = el("div.pilha--curta", { class: "pilha" }, [UI.carregando("Consultando histórico", { forma: "lista", plana: true, retrato: false, linhas: 1, tamanho: "medio" })]);
       /* `cursor` é o que o servidor devolveu como "continue daqui"
          (v2.16). Posição não servia: uma rolagem nova no topo empurrava
          tudo e a página seguinte repetia a última linha. */
@@ -251,7 +251,7 @@
 
   global.RAMACampanhaDocumentos = {
     aba: function (ctx) {
-      var lista = el("div.pilha--curta", { class: "pilha" }, [UI.carregando("Consultando documentos")]);
+      var lista = el("div.pilha--curta", { class: "pilha" }, [UI.carregando("Consultando documentos", { forma: "lista", retrato: "quadrado", linhas: 1, tamanho: "curto" })]);
 
       /* id → { chave, cartao }: os cartões na tela. Um documento que não
          mudou continua com o MESMO cartão — aberto ou fechado como
@@ -349,7 +349,7 @@
     var o = opcoes || {};
     var corpo = el("div.pilha--curta", { class: "pilha" }, [
       d.descricao ? el("p", { texto: d.descricao, estilo: { whiteSpace: "pre-wrap" } }) : null,
-      el("div.documento__imagem", {}, [el("p.t-mini", { texto: "Carregando imagem…" })]),
+      el("div.documento__imagem", {}, [UI.carregando("Carregando imagem", { forma: "imagem", legado: function () { return el("p.t-mini", { texto: "Carregando imagem…" }); } })]),
     ]);
 
     var imagemCaixa = U.$(".documento__imagem", corpo);
@@ -484,7 +484,7 @@
 
   global.RAMACampanhaNotas = {
     aba: function (ctx) {
-      var lista = el("div.pilha--curta", { class: "pilha" }, [UI.carregando("Consultando notas")]);
+      var lista = el("div.pilha--curta", { class: "pilha" }, [UI.carregando("Consultando notas", { forma: "lista", retrato: false, linhas: 2, lado: false, tamanho: "curto" })]);
 
       async function carregar() {
         var r = await global.RAMAApi.listarNotasMestre(ctx.campanhaId);

@@ -267,7 +267,7 @@
       aoFechar: function () { janelaAberta = null; previa = null; conferirAgora(ctx); },
     });
     st.modal = janelaAberta;
-    U.trocar(st.corpo, [UI().carregando ? UI().carregando("Abrindo a biblioteca") : el("p", { texto: "Abrindo a biblioteca…" })]);
+    U.trocar(st.corpo, [UI().carregando ? UI().carregando("Abrindo a biblioteca", { forma: "retratos", proporcao: "1 / 1", tamanho: "grande" }) : el("p", { texto: "Abrindo a biblioteca…" })]);
 
     var r = await global.RAMAApi.listarImagensPersonagem(ctx.personagemId, "retrato");
     if (!r.ok) {

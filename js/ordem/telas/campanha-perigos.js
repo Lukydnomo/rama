@@ -44,7 +44,7 @@
   var NOMES_DO_ESTADO = { ativo: "no perigo", escapou: "escapou", preso: "preso", soterrado: "soterrado", caido: "caído" };
 
   function aba(ctx) {
-    var alvo = el("div.pilha", {}, [UI.carregando("Consultando os perigos")]);
+    var alvo = el("div.pilha", {}, [UI.carregando("Consultando os perigos", { forma: "lista", retrato: false, etiquetas: 2, linhas: 1, tamanho: "medio" })]);
     var memoria = { estado: null, rev: 0, vista: null, mestre: ctx.ehMestre(), ocupado: false, aberto: "" };
 
     async function carregar(segundoPlano) {

@@ -220,6 +220,12 @@ clique fora, a preservação dos campos ao voltar, janelas sobrepostas, foco,
 rolagem e o fechamento por uma ação que termina enquanto a pergunta está aberta.
 Os testes usam a interface real, sem acessar o backend.
 
+**Skeleton Loading** — abra `testes/esqueleto.html`. Confere que o Legacy
+recebe exatamente o carregamento de antes, o esqueleto acessível do Modern20,
+a troca de estilo no meio do carregamento, a concorrência entre regiões e a
+transição de chegada; embaixo, uma galeria das formas. Para ver nas telas
+reais com rede lenta, o servidor de teste tem `/__atraso?ms=…`.
+
 **Modelo e motor de dados** — 2299 verificações. No navegador, abra `testes/`;
 no terminal:
 
@@ -928,6 +934,17 @@ próprio `<script src>`, então funciona debaixo de subpasta sem ajuste.
 segredo nenhum — ele os lê das Script Properties. Publicá-lo não expõe nada.
 
 ### Atualizar o backend
+
+**v9.19.0 — ESBOÇO:** Skeleton Loading exclusivo do Modern20 — enquanto o
+conteúdo chega, cada tela mostra um esqueleto do que vai aparecer; o Legacy
+mantém os carregamentos de sempre. **Só o site muda.** Site: `js/ui.js`,
+`js/util.js`, `js/interface.js`, `js/auth.js`, `js/imagens.js`, as telas que
+carregam conteúdo (`js/paginas/`, `js/ordem/telas/`, `js/ordem2/telas/`,
+`js/oblivio/telas/`, `js/vampiro/telas/`, `js/goblins/telas/`,
+`js/brutal/telas/`, `js/tormenta20/telas/`, `js/compartilhar.js`,
+`js/retratos.js`, `js/tema-editor.js`, `js/homebrew-imagem.js`),
+`css/modern20/componentes.css`, `css/modern20/layout.css`,
+`css/modern20/densidade.css`, `css/modern20/perfil.css` e `js/versao.js`.
 
 **v9.18.9 — REARRANJO:** em Personagens, no Modern20, trocar a Exibição
 (Abas ↔ Pastas laterais no computador, Abas ↔ Ícones no celular) anima: as
@@ -2192,7 +2209,7 @@ Três números diferentes, que não se misturam:
 
 | | Onde | O que é |
 |---|---|---|
-| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v9.18.9 |
+| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v9.19.0 |
 | `schemaVersion` | `js/ficha.js` | o formato da FICHA |
 | `versaoFormato` | `js/config.js` | o formato dos arquivos de importação |
 

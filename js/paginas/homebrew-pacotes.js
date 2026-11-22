@@ -81,7 +81,7 @@
     var focado = document.activeElement && raiz.contains(document.activeElement) && document.activeElement.dataset ? document.activeElement.dataset.foco : "";
     var lista = listas[sub];
     var corpo;
-    if (estados[sub] === "carregando") corpo = UI.carregando(sub === "meus" ? "Abrindo seus pacotes" : "Consultando pacotes públicos");
+    if (estados[sub] === "carregando") corpo = UI.carregando(sub === "meus" ? "Abrindo seus pacotes" : "Consultando pacotes públicos", { forma: "cartoes", capa: true, tamanho: "medio" });
     else if (estados[sub] === "erro") corpo = falhas[sub] && falhas[sub].erro === "instalacao_incompleta"
       ? el("div.r-vazio", {}, [el("p.r-vazio__titulo", { texto: "Pacotes ainda não instalados no servidor" }), el("p.r-vazio__texto", { texto: "Quem administra o R.A.M.A. precisa publicar HomebrewPacotes.gs e rodar setupRama()." })])
       : UI.erroDeTela(falhas[sub], carregar);

@@ -405,8 +405,14 @@
   }
 
   function trocar(node, filhos) {
+    /* v9.19.0: o esqueleto do Modern20 que sai daqui deixa o conteúdo
+       entrar com uma transição curta (RAMAUI._antesDeTrocar). Continua
+       síncrono: limpa e anexa agora; a transição não segura nada. */
+    var depois = global.RAMAUI && global.RAMAUI._antesDeTrocar ? global.RAMAUI._antesDeTrocar(node) : null;
     limpar(node);
-    return anexar(node, filhos);
+    var r = anexar(node, filhos);
+    if (depois) depois();
+    return r;
   }
 
   /* SVG precisa de namespace; sem isto o navegador cria um elemento HTML

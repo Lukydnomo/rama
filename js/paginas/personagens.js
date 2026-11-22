@@ -159,8 +159,26 @@
     } catch (e) { /* sem histórico: só não lembra */ }
   }
 
+  /* v9.19.0: o esqueleto do Modern20 acompanha a exibição escolhida —
+     lateral no computador, ícones no celular, abas com a faixa de pastas.
+     (No Legacy, RAMAUI.carregando ignora a forma.) */
+  function esqueletoDaLista() {
+    var modo = exibicaoEfetiva();
+    if (modo === "icones") return { forma: "icones", tamanho: "medio" };
+    if (modo === "lateral") return { forma: "lista", lateral: 8, filtros: true, etiquetas: 1, tamanho: "medio" };
+    return { forma: "lista", faixa: 6, filtros: true, etiquetas: 1, tamanho: "medio" };
+  }
+
+  /* A ficha aberta daqui já sabe o sistema: o esqueleto dela (ficha.js)
+     usa a dica só para a FORMA — recursos e atributos do sistema —, e só
+     depois da sessão conferida. Nenhum dado da ficha vai junto. */
+  function dicaDeSistema(p) {
+    try { if (global.sessionStorage && p && p.id && p.sistema) global.sessionStorage.setItem("rama.ficha.sistema." + p.id, String(p.sistema)); }
+    catch (e) { /* sem armazenamento: a ficha usa o esqueleto neutro */ }
+  }
+
   async function carregar() {
-    U.trocar(painel, [cabecalho(), abasDeContexto(), UI.carregando("Consultando arquivo")]);
+    U.trocar(painel, [cabecalho(), abasDeContexto(), UI.carregando("Consultando arquivo", esqueletoDaLista())]);
 
     var r = await global.RAMAApi.listarPersonagens();
     if (contexto !== "meus") return;
@@ -491,6 +509,7 @@
       el("a.registro__link", {
         href: U.url("ficha/?id=" + encodeURIComponent(p.id)),
         "aria-label": "Abrir ficha de " + (p.nome || "personagem"),
+        onclick: function () { dicaDeSistema(p); },
       }),
 
       organizavel ? el("button.arrastar-alca", {
@@ -2062,7 +2081,7 @@
   }
 
   function conteudoRecebidos() {
-    if (recebidos.estado === "nada" || recebidos.estado === "carregando") return UI.carregando("Consultando fichas compartilhadas");
+    if (recebidos.estado === "nada" || recebidos.estado === "carregando") return UI.carregando("Consultando fichas compartilhadas", { forma: "lista", etiquetas: 1, filtros: true, tamanho: "medio" });
     if (recebidos.estado === "erro") {
       if (recebidos.erro && recebidos.erro.erro === "acao_desconhecida") {
         return UI.vazio({
