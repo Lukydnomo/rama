@@ -218,6 +218,36 @@ t.grupo("Primeira apresentação: curta, limitada e uma vez");
   t.ok("redesenhar a mesma lista não repete", criadas.length === antes + 8);
 }
 
+t.grupo("Troca de arranjo (v9.18.9): o mesmo elemento desliza do lugar antigo");
+{
+  const posto = (chave, left, top) => { const e = elemento(20); e.chave = chave; e.getBoundingClientRect = () => ({ left, top, width: 80, height: 20, right: left + 80, bottom: top + 20 }); return e; };
+  let lista = [posto("pasta:a", 0, 10), posto("p:1", 0, 60), posto("p:2", 0, 2000)];
+  const area = elemento(0);
+  area.querySelectorAll = () => lista;
+  area.querySelector = () => null;
+  const opcoes = { seletor: "*", chave: (e) => e.chave };
+  let mudou = 0;
+  const depois = [posto("pasta:a", 20, 120), posto("p:1", 270, 60), posto("nova", 0, 200), posto("p:2", 270, 2000), posto("p:3", 0, 3000)];
+
+  raiz.atributos["data-interface"] = "legacy";
+  let antes = criadas.length;
+  M.rearranjar(area, () => { mudou++; lista = depois; }, opcoes);
+  t.ok("Legacy: troca na hora, uma vez, sem animação", mudou === 1 && criadas.length === antes);
+  raiz.atributos["data-interface"] = "modern20";
+
+  lista = [posto("pasta:a", 0, 10), posto("p:1", 0, 60), posto("p:2", 0, 2000)];
+  antes = criadas.length;
+  M.rearranjar(area, () => { mudou++; lista = depois; }, opcoes);
+  const novas = criadas.slice(antes);
+  const de = (e) => novas.find((a) => a.el === e);
+  t.ok("mudar roda uma vez só", mudou === 2);
+  t.ok("a pasta sai de onde estava e desliza até o lugar novo", de(depois[0]) && de(depois[0]).quadros[0].translate === "-20px -110px" && de(depois[0]).quadros[1].translate === "0 0");
+  t.ok("  com a mola dos tokens", de(depois[0]).opcoes.duration === 360 && /1\.18|linear/.test(de(depois[0]).opcoes.easing));
+  t.ok("o cartão também (só translate: o texto não estica)", de(depois[1]) && de(depois[1]).quadros.every((q) => Object.keys(q).every((k) => k === "translate")));
+  t.ok("o que não existia surge (opacidade), sem piscar antes do atraso", de(depois[2]) && de(depois[2]).quadros[0].opacity === 0 && de(depois[2]).opcoes.fill === "backwards");
+  t.ok("fora da vista, antes e depois: não anima", !de(depois[3]) && !de(depois[4]));
+}
+
 t.grupo("As folhas e as telas");
 {
   const ler = (c) => Deno.readTextFile(new URL("../" + c, import.meta.url));
@@ -247,6 +277,8 @@ t.grupo("As folhas e as telas");
   t.ok("toda página carrega o movimento antes de ui.js", sem.length === 0, sem.join(", "));
   const iface = await ler("js/interface.js");
   t.ok("trocar de estilo para os movimentos em andamento", /RAMAMovimento\.pararTudo\(\)/.test(iface));
+  const pers = await ler("js/paginas/personagens.js");
+  t.ok("Personagens: trocar a exibição (Abas, Pastas laterais, Ícones) passa pelo rearranjo", /function trocarExibicao\(valor\) \{[\s\S]{0,200}rearranjarExibicao\(/.test(pers) && /rearranjarExibicao\(desenhar\)/.test(pers));
 }
 
 console.log(`\n${FORTE}${passaram + falharam} verificações${FIM} · ${VERDE}${passaram} ok${FIM} · ${falharam ? VERMELHO : CINZA}${falharam} falhas${FIM}`);

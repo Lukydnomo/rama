@@ -200,6 +200,7 @@ ou sem a Web Animations API.
 | `destacar(el)` | um valor que mudou (fundo breve; o número já está certo) |
 | `lembrar(raiz)` / `continuar(raiz, foto)` | barras e números que atravessam um redesenho, da largura antiga à nova |
 | `flip(itens, mudar)` | reposicionar poucos itens (até 40) |
+| `rearranjar(raiz, mudar, { seletor, chave, pilula })` | trocar o arranjo da tela inteira (v9.18.9, exibição de Personagens): cada elemento com a mesma chave desliza com mola do lugar antigo ao novo; o novo surge; a pílula do seletor segmentado corre |
 | `apresentar(lista)` | primeira apresentação: os 8 primeiros em escada de no máximo 160 ms, uma vez por lista |
 | `animar(el, canal, quadros, opcoes)` | o núcleo: um canal por propósito |
 | `pararTudo()` | estado final em tudo (troca de estilo, preferência mudando) |

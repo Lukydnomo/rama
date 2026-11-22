@@ -61,6 +61,7 @@
     sair: "cubic-bezier(0.16, 1, 0.3, 1)",
     mover: "cubic-bezier(0.3, 0, 0, 1)",
     fechar: "cubic-bezier(0.4, 0, 1, 1)",
+    mola: "cubic-bezier(0.3, 1.18, 0.5, 1)",
   };
 
   function css(nome) {
@@ -263,6 +264,108 @@
       if (Math.abs(dx) < 1 && Math.abs(dy) < 1) return;
       animar(x, "flip", [{ translate: dx + "px " + dy + "px" }, { translate: "0 0" }], { duracao: ms("navegar"), curva: curva("mover") });
     });
+  }
+
+  /* ---------- troca de arranjo (layout compartilhado) ----------
+     A mesma coisa em outro lugar: trocar a exibição redesenha a tela
+     inteira, mas as pastas, os cartões e os filtros continuam sendo os
+     mesmos. Antes de `mudar`, guarda onde cada um estava (pela chave);
+     depois, cada elemento novo com a mesma chave sai de lá e desliza com
+     mola até o lugar novo — como o layoutId do Motion. O que não existia
+     surge curto, em escada; o que sumiu sai junto com o redesenho.
+     Só o que está à vista anima (antes ou depois), até 80 por troca.
+     `pilula`: o seletor do botão escolhido num grupo segmentado — o fundo
+     dele corre do botão antigo ao novo. */
+  var MAX_ARRANJO = 80;
+
+  function aVista(r) {
+    var vh = global.innerHeight || 800;
+    return !!r && !!(r.width || r.height) && r.bottom > -40 && r.top < vh + 40;
+  }
+
+  function retratos(raiz, seletor, chaveDe) {
+    var mapa = {}, n = 0;
+    Array.prototype.forEach.call(raiz.querySelectorAll(seletor), function (x) {
+      if (n >= MAX_ARRANJO * 2) return;
+      var k = chaveDe(x);
+      if (!k || mapa[k]) return;
+      var r = x.getBoundingClientRect();
+      if (!r.width && !r.height) return;
+      mapa[k] = r;
+      n++;
+    });
+    return mapa;
+  }
+
+  function rearranjar(raiz, mudar, opcoes) {
+    var o = opcoes || {};
+    if (!raiz || !ativo() || !o.seletor || !o.chave) { mudar(); return; }
+    var antes = retratos(raiz, o.seletor, o.chave);
+    var botaoAntes = o.pilula ? raiz.querySelector(o.pilula) : null;
+    var pilula = botaoAntes ? pilulaVisivel(botaoAntes) : null;
+    mudar();
+    var vistos = {}, movidos = 0, novos = 0;
+    Array.prototype.forEach.call(raiz.querySelectorAll(o.seletor), function (x) {
+      if (movidos + novos >= MAX_ARRANJO) return;
+      var k = o.chave(x);
+      if (k && vistos[k]) return;
+      if (k) vistos[k] = true;
+      var r1 = x.getBoundingClientRect();
+      var r0 = k ? antes[k] : null;
+      if (!aVista(r1) && !aVista(r0)) return;
+      if (r0) {
+        var dx = r0.left - r1.left, dy = r0.top - r1.top;
+        if (Math.abs(dx) < 1 && Math.abs(dy) < 1) return;
+        movidos++;
+        animar(x, "arranjo", [{ translate: dx + "px " + dy + "px" }, { translate: "0 0" }],
+          { duracao: ms("mola"), curva: curva("mola") });
+      } else if (aVista(r1)) {
+        animar(x, "arranjo", [{ opacity: 0, scale: "0.97" }, { opacity: 1, scale: "1" }],
+          { duracao: ms("navegar"), curva: curva("sair"), atraso: Math.min(novos * 18, 160), preencher: "backwards" });
+        novos++;
+      }
+    });
+    if (pilula) correrPilula(raiz.querySelector(o.pilula), pilula);
+  }
+
+  /* De onde a pílula parte: se ainda está correndo, de onde ela ESTÁ. */
+  function pilulaVisivel(botao) {
+    var grupo = botao.parentNode;
+    var viva = grupo && grupo.querySelector(":scope > .m20-pilula");
+    return (viva || botao).getBoundingClientRect();
+  }
+
+  function correrPilula(nova, r0) {
+    if (!nova || !r0 || !r0.width) return;
+    var grupo = nova.parentNode;
+    var r1 = nova.getBoundingClientRect();
+    if (!grupo || !r1.width) return;
+    if (Math.abs(r0.left - r1.left) < 1 && Math.abs(r0.top - r1.top) < 1) return;
+    var rg = grupo.getBoundingClientRect();
+    /* Longe demais (o grupo mudou de lugar na tela): só o fundo novo. */
+    if (Math.abs(r0.top - r1.top) > rg.height + 8) return;
+    var cs = global.getComputedStyle(nova);
+    var outro = Array.prototype.filter.call(grupo.children, function (c) { return c !== nova; })[0];
+    var fundo = outro ? global.getComputedStyle(outro).backgroundColor : "";
+    var x0 = rg.left + grupo.clientLeft, y0 = rg.top + grupo.clientTop;
+    var p = doc.createElement("span");
+    p.className = "m20-pilula";
+    p.setAttribute("aria-hidden", "true");
+    p.style.background = cs.backgroundColor;
+    p.style.borderRadius = cs.borderRadius;
+    grupo.insertBefore(p, grupo.firstChild);
+    grupo.classList.add("m20-pilula-grupo");
+    if (fundo) grupo.style.backgroundColor = fundo;
+    var de = { left: (r0.left - x0) + "px", top: (r0.top - y0) + "px", width: r0.width + "px", height: r0.height + "px" };
+    var ate = { left: (r1.left - x0) + "px", top: (r1.top - y0) + "px", width: r1.width + "px", height: r1.height + "px" };
+    Object.keys(ate).forEach(function (k) { p.style[k] = ate[k]; });
+    animar(p, "pilula", [de, ate], { duracao: ms("mola"), curva: curva("mola"), aoFim: function () {
+      if (p.parentNode) p.parentNode.removeChild(p);
+      if (!grupo.querySelector(":scope > .m20-pilula")) {
+        grupo.classList.remove("m20-pilula-grupo");
+        grupo.style.backgroundColor = "";
+      }
+    } });
   }
 
   /* ---------- primeira apresentação ----------
@@ -561,6 +664,8 @@
     soltarCapa();
     Array.prototype.forEach.call(doc.querySelectorAll(".m20-traco-aba"), function (t) { t.remove(); });
     Array.prototype.forEach.call(doc.querySelectorAll(".m20-aba--chegando"), function (a) { a.classList.remove("m20-aba--chegando"); });
+    Array.prototype.forEach.call(doc.querySelectorAll(".m20-pilula"), function (p) { p.remove(); });
+    Array.prototype.forEach.call(doc.querySelectorAll(".m20-pilula-grupo"), function (g) { g.classList.remove("m20-pilula-grupo"); g.style.backgroundColor = ""; });
     deslizando = null;
   }
   if (consultaReduzida) {
@@ -585,6 +690,7 @@
     lembrar: lembrar,
     continuar: continuar,
     flip: flip,
+    rearranjar: rearranjar,
     apresentar: apresentar,
     /* para os testes */
     _rodando: function () { return rodando.length; },

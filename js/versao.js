@@ -118,6 +118,19 @@
 
   var CHANGELOG = [
     {
+      versao: "9.18.9",
+      codinome: "REARRANJO",
+      data: "22/11/2026",
+      mudancas: {
+        "Melhorado": [
+          "Personagens, Modern20: trocar a Exibição agora anima — Abas ↔ Pastas laterais no computador e Abas ↔ Ícones no celular. As pastas, os cartões dos personagens e os filtros saem de onde estavam e deslizam com mola até o lugar novo; o que só existe no arranjo novo surge curto, em escada; e o destaque do seletor corre do botão antigo ao novo. Pasta aberta, busca, filtro e agrupamento continuam iguais. No Legacy e com “reduzir movimento”, troca na hora como antes.",
+        ],
+        "Técnico": [
+          "RAMAMovimento.rearranjar(raiz, mudar, { seletor, chave, pilula }): guarda a posição de cada elemento pela chave antes de redesenhar e anima o novo de lá (só translate, com --m20-mov-mola e --m20-curva-mola; até 80 itens, só o que está à vista); a pílula do seletor segmentado corre atrás dos botões (.m20-pilula). Testes em testes/executar-movimento.js.",
+        ],
+      },
+    },
+    {
       versao: "9.18.8",
       codinome: "EIXO",
       data: "21/11/2026",

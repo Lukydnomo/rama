@@ -929,6 +929,12 @@ segredo nenhum — ele os lê das Script Properties. Publicá-lo não expõe nad
 
 ### Atualizar o backend
 
+**v9.18.9 — REARRANJO:** em Personagens, no Modern20, trocar a Exibição
+(Abas ↔ Pastas laterais no computador, Abas ↔ Ícones no celular) anima: as
+pastas, os cartões e os filtros deslizam até o lugar novo e o destaque do
+seletor corre. **Só o site muda.** Site: `js/movimento.js`,
+`js/paginas/personagens.js`, `css/modern20/componentes.css` e `js/versao.js`.
+
 **v9.18.8 — EIXO:** o símbolo do R.A.M.A. fica centralizado no quadro da
 abertura no Modern20 (antes ficava deslocado para a esquerda). **Só o site
 muda.** Site: `css/layout.css`, `css/modern20/layout.css`,
@@ -2186,7 +2192,7 @@ Três números diferentes, que não se misturam:
 
 | | Onde | O que é |
 |---|---|---|
-| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v9.18.8 |
+| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v9.18.9 |
 | `schemaVersion` | `js/ficha.js` | o formato da FICHA |
 | `versaoFormato` | `js/config.js` | o formato dos arquivos de importação |
 

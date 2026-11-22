@@ -1229,6 +1229,19 @@
   & .r-interruptor--ligado .r-interruptor__bola { transform-origin: right center; }
   & .r-interruptor:active:not(:disabled) .r-interruptor__bola { scale: 1.22 1; }
 
+  /* ---------- seletor segmentado: a pílula corre (v9.18.9) ----------
+     RAMAMovimento.rearranjar põe a pílula (o fundo do botão escolhido)
+     atrás dos botões enquanto ela corre do antigo ao novo; nesse meio
+     tempo os botões ficam sem fundo próprio. */
+  & .m20-pilula-grupo { position: relative; isolation: isolate; }
+  /* especificidade acima de .exibicao__opcao[aria-pressed="true"], sem important */
+  & .m20-pilula-grupo.m20-pilula-grupo > :not(.m20-pilula) { background-color: transparent; }
+  & .m20-pilula {
+    position: absolute;
+    z-index: -1;
+    pointer-events: none;
+  }
+
   /* ---------- campos: foco e validação ---------- */
   & .r-entrada--erro,
   & .r-area--erro { animation: m20-chamar var(--m20-mov-especial) var(--m20-curva-sair); }

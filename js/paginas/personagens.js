@@ -595,7 +595,30 @@
     exibicaoDesktopLocal = valor === "lateral" ? "lateral" : "abas";
     try { if (global.localStorage) global.localStorage.setItem(CHAVE_DESKTOP, exibicaoDesktopLocal); }
     catch (e) { /* sem armazenamento: vale até recarregar */ }
-    if (exibicaoEfetiva() !== exibicaoDesenhada) desenhar();
+    if (exibicaoEfetiva() !== exibicaoDesenhada) rearranjarExibicao(desenhar);
+  }
+
+  /* v9.18.9: trocar a exibição (Abas, Pastas laterais, Ícones) é a mesma
+     página em outro arranjo — as pastas, os cartões e os filtros deslizam
+     do lugar antigo para o novo, e a pílula do seletor corre. No Legacy e
+     com movimento reduzido, troca na hora. */
+  var ARRANJO = "[data-pasta], [data-grupo-sistema], [data-personagem], [data-foco='nova-pasta'], .r-busca, .filtro-sistema, .filtros--personagens > label.r-marca, .exibicao";
+  function chaveDoArranjo(x) {
+    var d = x.dataset || {};
+    if (d.pasta) return "pasta:" + d.pasta;
+    if (d.grupoSistema) return "sistema:" + d.grupoSistema;
+    if (d.personagem) return "p:" + d.personagem;
+    if (d.foco === "nova-pasta") return "nova-pasta";
+    if (x.classList.contains("r-busca")) return "busca";
+    if (x.classList.contains("filtro-sistema")) return "filtro-sistema";
+    if (x.classList.contains("r-marca")) return "agrupar";
+    if (x.classList.contains("exibicao")) return "exibicao";
+    return null;
+  }
+  function rearranjarExibicao(mudar) {
+    var M = global.RAMAMovimento;
+    if (!M || !M.rearranjar || !painel) { mudar(); return; }
+    M.rearranjar(painel, mudar, { seletor: ARRANJO, chave: chaveDoArranjo, pilula: ".exibicao__opcao[aria-pressed='true']" });
   }
 
   function ouvirTela() {
@@ -672,10 +695,14 @@
 
   /* A troca é imediata: pasta, busca, sistema e agrupamento ficam. */
   function trocarExibicao(valor) {
-    if (valor !== "icones") fecharExpansao(true);
-    if (global.RAMAPreferencias) global.RAMAPreferencias.salvar("exibicaoPastas", valor);
-    else exibicaoLocal = valor;
-    if (exibicaoEfetiva() !== exibicaoDesenhada) desenhar();
+    /* Tudo dentro do rearranjo: salvar a preferência pode redesenhar na
+       hora (o aviso de mudança da preferência). */
+    rearranjarExibicao(function () {
+      if (valor !== "icones") fecharExpansao(true);
+      if (global.RAMAPreferencias) global.RAMAPreferencias.salvar("exibicaoPastas", valor);
+      else exibicaoLocal = valor;
+      if (exibicaoEfetiva() !== exibicaoDesenhada) desenhar();
+    });
   }
 
   function nomeDaSelecao(pastaId) {
