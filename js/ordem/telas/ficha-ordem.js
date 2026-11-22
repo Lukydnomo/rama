@@ -1637,7 +1637,7 @@
     if (!RECURSOS_COM_TEMPORARIO[item.chave]) return null;
     var temp = temporarioDe(o, item.chave);
     var passoT = UI.passo({
-      valor: temp, minimo: 0, maximo: 99999,
+      valor: temp, minimo: 0, maximo: 99999, vazioVale: 0,
       rotulo: item.nome + " temporários",
       aoMudar: function (v) {
         if (!o.temporarios) o.temporarios = { pv: 0, pe: 0, san: 0, defesa: 0, capacidade: 0 };

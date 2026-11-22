@@ -935,6 +935,10 @@ segredo nenhum — ele os lê das Script Properties. Publicá-lo não expõe nad
 
 ### Atualizar o backend
 
+**v9.19.1 — PISO:** na ficha de Ordem, apagar os PV/PE/SAN temporários
+deixa 0. **Só o site muda.** Site: `js/ui.js`, `js/ordem/telas/ficha-ordem.js`
+e `js/versao.js`.
+
 **v9.19.0 — ESBOÇO:** Skeleton Loading exclusivo do Modern20 — enquanto o
 conteúdo chega, cada tela mostra um esqueleto do que vai aparecer; o Legacy
 mantém os carregamentos de sempre. **Só o site muda.** Site: `js/ui.js`,
@@ -2209,7 +2213,7 @@ Três números diferentes, que não se misturam:
 
 | | Onde | O que é |
 |---|---|---|
-| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v9.19.0 |
+| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v9.19.1 |
 | `schemaVersion` | `js/ficha.js` | o formato da FICHA |
 | `versaoFormato` | `js/config.js` | o formato dos arquivos de importação |
 

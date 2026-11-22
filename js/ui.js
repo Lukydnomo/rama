@@ -1159,6 +1159,9 @@
     });
 
     function aplicar(novo, avisar) {
+      /* v9.19.1: `vazioVale` — campo apagado vale esse número (os
+         temporários: vazio é 0), em vez de voltar ao valor anterior. */
+      if (o.vazioVale !== undefined && String(novo).trim() === "") novo = o.vazioVale;
       var v = U.limitar(U.inteiro(novo, valor), minimo, maximo);
       valor = v;
       campo.value = String(v);

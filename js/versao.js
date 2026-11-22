@@ -118,6 +118,19 @@
 
   var CHANGELOG = [
     {
+      versao: "9.19.1",
+      codinome: "PISO",
+      data: "22/11/2026",
+      mudancas: {
+        "Corrigido": [
+          "Ficha de Ordem: apagar o número de PV, PE ou SAN temporários e sair do campo agora deixa 0, em vez de voltar ao valor anterior.",
+        ],
+        "Técnico": [
+          "RAMAUI.passo ganhou a opção vazioVale (o número que vale quando o campo fica vazio); os demais campos numéricos continuam voltando ao valor anterior.",
+        ],
+      },
+    },
+    {
       versao: "9.19.0",
       codinome: "ESBOÇO",
       data: "22/11/2026",
