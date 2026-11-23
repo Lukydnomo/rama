@@ -1948,6 +1948,11 @@
   color: var(--cor-texto-3);
   font-variant-numeric: tabular-nums;
 }
+/* v9.21.0 (fórmulas do Rollem): o descartado fica riscado e apagado —
+   não soma, mas continua à vista; o crítico (c) fica em negrito, com a
+   borda mais forte. O texto do leitor de tela diz o mesmo. */
+.face--descartada { text-decoration: line-through; opacity: .55; }
+.face--critico { font-weight: 700; border-color: var(--cor-traco-forte); color: var(--cor-texto); }
 .face--principal {
   border-color: var(--cor-traco-forte);
   background: var(--fundo-selecao);

@@ -941,6 +941,12 @@ segredo nenhum — ele os lê das Script Properties. Publicá-lo não expõe nad
 
 ### Atualizar o backend
 
+**v9.21.0 — GRAMÁTICA:** fórmulas de dados com a sintaxe inteira do Rollem
+(v1, e min/max/ev do v2) em toda rolagem que aceita fórmula, inclusive a rolagem
+livre da campanha. **Só o site muda.** Site: `js/dados.js`,
+`js/paginas/ficha-rolagens.js`, `js/paginas/campanha-secoes.js`,
+`js/historico.js`, `css/componentes.css` e `js/versao.js`.
+
 **v9.20.0 — ENQUADRO:** GIF animado pode ser recortado mantendo a animação,
 como as fotos. **Só o site muda.** Site: `js/gif.js` (novo), `js/imagem-editor.js`,
 `js/imagem.js`, as páginas que abrem o editor (`personagens/`, `perfil/`,
@@ -2229,7 +2235,7 @@ Três números diferentes, que não se misturam:
 
 | | Onde | O que é |
 |---|---|---|
-| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v9.20.0 |
+| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v9.21.0 |
 | `schemaVersion` | `js/ficha.js` | o formato da FICHA |
 | `versaoFormato` | `js/config.js` | o formato dos arquivos de importação |
 

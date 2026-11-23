@@ -5107,7 +5107,7 @@
 
     t.grupo("v9.17.4 · manter os maiores ou os menores (k, kh, kl)");
     var k1 = comDados([3, 10, 20], function () { return D.formula({ formula: "3d20k1", contagem: "soma" }); });
-    t.ok("3d20k1 → [3, 10, 20] → 20", k1.ok && k1.total === 20 && /3d20k1 \(3, 10, 20 → 20\)/.test(k1.parcelas[0].detalhe));
+    t.ok("3d20k1 → [3, 10, 20] → 20", k1.ok && k1.total === 20 && /3d20k1 \(\[3\], \[10\], 20 → 20\)/.test(k1.parcelas[0].detalhe));
     var kl = comDados([3, 10, 20], function () { return D.formula({ formula: "3d20kl1", contagem: "soma" }); });
     t.ok("3d20kl1 → [3, 10, 20] → 3", kl.ok && kl.total === 3);
     var kh = comDados([5, 1, 6, 2], function () { return D.formula({ formula: "4d6kh3 + 1", contagem: "soma" }); });
@@ -5115,6 +5115,47 @@
     var sem = comDados([4, 9], function () { return D.formula({ formula: "2d20kl", contagem: "soma" }); });
     t.ok("sem número, mantém um", sem.ok && sem.total === 4);
     t.ok("manter 0 é recusado com explicação", !D.formula({ formula: "3d20k0", contagem: "soma" }).ok);
+
+    t.grupo("v9.21.0 · a sintaxe do Rollem (v1 e as funções do v2)");
+    function rola(f, seq) { return comDados(seq, function () { return D.formula({ formula: f, contagem: "soma" }); }); }
+    var r1 = rola("4d6d1", [3, 1, 5, 6]);
+    t.ok("4d6d1 descarta o menor: [3, 1, 5, 6] → 14, o 1 entre colchetes", r1.ok && r1.total === 14 && /\[1\]/.test(r1.parcelas[0].detalhe) && r1.marcas[1] === "descartado");
+    t.ok("4d6dl1 é o mesmo; 4d6dh1 descarta o maior (9)", rola("4d6dl1", [3, 1, 5, 6]).total === 14 && rola("4d6dh1", [3, 1, 5, 6]).total === 9);
+    t.ok("4d6k2 = 4d6kh2 (11); 4d6kl2 fica com os menores (4)", rola("4d6k2", [3, 1, 5, 6]).total === 11 && rola("4d6kh2", [3, 1, 5, 6]).total === 11 && rola("4d6kl2", [3, 1, 5, 6]).total === 4);
+    var ex = rola("3d6!", [6, 2, 4, 3]);
+    t.ok("3d6! explode no máximo: [6, 2, 4] + 3 → 15, marcado como explosão", ex.total === 15 && ex.rolagens.length === 4 && ex.marcas[3] === "explosao" && /6, 2, 4, 3!/.test(ex.parcelas[0].detalhe));
+    var ex2 = rola("2d6!5", [5, 1, 6, 2]);
+    t.ok("2d6!5 explode de 5 para cima, em cadeia: [5, 1] + 6 + 2 → 14", ex2.total === 14 && ex2.rolagens.length === 4);
+    t.ok("explodir de 1 para cima é recusado (explodiria sempre)", !rola("1d6!1", [1]).ok);
+    t.ok("4d6--2 tira 2 de cada dado: [3, 1, 5, 6] → 7; 2d6++1 soma 1 em cada", rola("4d6--2", [3, 1, 5, 6]).total === 7 && rola("2d6++1", [2, 3]).total === 7);
+    t.ok("fora de um dado, 5--2 continua sendo 5 − (−2)", rola("1d1 + 5--2", [1]).total === 8);
+    var c1 = rola("10d6 >> 4", [1, 2, 3, 4, 5, 6, 4, 2, 6, 1]);
+    t.ok("10d6 >> 4 conta os dados de 4 para cima (5), com espaço ou sem", c1.total === 5 && rola("10d6>>4", [1, 2, 3, 4, 5, 6, 4, 2, 6, 1]).total === 5 && /5 sucessos/.test(c1.parcelas[0].detalhe));
+    t.ok("10d6 << 3 conta os de 3 para baixo (5)", rola("10d6 << 3", [1, 2, 3, 4, 5, 6, 4, 2, 6, 1]).total === 5);
+    t.ok("Burning Wheel: B3 = 3d6 >> 4; G3 >> 3; W3 >> 2", rola("B3", [4, 2, 6]).total === 2 && rola("G3", [4, 2, 6]).total === 2 && rola("W3", [4, 2, 6]).total === 3);
+    t.ok("B2! explode (o 6 dá mais um dado, que também conta)", rola("B2!", [6, 1, 5]).total === 2 && rola("B2!", [6, 1, 5]).rolagens.length === 3);
+    var fa = rola("4dF", [1, 2, 3, 3]);
+    t.ok("4dF: −1, 0, +1, +1 → 1, escrito com − 0 +", fa.total === 1 && /4dF \(−, 0, \+, \+\)/.test(fa.parcelas[0].detalhe) && rola("dF", [1]).total === -1);
+    t.ok("d% rola de 1 a 100", rola("d%", [77]).total === 77 && /1d%/.test(rola("d%", [77]).parcelas[0].detalhe));
+    var rp = rola("6#4d6d1", [6, 6, 6, 1, 5, 5, 5, 1, 4, 4, 4, 1, 3, 3, 3, 1, 2, 2, 2, 1, 1, 1, 1, 1]);
+    t.ok("6#4d6d1 rola seis vezes, cada uma com o seu total (18, 15, 12, 9, 6, 3)", rp.ok && rp.repeticoes.join() === "18,15,12,9,6,3" && rp.parcelas.length === 6 && rp.totalTexto === "18 · 15 · 12 · 9 · 6 · 3");
+    var cm = rola("1d20 >= 15", [17]);
+    t.ok("1d20 >= 15 com 17 → sucesso; com 9 → falha", cm.ok && cm.sucesso === true && cm.totalTexto === "17 · sucesso" && rola("1d20 >= 15", [9]).sucesso === false);
+    t.ok("as cinco comparações: <, <=, >, >=, =", rola("1d6 < 4", [3]).sucesso && rola("1d6 <= 3", [3]).sucesso && rola("1d6 > 2", [3]).sucesso && rola("1d6 = 3", [3]).sucesso && !rola("1d6 = 3", [4]).sucesso);
+    t.ok("a comparação é a última conta: (1d6 < 2) * 5 é recusada; 1d20 < (2 * 5) vale", !D.lerFormula("(1d6 < 2) * 5").ok && D.lerFormula("1d20 < (2 * 5)").ok && !D.lerFormula("1d6 < 2 < 3").ok);
+    var cr = rola("2d20c19", [19, 5]);
+    t.ok("2d20c19 destaca o 19 (crítico) e soma tudo", cr.total === 24 && cr.marcas[0] === "critico" && /19\*/.test(cr.parcelas[0].detalhe));
+    t.ok("crítico não combina com manter ou descartar", !D.lerFormula("4d6c5k3").ok);
+    t.ok("2d6daro: dois iguais rolam de novo e somam (3, 3 → +2, 5)", rola("2d6daro", [3, 3, 2, 5]).total === 13 && rola("3d6taro", [1, 2, 3]).total === 6 && rola("4d6aro", [2, 2, 2, 2, 1, 1, 1, 2]).total === 13);
+    t.ok("ns (sem ordenar) é aceito, sozinho ou junto de ! e k", rola("2d6ns", [5, 2]).total === 7 && rola("4d6!ns", [1, 2, 3, 4]).ok && rola("4d6kh3ns", [1, 2, 3, 4]).total === 9);
+    t.ok("maiúsculas não importam: 4D6KH3", rola("4D6KH3", [1, 2, 3, 4]).total === 9);
+    t.ok("min(2d6) = 2, max(2d6) = 12, ev(2d6) = 7 — sem rolar", rola("min(2d6)", []).total === 2 && rola("max(2d6)", []).total === 12 && rola("ev(2d6)", []).total === 7);
+    var ev = D.previaDaFormula("ev(4d6d1)");
+    t.ok("ev(4d6d1) ≈ 12,24 (média por simulação fixa); ev(1d20+5) = 15,5", rola("ev(4d6d1) * 100", []).total >= 1220 && rola("ev(4d6d1) * 100", []).total <= 1228 && rola("ev(1d20+5)*10", []).total === 155 && ev.ok);
+    t.ok("max(1d6!) não tem limite: recusado com o motivo", /não tem limite/.test(rola("max(1d6!)", []).mensagem || ""));
+    t.ok("min e max de vários valores continuam como antes", rola("1d1 + min(3, 5) + max(2, 9)", [1]).total === 13);
+    t.ok("prévia escreve os sufixos: 4d6!5kh3, 3d6--1, 10d6 >> 4, B4!, 6#1d20 >= 15", ["4d6!5kh3", "3d6--1", "10d6>>4", "B4!", "6#1d20>=15"].map(function (f) { return D.previaDaFormula(f).texto; }).join(" | ") ===
+      "4d6!5k3 | 3d6--1 | 10d6 >> 4 | B4! | 6#1d20 ≥ 15");
 
     t.grupo("v2.43 · leitura das fórmulas");
     t.iguais("prévias com os valores de agora", [

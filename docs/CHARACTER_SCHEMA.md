@@ -956,6 +956,35 @@ RAMADados.rolar("-2d20")
 → { expressao: "-2d20", rolagens: [6, 15], principal: 6, selecao: "menor" }
 ```
 
+### Fórmulas: a sintaxe do Rollem — v9.21.0
+
+As fórmulas (`RAMADados.formula`: rolagem livre da ficha em todos os sistemas,
+rolagem livre da campanha, fórmulas de atributo e de perícia) aceitam a
+sintaxe v1 do [Rollem](https://rollem.rocks/docs/v1-syntax) inteira e as
+funções de estatística planejadas no v2:
+
+| Sintaxe | O que faz |
+|---|---|
+| `XdY`, `dY`, `d%`, `XdF` | dados; `d%` = d100; Fate vale −1, 0, +1 (escrito − 0 +) |
+| `XdY!`, `XdY!Z` | explode no máximo / de Z para cima, em cadeia (até 100 dados a mais) |
+| `XdYkZ` = `XdYkhZ`, `XdYklZ` | mantém os Z maiores / menores |
+| `XdYdZ` = `XdYdlZ`, `XdYdhZ` | descarta os Z menores / maiores (aparecem entre colchetes, riscados) |
+| `XdYcZ` | destaca os dados de Z para cima (crítico); não combina com manter/descartar |
+| `2dYdaro`, `3dYtaro`, `XdYaro` | todos iguais: rola de novo o mesmo tanto e soma (até 20 vezes) |
+| `XdYns` | aceito; a saída já vem na ordem rolada (o padrão do v2) |
+| `XdY++N`, `XdY--N` | soma / tira N de cada dado (fora de um dado, `5--2` é 5 − (−2)) |
+| `A<<B`, `A>>B` | conta os dados ≤ B / ≥ B |
+| `BX`, `GX`, `WX` (`!`) | Burning Wheel: `Xd6 >> 4`, `>> 3`, `>> 2` (explodindo) |
+| `A<B` `A<=B` `A>B` `A>=B` `A=B` | comparação, só como última conta e fora de parênteses: o total vem com "sucesso" ou "falha" |
+| `X#A` | repete A X vezes (até 20), cada uma com o seu total: `6#4d6d1` |
+| `min(A)`, `max(A)`, `ev(A)` | com um dado dentro: o mínimo, o máximo e a média possíveis, sem rolar (média exata quando dá; senão, simulação fixa). Com vários valores, `min`/`max` continuam sendo o menor/maior |
+
+Continuam valendo `@atributos`, `+ − * /`, parênteses e `piso()`, `teto()`,
+`arred()`, `abs()`. Espaços e maiúsculas não importam. O resultado ganha
+`marcas` por face (`explosao`, `descartado`, `critico`), `totalTexto` nas
+repetições e comparações (`"18 · 15 · 12"`, `"17 · sucesso"`), `repeticoes` e
+`sucesso`. Testes: o grupo "a sintaxe do Rollem" em `testes/casos.js`.
+
 ### Rolagem de perícia
 
 1. pega o atributo vinculado;

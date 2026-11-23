@@ -141,7 +141,9 @@
       el("div.rolagem__resultado", {}, [
         AR() ? AR().icone(aparencia, "cartao") : null,
         el("div.rolagem__numeros", {}, [
-          el("p.rolagem__total", { texto: String(r.total !== undefined ? r.total : r.principal) }),
+          /* v9.21.0: repetições (6#4d6d1) e comparações (1d20 >= 15)
+             mostram o resultado por extenso: "18 · 15 · 12…", "17 · sucesso". */
+          el("p.rolagem__total", { texto: r.totalTexto ? String(r.totalTexto) : String(r.total !== undefined ? r.total : r.principal) }),
           faces(r),
         ]),
       ]),
@@ -191,19 +193,28 @@
     var dados = el("div.rolagem__dados", { "aria-hidden": "true" }, lista.map(function (valor, i) {
       var principal = temPrincipal && !marcou && valor === r.natural;
       if (principal) marcou = true;
-      var marca = marcas[i] === "fome" ? "face--fome" : marcas[i] === "explosao" ? "face--explosao" : "";
-      return el("span.face", { class: [principal ? "face--principal" : "", marca].filter(Boolean).join(" "), texto: String(valor), title: marca === "face--fome" ? "Dado de Fome" : marca ? "Dado de explosão (veio de um 6)" : null });
+      var marca = { fome: "face--fome", explosao: "face--explosao", descartado: "face--descartada", critico: "face--critico" }[marcas[i]] || "";
+      var dica = { fome: "Dado de Fome", explosao: "Dado de explosão", descartado: "Descartado (não soma)", critico: "Crítico" }[marcas[i]] || null;
+      var texto = r.fate ? (valor > 0 ? "+" : valor < 0 ? "−" : "0") : String(valor);
+      return el("span.face", { class: [principal ? "face--principal" : "", marca].filter(Boolean).join(" "), texto: texto, title: dica });
     }));
-    if (!marcas.some(function (m) { return m === "fome" || m === "explosao"; })) return dados;
+    if (!marcas.some(Boolean)) return dados;
     return el("div", {}, [dados, el("span.so-leitor", { texto: textoDasFaces(lista, marcas) })]);
   }
 
   /* "7, 3; de Fome: 10, 1" — o mesmo texto no cartão e no histórico.
      Malditos Goblins (v6.0): "6, 4; de explosão: 5". */
   function textoDasFaces(lista, marcas) {
-    var comuns = [], fome = [], explosao = [];
-    lista.forEach(function (v, i) { (marcas && marcas[i] === "fome" ? fome : marcas && marcas[i] === "explosao" ? explosao : comuns).push(v); });
-    return comuns.join(", ") + (fome.length ? (comuns.length ? "; " : "") + "de Fome: " + fome.join(", ") : "") + (explosao.length ? (comuns.length || fome.length ? "; " : "") + "de explosão: " + explosao.join(", ") : "");
+    var comuns = [], fome = [], explosao = [], descartados = [];
+    lista.forEach(function (v, i) {
+      var m = marcas && marcas[i];
+      (m === "fome" ? fome : m === "explosao" ? explosao : m === "descartado" ? descartados : comuns).push(m === "critico" ? v + " (crítico)" : v);
+    });
+    var partes = [comuns.join(", ")];
+    if (fome.length) partes.push("de Fome: " + fome.join(", "));
+    if (explosao.length) partes.push("de explosão: " + explosao.join(", "));
+    if (descartados.length) partes.push("descartados: " + descartados.join(", "));
+    return partes.filter(Boolean).join("; ");
   }
 
   function parcelas(r) {
@@ -213,7 +224,7 @@
     return el("div.rolagem__parcelas", {}, lista.map(function (p) {
       return el("div.rolagem__parcela", {}, [
         el("span", { texto: p.rotulo + (p.detalhe ? " (" + p.detalhe + ")" : "") }),
-        el("span", { texto: U.comSinal(p.valor) }),
+        el("span", { texto: p.semValor ? "" : U.comSinal(p.valor) }),
       ]);
     }));
   }
@@ -229,8 +240,9 @@
     var entrada = el("input.r-entrada.rolagem-livre__entrada", {
       id: id, type: "text", autocomplete: "off", spellcheck: "false",
       maxlength: global.RAMADados ? global.RAMADados.MAX_FORMULA : 200,
-      placeholder: "1d20+5, 2d6*2, 3d20k1, 3d20kl1…",
+      placeholder: "1d20+5, 4d6d1, 3d6!, 10d6>>4, 6#4d6d1, 1d20>=15…",
       "aria-describedby": id + "-erro",
+      title: "Aceita a sintaxe do Rollem: XdY, d%, dF, ! (explodir), k/kh/kl (manter), d/dl/dh (descartar), c (crítico), aro (iguais), ns, ++/-- (por dado), << e >> (contar), B/G/W (Burning Wheel), X# (repetir), comparações (< <= > >= =) e min()/max()/ev().",
     });
     var erro = el("p.t-mini.t-erro.rolagem-livre__erro", { id: id + "-erro", role: "alert" });
     function rolarAgora(ev) {

@@ -165,7 +165,7 @@
       el("div.rolagem-linha__corpo", {}, [
         el("div.rolagem-linha__topo", {}, [
           el("span.t-forte", { texto: r.nome || "Rolagem" }),
-          el("span.rolagem-linha__total", { texto: String(res.total !== null && res.total !== undefined ? res.total : "—") }),
+          el("span.rolagem-linha__total", { texto: res.totalTexto ? String(res.totalTexto) : String(res.total !== null && res.total !== undefined ? res.total : "—") }),
         ]),
         el("p.t-mini", {
           texto: [r.autor, res.expressao, faces ? "[" + faces + "]" : "", U.horaCurta(r.criadoEm)]
@@ -183,23 +183,33 @@
   /* A rolagem livre usa EXATAMENTE o mesmo motor da ficha. Não existe
      um segundo interpretador de expressão no sistema. */
   function rolagemLivre(ctx, aoRolar) {
+    /* v9.21.0: a sintaxe inteira do Rollem, pelo leitor de fórmulas
+       (RAMADados.formula, somando tudo) — o mesmo da rolagem livre da
+       ficha: 2d20 soma; o maior e o menor são 2d20k1 e 2d20kl1. */
     var campo = UI.campo({
-      rotulo: "Expressão", valor: "1d20", limite: 12,
-      ajuda: "Qualquer coisa que o motor aceite: 1d20, 2d20, -2d20, 3d6…",
+      rotulo: "Expressão", valor: "1d20", limite: global.RAMADados.MAX_FORMULA || 200,
+      ajuda: "1d20+5, 2d20k1 (o maior), 4d6d1, 3d6!, 10d6 >> 4, 6#4d6d1, 1d20 >= 15, dF, d%… (a sintaxe do Rollem).",
     });
 
     var saida = el("div.rolagem-livre__saida");
 
+    function rolarExpressao(texto) {
+      var f = global.RAMADados.formula({ nome: "Rolagem livre", formula: texto, contagem: "soma" });
+      if (!f.ok) return f;
+      f.detalhe = f.parcelas.map(function (p) { return (f.parcelas.length > 1 ? p.rotulo + ": " : "") + (p.detalhe || p.valor); }).join(" · ");
+      return f;
+    }
+
     async function rolar() {
-      var v = global.RAMAValidacao.dado(campo.entrada.value);
-      if (!v.ok) { campo.marcarErro(v.mensagem); return; }
+      var texto = U.aparar(campo.entrada.value);
+      if (!texto) { campo.marcarErro("Escreva uma expressão: 1d20, 4d6d1…"); return; }
+      var r = rolarExpressao(texto);
+      if (!r.ok) { campo.marcarErro(r.mensagem || "Não deu para ler essa expressão."); return; }
       campo.marcarErro("");
 
-      var r = global.RAMADados.rolar(v.valor);
-
       U.trocar(saida, [
-        el("p.rolagem-livre__total", { texto: String(r.principal) }),
-        el("p.t-mini", { texto: r.expressao + " · [" + r.rolagens.join(", ") + "]" }),
+        el("p.rolagem-livre__total", { texto: r.totalTexto ? String(r.totalTexto) : String(r.total) }),
+        el("p.t-mini", { texto: r.detalhe }),
       ]);
 
       /* Registrada UMA vez, com o resultado que já apareceu na tela.
@@ -209,8 +219,10 @@
       var g = await global.RAMAApi.registrarRolagem(ctx.campanhaId, {
         id: id, personagemId: "", tipo: "livre", nome: "Rolagem livre",
         dados: {
-          expressao: r.expressao, rolagens: r.rolagens,
-          natural: r.principal, total: r.principal, selecao: r.selecao, parcelas: [],
+          expressao: r.expressao, rolagens: (r.rolagens || []).slice(0, 200),
+          natural: r.natural !== undefined ? r.natural : null, total: r.total, selecao: r.selecao || null, parcelas: r.parcelas || [],
+          marcas: Array.isArray(r.marcas) ? r.marcas.slice(0, 60) : undefined,
+          totalTexto: r.totalTexto || undefined,
         },
       });
 

@@ -88,6 +88,7 @@
         selecao: resultado.selecao || null,
         parcelas: resultado.parcelas || [],
         critico: !!o.critico,
+        totalTexto: resultado.totalTexto ? String(resultado.totalTexto).slice(0, 200) : undefined,
       },
     };
     /* A aparência do momento (tema de dados ou cores do padrão) vai com o
@@ -97,7 +98,7 @@
     /* Marcas por face (v5.0: os dados de Fome de Vampiro; v6.0: os dados
        de explosão de Malditos Goblins). */
     if (Array.isArray(resultado.marcas)) {
-      rolagem.dados.marcas = resultado.marcas.slice(0, 60).map(function (m) { return m === "fome" || m === "explosao" ? m : ""; });
+      rolagem.dados.marcas = resultado.marcas.slice(0, 60).map(function (m) { return m === "fome" || m === "explosao" || m === "descartado" || m === "critico" ? m : ""; });
     }
 
     daqui[rolagem.id] = true;

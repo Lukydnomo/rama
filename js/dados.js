@@ -579,12 +579,39 @@
        soma    todos os dados somam; não há natural
      ================================================================= */
 
+  /* v9.21.0 — a sintaxe inteira do Rollem (v1, e as funções de
+     estatística do v2), no mesmo leitor, sem eval:
+
+       dados          XdY  dY  d%  XdF (Fate: −1, 0, +1)
+       explodir       XdY!  (no máximo)   XdY!Z  (de Z para cima)
+       manter         XdYkZ = XdYkhZ (os Z maiores)   XdYklZ (os Z menores)
+       descartar      XdYdZ = XdYdlZ (os Z menores)   XdYdhZ (os Z maiores)
+       crítico        XdYcZ   destaca os dados de Z para cima
+       iguais         2dYdaro  3dYtaro  XdYaro   todos iguais: rola de novo e soma
+       sem ordenar    XdYns   (aceito; a saída já vem na ordem rolada)
+       por dado       XdY++N  XdY--N   soma (ou tira) N de CADA dado
+       contar         A<<B  (quantos dados ≤ B)   A>>B  (quantos ≥ B)
+       Burning Wheel  BX  GX  WX  (Xd6 >> 4, 3, 2)   BX!  GX!  WX!  (explodindo)
+       comparar       A<B  A<=B  A>B  A>=B  A=B   — só como a ÚLTIMA conta
+       repetir        X#A   rola A X vezes (6#4d6d1)
+       estatística    min(2d6) max(2d6) ev(2d6)  — o mínimo, o máximo e a
+                      média possíveis, sem rolar (com vários valores,
+                      min/max continuam sendo o menor/maior deles)
+
+     Continua tudo o que já valia: @atributos, + − * / e parênteses,
+     piso() teto() arred() abs(), a quantidade e as faces como contas. */
+
   var MAX_FORMULA = 200;
   var MAX_NOS_FORMULA = 200;
   var MAX_DADOS_FORMULA = 12;
+  var MAX_EXPLOSOES = 100;
+  var MAX_REPETICOES = 20;
+  var MAX_IGUAIS = 20;
   var CONTAGENS = ["maior", "menor", "soma"];
-  var LETRA_DE_REF = /[A-Za-z0-9_\u00C0-\u00D6\u00D8-\u00F6\u00F8-\u00FF]/;
-  var LETRA_DE_PALAVRA = /[A-Za-z_\u00C0-\u00D6\u00D8-\u00F6\u00F8-\u00FF]/;
+  var LETRA_DE_REF = /[A-Za-z0-9_À-ÖØ-öø-ÿ]/;
+  var LETRA_DE_PALAVRA = /[A-Za-z_À-ÖØ-öø-ÿ]/;
+  var COMPARACOES = ["<", "<=", ">", ">=", "="];
+  var BURNING = { b: 4, g: 3, w: 2 };
 
   function arredondar(x) { return Math.round(x); }
   var FUNCOES_DE_FORMULA = {
@@ -594,9 +621,12 @@
     abs: { fn: Math.abs, min: 1, max: 1 },
     min: { fn: Math.min, min: 1, max: 12 },
     max: { fn: Math.max, min: 1, max: 12 },
+    ev: { fn: function (v) { return v; }, min: 1, max: 1 }, media: { fn: function (v) { return v; }, min: 1, max: 1 },
   };
 
   function erroDeFormula(mensagem) { return { ok: false, erro: "formula", mensagem: mensagem }; }
+
+  var OPERADORES_DUPLOS = ["<<", ">>", "<=", ">=", "++", "--"];
 
   function tokensDaFormula(s) {
     var lista = [];
@@ -624,7 +654,7 @@
         var j = i + 1;
         while (j < s.length && LETRA_DE_REF.test(s[j])) {
           /* "@FORd20": o d seguido de número ou parêntese já é o dado. */
-          if (j > i + 1 && /[dD]/.test(s[j]) && /[0-9(@]/.test(s[j + 1] || "")) break;
+          if (j > i + 1 && /[dD]/.test(s[j]) && /[0-9(@%]/.test(s[j + 1] || "")) break;
           j++;
         }
         if (j === i + 1) return erroDeFormula("Depois de @ vem a sigla ou o nome de um atributo (por exemplo, @FOR).");
@@ -636,17 +666,24 @@
         var k = i;
         while (k < s.length && LETRA_DE_PALAVRA.test(s[k])) k++;
         var palavra = s.slice(i, k);
-        if (/^[dD]$/.test(palavra)) lista.push({ t: "d" });
-        else lista.push({ t: "id", v: palavra.toLowerCase() });
+        var baixa = palavra.toLowerCase();
+        if (baixa === "d") lista.push({ t: "d" });
+        else if (baixa === "df") { lista.push({ t: "d" }); lista.push({ t: "fate" }); }
+        else lista.push({ t: "id", v: baixa });
         i = k;
         continue;
       }
-      var op = { "\u2212": "-", "\u00D7": "*", "\u00F7": "/", ";": "," }[c] || c;
-      if ("+-*/(),".indexOf(op) >= 0) { lista.push({ t: op }); i++; continue; }
+      var dois = s.slice(i, i + 2);
+      if (OPERADORES_DUPLOS.indexOf(dois) >= 0) { lista.push({ t: dois }); i += 2; continue; }
+      var op = { "−": "-", "×": "*", "÷": "/", ";": ",", "≤": "<=", "≥": ">=" }[c] || c;
+      if (op.length === 2) { lista.push({ t: op }); i++; continue; }
+      if ("+-*/(),!#%<>=".indexOf(op) >= 0) { lista.push({ t: op }); i++; continue; }
       return erroDeFormula("“" + c + "” não faz parte de uma fórmula.");
     }
     return { ok: true, lista: lista };
   }
+
+  function ehEstatistica(x) { return !!x && x.k === "fn" && !!x.estatistica; }
 
   function lerFormula(texto) {
     var s = String(texto === undefined || texto === null ? "" : texto).trim();
@@ -667,14 +704,44 @@
       return x;
     }
     function ve(tipo) { return t[p] && t[p].t === tipo; }
+    function veId(re) { return t[p] && t[p].t === "id" && re.test(t[p].v); }
     function come(tipo) { if (ve(tipo)) { p++; return true; } return false; }
     function exige(tipo, mensagem) { if (!come(tipo) && !falha) falha = mensagem; }
+    function veComparacao() { return t[p] && COMPARACOES.indexOf(t[p].t) >= 0; }
     function temDado(x) {
-      if (!x) return false;
+      if (!x || ehEstatistica(x)) return false;
       if (x.k === "dado") return true;
       return [x.a, x.b, x.q, x.f].some(temDado) || (x.args || []).some(temDado);
     }
+    function inteiroDoToken(min, mensagem) {
+      if (!ve("num") || t[p].v < min || Math.floor(t[p].v) !== t[p].v) { if (!falha) falha = mensagem; return null; }
+      return t[p++].v;
+    }
 
+    /* X#A: só no começo, valendo para a fórmula inteira. */
+    function topo() {
+      var vezes = 0;
+      if (ve("num") && t[p + 1] && t[p + 1].t === "#") {
+        vezes = t[p].v;
+        p += 2;
+        if (vezes < 1 || vezes > MAX_REPETICOES || Math.floor(vezes) !== vezes) { falha = "Repetir (X#…) vai de 1 a " + MAX_REPETICOES + " vezes."; return null; }
+      }
+      var a = comparacao();
+      if (!falha && ve("#")) falha = "Repetir (X#…) só vale no começo da fórmula: 6#4d6d1.";
+      return vezes ? no({ k: "rep", n: vezes, a: a }) : a;
+    }
+    /* A comparação é a última conta: nada depois dela, e nunca dentro
+       de parênteses. */
+    function comparacao() {
+      var a = soma();
+      if (!falha && veComparacao()) {
+        var op = t[p++].t;
+        var b = soma();
+        if (!falha && veComparacao()) falha = "Só uma comparação por fórmula, e ela é a última conta.";
+        return no({ k: "cmp", op: op, a: a, b: b });
+      }
+      return a;
+    }
     function soma() {
       var a = produto();
       while (!falha && (ve("+") || ve("-"))) {
@@ -684,10 +751,33 @@
       return a;
     }
     function produto() {
-      var a = unario();
+      var a = porDado();
       while (!falha && (ve("*") || ve("/"))) {
         var op = t[p++].t;
-        a = no({ k: "op", op: op, a: a, b: unario() });
+        a = no({ k: "op", op: op, a: a, b: porDado() });
+      }
+      return a;
+    }
+    /* ++ e -- mexem em CADA dado; << e >> contam dados. Fora de um dado,
+       "5--2" continua sendo 5 − (−2). */
+    function porDado() {
+      var a = unario();
+      while (!falha && (ve("++") || ve("--") || ve("<<") || ve(">>"))) {
+        var op = t[p++].t;
+        var b = unario();
+        if (falha) return a;
+        if (op === "<<" || op === ">>") {
+          if (!a || a.k !== "dado") { falha = op + " conta dados: escreva logo depois de um dado (10d6 " + op + " 4)."; return a; }
+          if (temDado(b)) { falha = "O alvo de " + op + " é um número, não outro dado."; return a; }
+          a.contar = { modo: op === "<<" ? "le" : "ge", alvo: b };
+          continue;
+        }
+        if (a && a.k === "dado" && !a.contar && !temDado(b)) {
+          var parcela = op === "--" ? no({ k: "neg", a: b }) : b;
+          a.porDado = a.porDado ? no({ k: "op", op: "+", a: a.porDado, b: parcela }) : parcela;
+          continue;
+        }
+        a = no({ k: "op", op: op === "++" ? "+" : "-", a: a, b: op === "--" ? no({ k: "neg", a: b }) : b });
       }
       return a;
     }
@@ -696,33 +786,84 @@
       if (come("+")) return unario();
       return dado();
     }
+    function contarDado() {
+      dados++;
+      if (dados > MAX_DADOS_FORMULA && !falha) falha = "Dados demais numa fórmula só (até " + MAX_DADOS_FORMULA + ").";
+    }
     function dado() {
+      /* Burning Wheel: B5 = 5d6 >> 4; G5 >> 3; W5 >> 2; com ! explode. */
+      if (veId(/^[bgw]$/) && t[p + 1] && t[p + 1].t === "num") {
+        var letra = t[p].v;
+        p++;
+        var qtd = inteiroDoToken(0, "Burning Wheel: B, G ou W seguido do número de dados (B5).");
+        if (falha) return null;
+        contarDado();
+        var bw = no({ k: "dado", q: no({ k: "num", v: qtd }), f: no({ k: "num", v: 6 }), contar: { modo: "ge", alvo: no({ k: "num", v: BURNING[letra] }) }, burning: letra.toUpperCase() });
+        if (come("!")) bw.explode = { limiar: null };
+        return bw;
+      }
       var q = null;
       if (!ve("d")) {
         q = primario();
         if (!ve("d")) return q;
       }
       p++;
-      var f = primario();
+      var x = { k: "dado", q: q || no({ k: "num", v: 1 }) };
+      if (come("fate")) { x.fate = true; x.f = no({ k: "num", v: 3 }); }
+      else if (come("%")) { x.f = no({ k: "num", v: 100 }); x.porcento = true; }
+      else x.f = primario();
       if (falha) return null;
-      if (temDado(q) || temDado(f)) { falha = "A quantidade e as faces de um dado não podem ter outro dado."; return null; }
-      dados++;
-      if (dados > MAX_DADOS_FORMULA && !falha) falha = "Dados demais numa fórmula só (até " + MAX_DADOS_FORMULA + ").";
-      /* Manter (v9.17.4): k ou kh fica com os maiores, kl com os menores;
-         sem número, fica com um. 3d20k1 → [3, 10, 20] → 20. */
-      var manter = null;
-      if (ve("id") && /^k[hl]?$/.test(t[p].v)) {
-        var modo = t[p].v === "kl" ? "l" : "h";
-        p++;
-        var n = 1;
-        if (ve("num")) {
-          n = t[p].v;
-          p++;
-          if (n < 1 || Math.floor(n) !== n) { falha = "Quantos dados manter precisa ser um número inteiro de 1 para cima (3d20k1)."; return null; }
+      if (temDado(q) || temDado(x.f)) { falha = "A quantidade e as faces de um dado não podem ter outro dado."; return null; }
+      contarDado();
+      modificadores(x);
+      if (falha) return null;
+      return no(x);
+    }
+    /* Os sufixos de um dado, em qualquer ordem. */
+    function modificadores(x) {
+      for (;;) {
+        if (falha) return;
+        if (come("!")) {
+          if (x.explode) { falha = "O dado já explode (um ! basta)."; return; }
+          x.explode = { limiar: ve("num") ? t[p++].v : null };
+          continue;
         }
-        manter = { modo: modo, n: n };
+        if (ve("d") && t[p + 1] && t[p + 1].t === "num") {
+          p++;
+          if (x.manter) { falha = "Escolha manter (k) ou descartar (d), não os dois."; return; }
+          x.manter = { tipo: "descartar", modo: "l", n: inteiroDoToken(1, "Quantos dados descartar: um número inteiro (4d6d1).") };
+          continue;
+        }
+        if (veId(/^(k|kh|kl|dl|dh)$/)) {
+          var v = t[p++].v;
+          if (x.manter) { falha = "Escolha manter (k) ou descartar (d), não os dois."; return; }
+          var n = 1;
+          if (ve("num")) n = inteiroDoToken(1, "O número depois de " + v + " é inteiro, de 1 para cima (3d20" + v + "1).");
+          x.manter = v.charAt(0) === "k"
+            ? { tipo: "manter", modo: v === "kl" ? "l" : "h", n: n }
+            : { tipo: "descartar", modo: v === "dh" ? "h" : "l", n: n };
+          continue;
+        }
+        if (veId(/^ns$/)) { p++; x.semOrdem = true; continue; }
+        if (veId(/^c$/)) {
+          p++;
+          x.critico = inteiroDoToken(1, "O crítico (c) precisa do número: 1d20c19.");
+          continue;
+        }
+        if (veId(/^(daro|taro|aro)$/)) { x.iguais = t[p++].v; continue; }
+        /* Juntos, sem espaço: "2d6ns", "4d6kh3ns" viram uma palavra só. */
+        if (ve("id")) {
+          var junto = /^(kh|kl|k|dh|dl|ns|c|daro|taro|aro)(.+)$/.exec(t[p].v);
+          if (junto && /^(kh|kl|k|dh|dl|ns|c|daro|taro|aro)+$/.test(junto[2])) {
+            var partes = t[p].v.match(/kh|kl|k|dh|dl|ns|c|daro|taro|aro/g);
+            t.splice.apply(t, [p, 1].concat(partes.map(function (v) { return { t: "id", v: v }; })));
+            continue;
+          }
+        }
+        break;
       }
-      return no({ k: "dado", q: q || no({ k: "num", v: 1 }), f: f, manter: manter });
+      if (x.critico && x.manter) { falha = "O crítico (c) não combina com manter ou descartar."; return; }
+      if (x.fate && (x.explode || x.critico || x.iguais)) { falha = "Dados Fate (dF) não explodem nem têm crítico."; return; }
     }
     function primario() {
       if (falha) return null;
@@ -737,13 +878,14 @@
       if (x.t === "(") {
         p++;
         var dentro = soma();
+        if (!falha && veComparacao()) { falha = "A comparação precisa ser a última conta, fora de parênteses: 1 < (2 * 5)."; return null; }
         exige(")", "Falta fechar um parêntese.");
         return dentro;
       }
       if (x.t === "id") {
         p++;
         var fn = FUNCOES_DE_FORMULA[x.v];
-        if (!fn) { falha = "“" + x.v + "” não é uma função conhecida (piso, teto, arred, abs, min, max)."; return null; }
+        if (!fn) { falha = "“" + x.v + "” não é uma função conhecida (piso, teto, arred, abs, min, max, ev)."; return null; }
         exige("(", x.v + " precisa de parênteses: " + x.v + "(…).");
         var args = [];
         if (!ve(")")) {
@@ -754,14 +896,18 @@
         if (!falha && (args.length < fn.min || args.length > fn.max)) {
           falha = x.v + "() recebe " + (fn.min === fn.max ? fn.min + " valor" : "de " + fn.min + " a " + fn.max + " valores") + ".";
         }
-        return no({ k: "fn", nome: x.v, args: args });
+        var nome = x.v === "media" ? "ev" : x.v;
+        /* v2 do Rollem: min(2d6), max(2d6), ev(2d6) — o possível, sem rolar. */
+        var estatistica = nome === "ev" || ((nome === "min" || nome === "max") && args.length === 1 && temDado(args[0]));
+        return no({ k: "fn", nome: nome, args: args, estatistica: estatistica });
       }
-      if (x.t === "d") { falha = "Um dado precisa das faces: 1d20, 2d6…"; return null; }
+      if (x.t === "d") { falha = "Um dado precisa das faces: 1d20, 2d6, dF, d%…"; return null; }
+      if (COMPARACOES.indexOf(x.t) >= 0) { falha = "A comparação precisa de um valor dos dois lados: 1d20 >= 15."; return null; }
       falha = "“" + (x.v !== undefined ? x.v : x.t) + "” está fora do lugar.";
       return null;
     }
 
-    var arvore = soma();
+    var arvore = topo();
     if (!falha && p < t.length) falha = "“" + (t[p].v !== undefined ? t[p].v : t[p].t) + "” está fora do lugar.";
     if (falha) return erroDeFormula(falha);
     return { ok: true, arvore: arvore, referencias: referencias, dados: dados, texto: s };
@@ -777,18 +923,20 @@
         return v;
       }
       case "neg": return -contaDaFormula(x.a, valorDe);
-      case "fn": return FUNCOES_DE_FORMULA[x.nome].fn.apply(null, x.args.map(function (a) { return contaDaFormula(a, valorDe); }));
-      case "op": {
-        var a = contaDaFormula(x.a, valorDe);
-        var b = contaDaFormula(x.b, valorDe);
-        if (x.op === "+") return a + b;
-        if (x.op === "-") return a - b;
-        if (x.op === "*") return a * b;
-        if (b === 0) throw new Error("Divisão por zero na fórmula.");
-        return a / b;
-      }
+      case "fn":
+        if (x.estatistica) return estatisticaDoNo(x, valorDe);
+        return FUNCOES_DE_FORMULA[x.nome].fn.apply(null, x.args.map(function (a) { return contaDaFormula(a, valorDe); }));
+      case "op": return conta(x.op, contaDaFormula(x.a, valorDe), contaDaFormula(x.b, valorDe));
     }
     throw new Error("Fórmula inválida.");
+  }
+
+  function conta(op, a, b) {
+    if (op === "+") return a + b;
+    if (op === "-") return a - b;
+    if (op === "*") return a * b;
+    if (b === 0) throw new Error("Divisão por zero na fórmula.");
+    return a / b;
   }
 
   /* Arredondar para baixo sem cair no 0,1 + 0,2 do ponto flutuante. */
@@ -796,7 +944,7 @@
 
   function textoDeNumero(v) {
     var r = Math.round(v * 100) / 100;
-    return String(r).replace(".", ",");
+    return String(r).replace(".", ",").replace("-", "−");
   }
 
   function quantidadeEFaces(x, valorDe) {
@@ -809,20 +957,239 @@
     return { q: q, f: f };
   }
 
+  /* ---------------- rolar um dado (com os sufixos) ----------------
+     Devolve { valor, rolagens, marcas, eleito?, sucessos?, natural? }.
+     `sortear(faces)` é o sorteio (o de verdade ou o da estatística). */
+  function rolarDado(x, valorDe, sortear) {
+    var qf = quantidadeEFaces(x, valorDe);
+    var q = qf.q, f = qf.f;
+    function um() { return x.fate ? sortear(3) - 2 : sortear(f); }
+    var faces = [], marcas = [];
+    for (var i = 0; i < q; i++) { faces.push(um()); marcas.push(""); }
+    if (x.explode) {
+      var limiar = x.explode.limiar === null ? f : pisoSeguro(x.explode.limiar);
+      if (limiar < 2) throw new Error("Explodir de " + limiar + " para cima explodiria sempre: use 2 ou mais (1d6!5).");
+      if (limiar > f) throw new Error("Explodir de " + limiar + " para cima num d" + f + " nunca acontece.");
+      var extras = 0;
+      for (var e = 0; e < faces.length && extras < MAX_EXPLOSOES; e++) {
+        if (faces[e] >= limiar) { faces.push(um()); marcas.push("explosao"); extras++; }
+      }
+    }
+    if (x.iguais && q >= 2) {
+      /* Tunnels & Trolls: todos iguais → rola de novo o mesmo tanto e soma. */
+      var lote = faces.slice(0, q), rodadas = 0;
+      while (rodadas < MAX_IGUAIS && lote.every(function (v) { return v === lote[0]; })) {
+        lote = [];
+        for (var r2 = 0; r2 < q; r2++) { var novo = um(); lote.push(novo); faces.push(novo); marcas.push("explosao"); }
+        rodadas++;
+      }
+    }
+    var m = x.porDado ? contaDaFormula(x.porDado, valorDe) : 0;
+    var valores = faces.map(function (v) { return v + m; });
+    var mantidos = valores.map(function () { return true; });
+    if (x.manter) {
+      var ordem = valores.map(function (v, k) { return k; }).sort(function (a, b) { return valores[a] - valores[b] || a - b; });
+      var n = Math.min(x.manter.n, valores.length);
+      var fora;
+      if (x.manter.tipo === "manter") fora = x.manter.modo === "h" ? ordem.slice(0, valores.length - n) : ordem.slice(n);
+      else fora = x.manter.modo === "l" ? ordem.slice(0, n) : ordem.slice(valores.length - n);
+      fora.forEach(function (k) { mantidos[k] = false; marcas[k] = "descartado"; });
+    }
+    if (x.critico) faces.forEach(function (v, k) { if (v >= x.critico && marcas[k] !== "descartado") marcas[k] = marcas[k] === "explosao" ? "explosao" : "critico"; });
+    var r = { rolagens: valores, marcas: marcas, faces: f, fate: !!x.fate };
+    var soma = 0, quantos = 0;
+    valores.forEach(function (v, k) { if (mantidos[k]) { soma += v; quantos++; } });
+    if (x.contar) {
+      var alvo = contaDaFormula(x.contar.alvo, valorDe);
+      var sucessos = 0;
+      valores.forEach(function (v, k) { if (mantidos[k] && (x.contar.modo === "ge" ? v >= alvo : v <= alvo)) sucessos++; });
+      r.sucessos = sucessos;
+      r.alvo = alvo;
+      r.valor = sucessos;
+    } else {
+      r.valor = soma;
+      if (x.manter && quantos < valores.length) r.eleito = soma;
+    }
+    r.mantidos = quantos;
+    return r;
+  }
+
+  function dadoSimples(x) { return !x.manter && !x.explode && !x.iguais && !x.contar && !x.porDado && !x.fate; }
+
+  /* ---------------- avaliar ----------------
+     ctx = { valorDe, sortear, rolados (lista que recebe cada dado),
+             contagem, natural } */
+  function avaliar(x, ctx) {
+    if (!temDadoNo(x)) return contaDaFormula(x, ctx.valorDe);
+    if (x.k === "dado") {
+      var primeiro = !ctx.rolados.length;
+      var r;
+      if (ctx.contagem !== "soma" && primeiro && dadoSimples(x)) {
+        /* maior/menor: o primeiro dado é o conjunto de onde sai um só. */
+        r = rolarDado(x, ctx.valorDe, ctx.sortear);
+        var v = r.rolagens.length ? (ctx.contagem === "menor" ? Math.min.apply(null, r.rolagens) : Math.max.apply(null, r.rolagens)) : 0;
+        ctx.natural = v;
+        if (r.rolagens.length > 1) r.eleito = v;
+        r.valor = v;
+      } else {
+        r = rolarDado(x, ctx.valorDe, ctx.sortear);
+        if (ctx.contagem !== "soma" && primeiro && x.manter && r.mantidos === 1 && !x.contar) ctx.natural = r.valor;
+      }
+      ctx.rolados.push(r);
+      return r.valor;
+    }
+    if (x.k === "neg") return -avaliar(x.a, ctx);
+    if (x.k === "fn") {
+      if (x.estatistica) return estatisticaDoNo(x, ctx.valorDe);
+      return FUNCOES_DE_FORMULA[x.nome].fn.apply(null, x.args.map(function (a) { return avaliar(a, ctx); }));
+    }
+    if (x.k === "op") return conta(x.op, avaliar(x.a, ctx), avaliar(x.b, ctx));
+    throw new Error("Fórmula inválida.");
+  }
+
+  /* ---------------- estatística (v2: min, max, ev) ---------------- */
+
+  function intervalo(x, valorDe) {
+    if (!temDadoNo(x)) { var c = contaDaFormula(x, valorDe); return { min: c, max: c }; }
+    if (x.k === "dado") {
+      var qf = quantidadeEFaces(x, valorDe);
+      var m = x.porDado ? contaDaFormula(x.porDado, valorDe) : 0;
+      var lo = (x.fate ? -1 : 1) + m, hi = (x.fate ? 1 : qf.f) + m;
+      var total = qf.q;
+      var kept = !x.manter ? total : x.manter.tipo === "manter" ? Math.min(x.manter.n, total) : Math.max(0, total - x.manter.n);
+      if (x.contar) return { min: 0, max: x.explode || x.iguais ? Infinity : kept };
+      if (x.explode || x.iguais) return { min: kept * lo, max: Infinity };
+      return { min: Math.min(kept * lo, kept * hi), max: Math.max(kept * lo, kept * hi) };
+    }
+    if (x.k === "neg") { var n = intervalo(x.a, valorDe); return { min: -n.max, max: -n.min }; }
+    if (x.k === "fn") {
+      if (x.estatistica) { var e = estatisticaDoNo(x, valorDe); return { min: e, max: e }; }
+      var iv = x.args.map(function (a) { return intervalo(a, valorDe); });
+      if (x.nome === "min") return { min: Math.min.apply(null, iv.map(function (i) { return i.min; })), max: Math.min.apply(null, iv.map(function (i) { return i.max; })) };
+      if (x.nome === "max") return { min: Math.max.apply(null, iv.map(function (i) { return i.min; })), max: Math.max.apply(null, iv.map(function (i) { return i.max; })) };
+      var fn = FUNCOES_DE_FORMULA[x.nome].fn;
+      if (x.nome === "abs" && iv[0].min < 0 && iv[0].max > 0) return { min: 0, max: Math.max(-iv[0].min, iv[0].max) };
+      var a1 = fn(iv[0].min), a2 = fn(iv[0].max);
+      return { min: Math.min(a1, a2), max: Math.max(a1, a2) };
+    }
+    var a = intervalo(x.a, valorDe), b = intervalo(x.b, valorDe);
+    if (x.op === "+") return { min: a.min + b.min, max: a.max + b.max };
+    if (x.op === "-") return { min: a.min - b.max, max: a.max - b.min };
+    if (x.op === "/" && b.min <= 0 && b.max >= 0) throw new Error("Divisão que pode dar zero: sem mínimo ou máximo.");
+    var cantos = [conta(x.op, a.min, b.min), conta(x.op, a.min, b.max), conta(x.op, a.max, b.min), conta(x.op, a.max, b.max)]
+      .filter(function (v) { return !isNaN(v); });
+    return { min: Math.min.apply(null, cantos), max: Math.max.apply(null, cantos) };
+  }
+
+  /* A média exata quando a conta é linear; senão, 20 000 rolagens com um
+     sorteio próprio e fixo (o mesmo resultado sempre, e nada do sorteio
+     de verdade é gasto). */
+  function mediaExata(x, valorDe) {
+    if (!temDadoNo(x)) return contaDaFormula(x, valorDe);
+    if (x.k === "dado") {
+      if (x.explode || x.iguais) return null;
+      if (x.manter || x.contar) return mediaPorEnumeracao(x, valorDe);
+      var qf = quantidadeEFaces(x, valorDe);
+      var m = x.porDado ? contaDaFormula(x.porDado, valorDe) : 0;
+      return qf.q * ((x.fate ? 0 : (qf.f + 1) / 2) + m);
+    }
+    if (x.k === "neg") { var n = mediaExata(x.a, valorDe); return n === null ? null : -n; }
+    if (x.k === "fn") return x.estatistica ? estatisticaDoNo(x, valorDe) : null;
+    var a = mediaExata(x.a, valorDe), b = mediaExata(x.b, valorDe);
+    if (a === null || b === null) return null;
+    if (x.op === "+" || x.op === "-" || x.op === "*") return conta(x.op, a, b);
+    return temDadoNo(x.b) ? null : conta(x.op, a, b);
+  }
+
+  /* Manter, descartar e contar: a média exata, passando por todas as
+     combinações, quando elas são poucas (até 200 mil). */
+  function mediaPorEnumeracao(x, valorDe) {
+    var qf = quantidadeEFaces(x, valorDe);
+    var lados = x.fate ? 3 : qf.f;
+    var total = Math.pow(lados, qf.q);
+    if (!qf.q) return 0;
+    if (total > 200000) return null;
+    var faces = [], soma = 0;
+    for (var i = 0; i < qf.q; i++) faces.push(1);
+    for (var c = 0; c < total; c++) {
+      var k = 0;
+      var fila = faces.slice();
+      soma += rolarDado(x, valorDe, function () { return fila[k++]; }).valor;
+      for (var j = 0; j < qf.q; j++) { if (faces[j] < lados) { faces[j]++; break; } faces[j] = 1; }
+    }
+    return soma / total;
+  }
+
+  function estatisticaDoNo(x, valorDe) {
+    var alvo = x.args[0];
+    if (x.nome === "min" || x.nome === "max") {
+      var iv = intervalo(alvo, valorDe);
+      var v = x.nome === "min" ? iv.min : iv.max;
+      if (!Number.isFinite(v)) throw new Error(x.nome + "() não tem limite: o dado explode ou repete.");
+      return v;
+    }
+    var exata = mediaExata(alvo, valorDe);
+    if (exata !== null) return Math.round(exata * 100) / 100;
+    /* mulberry32 com semente fixa: o mesmo número sempre. */
+    var semente = 0x9E3779B9;
+    function sortear(f) {
+      semente = (semente + 0x6D2B79F5) | 0;
+      var z = Math.imul(semente ^ (semente >>> 15), 1 | semente);
+      z = (z + Math.imul(z ^ (z >>> 7), 61 | z)) ^ z;
+      return 1 + Math.floor((((z ^ (z >>> 14)) >>> 0) / 4294967296) * f);
+    }
+    var soma = 0, vezes = 20000;
+    for (var i = 0; i < vezes; i++) soma += avaliar(alvo, { valorDe: valorDe, sortear: sortear, rolados: [], contagem: "soma" });
+    return Math.round((soma / vezes) * 100) / 100;
+  }
+
+  /* ---------------- escrever ---------------- */
+
   /* Precedência para escrever a conta de volta com o mínimo de
      parênteses. */
   function nivel(x) { return x.k === "op" ? (x.op === "+" || x.op === "-" ? 1 : 2) : 3; }
 
+  function textoDoDado(x, valorDe) {
+    if (x.burning) return x.burning + pisoSeguro(contaDaFormula(x.q, valorDe)) + (x.explode ? "!" : "");
+    var qf = quantidadeEFaces(x, valorDe);
+    var s = qf.q + "d" + (x.fate ? "F" : x.porcento ? "%" : qf.f);
+    if (x.explode) s += "!" + (x.explode.limiar !== null ? pisoSeguro(x.explode.limiar) : "");
+    if (x.manter) s += (x.manter.tipo === "manter" ? (x.manter.modo === "l" ? "kl" : "k") : (x.manter.modo === "h" ? "dh" : "d")) + x.manter.n;
+    if (x.critico) s += "c" + x.critico;
+    if (x.iguais) s += x.iguais;
+    if (x.semOrdem) s += "ns";
+    if (x.porDado) { var m = contaDaFormula(x.porDado, valorDe); s += (m < 0 ? "--" : "++") + textoDeNumero(Math.abs(m)); }
+    if (x.contar) s += " " + (x.contar.modo === "ge" ? ">>" : "<<") + " " + textoDeNumero(contaDaFormula(x.contar.alvo, valorDe));
+    return s;
+  }
+
+  function textoDaFace(v, r) {
+    if (r.fate) return v > 0 ? "+" : v < 0 ? "−" : "0";
+    return textoDeNumero(v);
+  }
+
   /* A fórmula escrita com os números de agora: os pedaços sem dado viram
-     o número, cada dado vira "3d6" — e, depois de rolado, "3d6 (4, 2, 6)". */
+     o número, cada dado vira "3d6" — e, depois de rolado, "3d6 (4, 2, 6)",
+     com os descartados entre colchetes, os de explosão com "!" e os
+     críticos com "*". */
   function escreverFormula(x, valorDe, rolados) {
+    if (x.k === "rep") return x.n + "#" + escreverFormula(x.a, valorDe, rolados);
+    if (x.k === "cmp") return escreverFormula(x.a, valorDe, rolados) + " " + { "<": "<", "<=": "≤", ">": ">", ">=": "≥", "=": "=" }[x.op] + " " + escreverFormula(x.b, valorDe, rolados);
+    if (ehEstatistica(x)) return x.nome + "(" + escreverFormula(x.args[0], valorDe, null) + ") = " + textoDeNumero(estatisticaDoNo(x, valorDe));
     if (!temDadoNo(x)) return textoDeNumero(contaDaFormula(x, valorDe));
     if (x.k === "dado") {
       var r = rolados ? rolados.shift() : null;
-      var qf = quantidadeEFaces(x, valorDe);
-      var base = qf.q + "d" + qf.f + (x.manter ? (x.manter.modo === "l" ? "kl" : "k") + x.manter.n : "");
+      var base = textoDoDado(x, valorDe);
       if (!r) return base;
-      return base + " (" + (r.rolagens.length ? r.rolagens.join(", ") : "nenhum") + (r.eleito !== undefined ? " → " + r.eleito : "") + ")";
+      var lista = r.rolagens.map(function (v, k) {
+        var t = textoDaFace(v, r);
+        if (r.marcas[k] === "descartado") return "[" + t + "]";
+        if (r.marcas[k] === "explosao") return t + "!";
+        if (r.marcas[k] === "critico") return t + "*";
+        return t;
+      });
+      var fim = r.sucessos !== undefined ? " → " + r.sucessos + (r.sucessos === 1 ? " sucesso" : " sucessos") : r.eleito !== undefined ? " → " + textoDeNumero(r.eleito) : "";
+      return base + " (" + (lista.length ? lista.join(", ") : "nenhum") + fim + ")";
     }
     if (x.k === "neg") return "−" + embrulhar(x.a, 3, valorDe, rolados);
     if (x.k === "fn") return x.nome + "(" + x.args.map(function (a) { return escreverFormula(a, valorDe, rolados); }).join(", ") + ")";
@@ -836,7 +1203,7 @@
     return temDadoNo(x) && nivel(x) < minimo ? "(" + s + ")" : s;
   }
   function temDadoNo(x) {
-    if (!x) return false;
+    if (!x || ehEstatistica(x)) return false;
     if (x.k === "dado") return true;
     return temDadoNo(x.a) || temDadoNo(x.b) || (x.args || []).some(temDadoNo);
   }
@@ -869,54 +1236,52 @@
     if (!l.ok) return falhou(l.mensagem);
     if (!l.dados) return falhou("A fórmula precisa ter pelo menos um dado (por exemplo, 1d20).");
 
-    var rolados = [];
-    var natural;
-    function valorDoNo(x) {
-      if (!temDadoNo(x)) return contaDaFormula(x, p.valorDe);
-      if (x.k === "dado") {
-        var qf = quantidadeEFaces(x, p.valorDe);
-        var rolagens = [];
-        for (var i = 0; i < qf.q; i++) rolagens.push(sorteio(qf.f));
-        var r = { rolagens: rolagens };
-        var v;
-        if (x.manter) {
-          /* Manter: os n maiores (ou menores) somam; o resto fica de fora. */
-          var ordenados = rolagens.slice().sort(function (a, b) { return x.manter.modo === "l" ? a - b : b - a; });
-          var mantidos = ordenados.slice(0, Math.min(x.manter.n, ordenados.length));
-          v = mantidos.reduce(function (s, n) { return s + n; }, 0);
-          if (rolagens.length > mantidos.length) r.eleito = v;
-          if (contagem !== "soma" && !rolados.length && mantidos.length === 1) natural = v;
-        } else if (contagem !== "soma" && !rolados.length) {
-          v = rolagens.length ? (contagem === "menor" ? Math.min.apply(null, rolagens) : Math.max.apply(null, rolagens)) : 0;
-          natural = v;
-          if (rolagens.length > 1) r.eleito = v;
-        } else {
-          v = rolagens.reduce(function (s, n) { return s + n; }, 0);
-        }
-        rolados.push(r);
-        return v;
-      }
-      if (x.k === "neg") return -valorDoNo(x.a);
-      if (x.k === "fn") return FUNCOES_DE_FORMULA[x.nome].fn.apply(null, x.args.map(valorDoNo));
-      var a = valorDoNo(x.a);
-      var b = valorDoNo(x.b);
-      if (x.op === "+") return a + b;
-      if (x.op === "-") return a - b;
-      if (x.op === "*") return a * b;
-      if (b === 0) throw new Error("Divisão por zero na fórmula.");
-      return a / b;
-    }
+    var raiz = l.arvore;
+    var vezes = raiz.k === "rep" ? raiz.n : 1;
+    var corpo = raiz.k === "rep" ? raiz.a : raiz;
+    var comparacao = corpo.k === "cmp" ? corpo : null;
+    var conta_ = comparacao ? comparacao.a : corpo;
 
-    var base;
-    var detalhe;
+    var rodadas = [];
+    var natural;
     try {
-      base = pisoSeguro(valorDoNo(l.arvore));
-      detalhe = escreverFormula(l.arvore, p.valorDe, rolados.slice());
+      for (var i = 0; i < vezes; i++) {
+        var ctx = { valorDe: p.valorDe, sortear: sorteio, rolados: [], contagem: contagem };
+        var bruto = avaliar(conta_, ctx);
+        /* Só estatística (ev(4d6d1), sem rolar nada): as casas decimais ficam. */
+        var valor = ctx.rolados.length ? pisoSeguro(bruto) : Math.round(bruto * 100) / 100;
+        var rodada = { valor: valor, rolados: ctx.rolados };
+        if (comparacao) {
+          var alvo = avaliar(comparacao.b, ctx);
+          rodada.alvo = alvo;
+          rodada.sucesso = { "<": valor < alvo, "<=": valor <= alvo, ">": valor > alvo, ">=": valor >= alvo, "=": valor === alvo }[comparacao.op];
+        }
+        rodada.detalhe = escreverFormula(comparacao || conta_, p.valorDe, ctx.rolados.slice());
+        if (i === 0) natural = ctx.natural;
+        rodadas.push(rodada);
+      }
     } catch (e) {
       return falhou(e.message);
     }
 
-    var parcelas = [{ rotulo: "Fórmula", valor: base, detalhe: detalhe }];
+    var todos = rodadas.reduce(function (s, rd) { return s.concat(rd.rolados); }, []);
+    var rolagens = [], marcas = [];
+    todos.forEach(function (rd) { rd.rolagens.forEach(function (v, k) { rolagens.push(v); marcas.push(rd.marcas[k] || ""); }); });
+
+    var base = rodadas.reduce(function (s, rd) { return s + rd.valor; }, 0);
+    var parcelas;
+    var totalTexto = null;
+    if (vezes > 1) {
+      parcelas = rodadas.map(function (rd, k) { return { rotulo: "#" + (k + 1), valor: rd.valor, detalhe: rd.detalhe + (comparacao ? (rd.sucesso ? " — sucesso" : " — falha") : "") }; });
+      totalTexto = rodadas.map(function (rd) { return String(rd.valor) + (comparacao ? (rd.sucesso ? " ✓" : " ✗") : ""); }).join(" · ");
+    } else {
+      parcelas = [{ rotulo: "Fórmula", valor: base, detalhe: rodadas[0].detalhe }];
+      if (comparacao) {
+        totalTexto = base + " · " + (rodadas[0].sucesso ? "sucesso" : "falha");
+        parcelas.push({ rotulo: rodadas[0].sucesso ? "Sucesso" : "Falha", valor: 0, semValor: true, detalhe: textoDeNumero(base) + " " + { "<": "<", "<=": "≤", ">": ">", ">=": "≥", "=": "=" }[comparacao.op] + " " + textoDeNumero(rodadas[0].alvo) });
+      }
+    }
+
     var r = {
       ok: true,
       erro: null,
@@ -925,14 +1290,27 @@
       sigla: p.sigla || "",
       expressao: l.texto,
       selecao: contagem === "soma" ? null : contagem,
-      rolagens: rolados.reduce(function (s, x) { return s.concat(x.rolagens); }, []),
+      rolagens: rolagens.slice(0, 200),
       formula: l.texto,
       contagem: contagem,
       parcelas: parcelas,
       total: base,
     };
+    if (marcas.some(Boolean)) r.marcas = marcas.slice(0, 200);
+    /* Só dados Fate: as faces se escrevem − 0 + no cartão. */
+    if (todos.length && todos.every(function (rd) { return rd.fate; })) r.fate = true;
+    if (!totalTexto && base !== Math.floor(base)) totalTexto = textoDeNumero(base);
+    if (totalTexto) r.totalTexto = totalTexto;
+    if (comparacao && vezes === 1) r.sucesso = !!rodadas[0].sucesso;
+    if (vezes > 1) r.repeticoes = rodadas.map(function (rd) { return rd.valor; });
     if (contagem !== "soma") r.natural = natural || 0;
     acrescentarBonusEExtras(r, p);
+    /* Com bônus, o total da comparação é o de depois do bônus. */
+    if (comparacao && vezes === 1 && r.total !== base) {
+      var final = r.total;
+      r.sucesso = { "<": final < rodadas[0].alvo, "<=": final <= rodadas[0].alvo, ">": final > rodadas[0].alvo, ">=": final >= rodadas[0].alvo, "=": final === rodadas[0].alvo }[comparacao.op];
+      r.totalTexto = final + " · " + (r.sucesso ? "sucesso" : "falha");
+    }
     return r;
   }
 

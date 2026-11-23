@@ -118,6 +118,23 @@
 
   var CHANGELOG = [
     {
+      versao: "9.21.0",
+      codinome: "GRAMÁTICA",
+      data: "22/11/2026",
+      mudancas: {
+        "Adicionado": [
+          "Fórmulas de dados com a sintaxe inteira do Rollem, em todo lugar que aceita fórmula: a rolagem livre das fichas de todos os sistemas, a rolagem livre da campanha e as fórmulas de atributo e perícia. Agora vale: d% e dF (Fate), explodir (3d6!, 2d6!5), manter e descartar (4d6k3, 4d6kl1, 4d6d1, 4d6dh1), crítico (1d20c19), todos iguais rolam de novo (2d6daro, 3d6taro, 4d6aro), somar ou tirar de cada dado (4d6--2), contar sucessos (10d6 >> 4, 10d6 << 3), Burning Wheel (B5, G5, W5, B5!), comparar (1d20+5 >= 15 → sucesso ou falha), repetir (6#4d6d1, cada um com o seu total) e min(2d6), max(2d6), ev(2d6) para o mínimo, o máximo e a média possíveis.",
+          "No cartão da rolagem, os dados descartados aparecem riscados, os críticos em negrito, os de explosão com a marca de explosão e o Fate como − 0 +. Repetições e comparações mostram o resultado por extenso, também no histórico da campanha.",
+        ],
+        "Alterado": [
+          "Rolagem livre da campanha: passa a usar o mesmo leitor de fórmulas da ficha (antes aceitava só NdX, até 12 caracteres). Por isso 2d20 agora soma os dois dados, como no Rollem; o maior e o menor são 2d20k1 e 2d20kl1.",
+        ],
+        "Técnico": [
+          "js/dados.js: lerFormula ganhou repetição, comparação, ++/--, <</>>, os sufixos de dado e Burning Wheel; um avaliador só (rolarDado) para o sorteio de verdade e para a estatística (intervalo, média exata ou por enumeração, simulação com semente fixa). Documentado em docs/CHARACTER_SCHEMA.md; testes em testes/casos.js. Só o site muda.",
+        ],
+      },
+    },
+    {
       versao: "9.20.0",
       codinome: "ENQUADRO",
       data: "22/11/2026",
