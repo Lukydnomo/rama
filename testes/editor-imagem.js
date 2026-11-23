@@ -197,10 +197,22 @@
       botao("Usar imagem").click();
       var r7b = await aberto.promessa;
       ok("conversão explícita entrega imagem estática", r7b.ok && !r7b.gif && r7b.convertidoDeGif && /^data:image\/(webp|png|jpeg)/.test(r7b.imagem));
+      /* v9.20.0: recortar MANTENDO a animação (js/gif.js). */
+      aberto = await abrir(new File([bytesGif], "animado.gif", { type: "image/gif" }), "avatar");
+      ok("GIF oferece 'Recortar mantendo a animação'", !!botao("Recortar mantendo a animação"));
+      botao("Recortar mantendo a animação").click();
+      await ate(function () { return topo() && topo().querySelector(".editor-imagem"); });
+      ok("o editor avisa que o recorte vale para todos os quadros", /todos os quadros/.test(topo().querySelector(".editor-imagem__aviso").textContent));
+      botao("Usar imagem").click();
+      var r7c = await aberto.promessa;
+      var exam = r7c.ok ? await window.RAMAGif.examinar(Uint8Array.from(atob(r7c.imagem.split(",")[1]), function (c) { return c.charCodeAt(0); })) : null;
+      ok("recorte animado entrega GIF quadrado, ainda animado e com os tempos", r7c.ok && r7c.gif && r7c.recortadoDeGif && r7c.largura === r7c.altura &&
+        /^data:image\/gif;base64,/.test(r7c.imagem) && exam && exam.quadros === 2 && exam.atrasos.join() === "10,20");
       var grande = new Uint8Array(RI.MAX_GIF + 500); grande.set(bytesGif);
       aberto = await abrir(new File([grande], "grande.gif", { type: "image/gif" }), "avatar");
       ok("GIF grande: sem 'Usar GIF original', com o motivo e a conversão oferecida",
         !botao("Usar GIF original") && !!botao("Recortar como imagem estática") && /Para preservar a animação/.test(topo().textContent));
+      ok("GIF grande também pode ser recortado mantendo a animação", !!botao("Recortar mantendo a animação"));
       botao("Cancelar").click();
       ok("cancelar o GIF não entrega nada", !(await aberto.promessa).ok);
 

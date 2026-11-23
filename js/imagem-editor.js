@@ -24,8 +24,10 @@
    celular aplicada): só depois de escolhido o retângulo é que ele é
    reduzido e codificado — a prévia é o mesmo retângulo do arquivo salvo.
    GIF animado não passa pelo canvas sem a pessoa pedir: o original vai
-   inteiro, ou é convertido para imagem estática por escolha explícita,
-   com a prévia do resultado.
+   inteiro, é recortado MANTENDO a animação (v9.20.0, js/gif.js: todos os
+   quadros recortados e reduzidos, com os mesmos tempos — o jeito de
+   economizar tamanho) ou é convertido para imagem estática por escolha
+   explícita, com a prévia do resultado.
    ===================================================================== */
 
 (function (global) {
@@ -314,20 +316,25 @@
 
       var grandeDemais = cfg.gifMaximo && (aberta.largura > cfg.gifMaximo || aberta.altura > cfg.gifMaximo);
       var podeOriginal = aberta.gifCabe && !grandeDemais && !cfg.somenteEstatica;
+      /* v9.20.0: recortar sem perder a animação — também o GIF grande
+         demais para ir inteiro, que é quando recortar mais ajuda. */
+      var podeAnimado = !cfg.somenteEstatica && !!aberta.arquivo && !!global.RAMAGif;
 
       var motivo = cfg.somenteEstatica
         ? "Esta capa é sempre uma imagem estática, recortada na moldura. Para usar este GIF, ele precisa ser convertido: fica o primeiro quadro, sem animação."
         : !aberta.gifCabe
-        ? RI.MENSAGEM_GIF_GRANDE
+        ? RI.MENSAGEM_GIF_GRANDE + (podeAnimado ? " Recortar mantendo a animação costuma resolver: o GIF é reduzido para o tamanho do destino." : "")
         : grandeDemais
-          ? "Para manter a animação, a imagem precisa ter até " + cfg.gifMaximo + " pixels de largura e altura."
-          : "Para manter a animação, use o GIF original: o arquivo vai inteiro, sem recorte. A exibição mostra o centro.";
+          ? "Para usar o original, a imagem precisa ter até " + cfg.gifMaximo + " pixels de largura e altura." + (podeAnimado ? " Recortando, ela é reduzida para caber." : "")
+          : podeAnimado
+            ? "Use o GIF original (vai inteiro, sem recorte; a exibição mostra o centro) ou recorte mantendo a animação: só a área escolhida, já no tamanho do destino — quase sempre bem mais leve."
+            : "Para manter a animação, use o GIF original: o arquivo vai inteiro, sem recorte. A exibição mostra o centro.";
 
       var botoes = [
         { rotulo: "Cancelar", classe: "r-botao--fantasma" },
         {
           rotulo: "Recortar como imagem estática",
-          classe: podeOriginal ? "" : "r-botao--principal",
+          classe: podeOriginal || podeAnimado ? "r-botao--fantasma" : "r-botao--principal",
           aoClicar: function (fechar) {
             indoParaRecorte = true;
             fechar();
@@ -335,6 +342,17 @@
           },
         },
       ];
+      if (podeAnimado) {
+        botoes.push({
+          rotulo: "Recortar mantendo a animação",
+          classe: podeOriginal ? "" : "r-botao--principal",
+          aoClicar: function (fechar) {
+            indoParaRecorte = true;
+            fechar();
+            editor(aberta, cfg, o, { animado: true }).then(resolver);
+          },
+        });
+      }
       if (podeOriginal) {
         botoes.push({
           rotulo: "Usar GIF original",
@@ -372,8 +390,11 @@
           ]) : null,
           el("p", { texto: motivo }),
           el("p.t-mini", {
-            texto: "Recortar exige converter para imagem estática: fica só o primeiro quadro e a animação se perde. " +
-              "A conversão só acontece se você escolher, e o resultado aparece antes de confirmar.",
+            texto: podeAnimado
+              ? "Recortar mantendo a animação refaz todos os quadros no tamanho do destino, com os mesmos tempos (até 255 cores). " +
+                "“Como imagem estática” fica só com o primeiro quadro."
+              : "Recortar exige converter para imagem estática: fica só o primeiro quadro e a animação se perde. " +
+                "A conversão só acontece se você escolher, e o resultado aparece antes de confirmar.",
           }),
         ]),
         botoes: botoes,
@@ -722,6 +743,16 @@
           /* Deixa o botão mostrar "Preparando…" antes do trabalho pesado. */
           await new Promise(function (r) { setTimeout(r, 30); });
           var tam = G.saida(R, cfg);
+          if (extra.animado) {
+            var animado = await recortarAnimado(tam);
+            if (!animado) return;
+            if (!(await entregar(animado, o))) return;
+            concluido = true;
+            ocupado = false;
+            fechar();
+            resolver(animado);
+            return;
+          }
           var desenho = RI.recortar(origem, { x: R.x, y: R.y, largura: R.w, altura: R.h }, tam.largura, tam.altura);
           var cod = RI.codificar(desenho, { limite: cfg.limite });
           desenho.width = desenho.height = 0;
@@ -747,6 +778,32 @@
         }
       }
 
+      /* v9.20.0: o mesmo retângulo, em todos os quadros do GIF. Falhou ou
+         passou do limite: avisa e o editor continua aberto. */
+      async function recortarAnimado(tam) {
+        var r;
+        try {
+          var bytes = new Uint8Array(await aberta.arquivo.arrayBuffer());
+          r = await global.RAMAGif.recortar(bytes, { x: R.x, y: R.y, w: R.w, h: R.h }, tam.largura, tam.altura);
+        } catch (e) {
+          console.error("[R.A.M.A. · editor de imagem] recorte do GIF falhou", e);
+          UI.avisoErro("Não foi possível recortar este GIF mantendo a animação. Use o GIF original ou recorte como imagem estática.");
+          return null;
+        }
+        if (!r || !r.ok) { UI.avisoErro("Este GIF não tem quadros que dê para recortar."); return null; }
+        var imagem = global.RAMAGif.paraDataUrl(r.bytes);
+        if (imagem.length > RI.MAX_SAIDA_GIF) {
+          UI.avisoErro("Mesmo recortado, o GIF ficou com " + Math.round(r.bytes.length / 1024).toLocaleString("pt-BR") +
+            " KB — o limite é 1 MB. Escolha uma área menor ou um GIF com menos quadros.");
+          return null;
+        }
+        return {
+          ok: true, imagem: imagem, largura: r.largura, altura: r.altura, bytes: imagem.length,
+          gif: true, transparente: !!r.transparente, recortadoDeGif: true,
+          recorte: { x: Math.round(R.x), y: Math.round(R.y), largura: Math.round(R.w), altura: Math.round(R.h) },
+        };
+      }
+
       janela = UI.modal({
         titulo: cfg.titulo,
         largo: true,
@@ -756,6 +813,9 @@
           el("p.t-mini", { texto: cfg.explicacao }),
           extra.deGif ? el("p.t-mini.editor-imagem__aviso", {
             texto: "Conversão para imagem estática: o resultado é o primeiro quadro do GIF, sem animação. A miniatura mostra exatamente o que vai ser salvo.",
+          }) : null,
+          extra.animado ? el("p.t-mini.editor-imagem__aviso", {
+            texto: "Recorte com animação: a área escolhida vale para todos os quadros, com os mesmos tempos. A miniatura mostra o primeiro quadro; recortar um GIF longo pode levar alguns segundos.",
           }) : null,
           botoesDeModo ? el("div.filtros__grupo", { role: "group", "aria-label": "Como usar a imagem" }, botoesDeModo) : null,
           el("div.editor-imagem__area", {}, [

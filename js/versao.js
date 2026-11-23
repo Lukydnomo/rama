@@ -118,6 +118,20 @@
 
   var CHANGELOG = [
     {
+      versao: "9.20.0",
+      codinome: "ENQUADRO",
+      data: "22/11/2026",
+      mudancas: {
+        "Adicionado": [
+          "GIF animado pode ser recortado SEM perder a animação, igual às fotos: na janela do GIF, “Recortar mantendo a animação” abre o mesmo editor de enquadramento (arrastar, zoom, pinça, teclado), e a área escolhida vale para todos os quadros, com os mesmos tempos e a mesma repetição. O resultado já sai no tamanho do destino (256 px no avatar e nas fotos, por exemplo), o que costuma deixar o arquivo muitas vezes menor.",
+          "Um GIF grande demais para ir inteiro (mais de 1 MB, ou largo demais para a capa) também pode ser recortado assim. Se mesmo recortado passar de 1 MB, o editor avisa e continua aberto para escolher uma área menor.",
+        ],
+        "Técnico": [
+          "js/gif.js (RAMAGif), sem biblioteca: lê o GIF quadro a quadro (LZW, paletas, entrelaçamento, transparência, descartes), recorta e reduz cada quadro por média de área, monta uma paleta única de até 255 cores e recodifica — sem transparência, os quadros seguintes levam só o que mudou e quadros iguais viram tempo a mais no anterior. Testes em testes/executar-gif.js e no editor (testes/editor-imagem.html). Só o site muda.",
+        ],
+      },
+    },
+    {
       versao: "9.19.2",
       codinome: "FÔLEGO",
       data: "22/11/2026",

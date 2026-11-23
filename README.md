@@ -673,7 +673,13 @@ arquivo salvo, arraste, pinça, teclado, redefinir, cancelar e Esc dentro de out
 formulário, confirmação dupla, transparência sem fundo preto, foto de celular com
 orientação EXIF, GIF original preservado e conversão estática explícita, GIF
 grande, documento inteiro e recorte livre, capa 1500 × 500, limite de saída,
-falha de envio, arquivo inválido e abrir/fechar sem acumular janelas.
+falha de envio, arquivo inválido e abrir/fechar sem acumular janelas. Desde a
+v9.20.0, também o recorte que mantém a animação do GIF.
+
+**Recorte de GIF animado** — `deno run --allow-read testes/executar-gif.js`:
+LZW de ida e volta, leitura (paletas, entrelaçamento, transparência, descartes,
+tempos e repetição) e o recorte (animação, cores, transparente, quadros iguais
+juntados e só o que muda nos quadros seguintes).
 
 **Pastas e sistemas na página Personagens** — 35 verificações:
 
@@ -934,6 +940,11 @@ próprio `<script src>`, então funciona debaixo de subpasta sem ajuste.
 segredo nenhum — ele os lê das Script Properties. Publicá-lo não expõe nada.
 
 ### Atualizar o backend
+
+**v9.20.0 — ENQUADRO:** GIF animado pode ser recortado mantendo a animação,
+como as fotos. **Só o site muda.** Site: `js/gif.js` (novo), `js/imagem-editor.js`,
+`js/imagem.js`, as páginas que abrem o editor (`personagens/`, `perfil/`,
+`homebrew/`, `ficha/`, `campanha/`) e `js/versao.js`.
 
 **v9.19.2 — FÔLEGO:** GIF animado até 1 MB (antes, 50 KB). **Backend muda:**
 atualize `Dados.gs` e `Codigo.gs`, rode `setupRama()` (cria as colunas
@@ -2218,7 +2229,7 @@ Três números diferentes, que não se misturam:
 
 | | Onde | O que é |
 |---|---|---|
-| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v9.19.2 |
+| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v9.20.0 |
 | `schemaVersion` | `js/ficha.js` | o formato da FICHA |
 | `versaoFormato` | `js/config.js` | o formato dos arquivos de importação |
 

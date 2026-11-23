@@ -127,6 +127,9 @@
         gif: gif,
         gifCabe: gifCabe,
         imagem: imagemGif,
+        /* v9.20.0: o arquivo do GIF, para o recorte que mantém a animação
+           (js/gif.js) — inclusive o GIF grande demais para ir inteiro. */
+        arquivo: gif ? arquivo : null,
         origem: bitmap,
         largura: largura,
         altura: altura,

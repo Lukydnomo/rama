@@ -200,8 +200,11 @@ aba não a baixa de novo.
    `data:image/(webp|jpeg|png)`, dimensões de 1 a 4096 px e o limite da célula
    (`dados_grandes`).
 4. **GIF animado:** a janela oferece **Usar GIF original** (bytes intactos, até
-   ~29 KB e 4096 px; a faixa mostra o centro) ou **Recortar como imagem estática**
-   (o primeiro quadro, por escolha explícita, com a prévia do resultado).
+   1 MB e 4096 px; a faixa mostra o centro), **Recortar mantendo a animação**
+   (v9.20.0, `js/gif.js`: todos os quadros recortados e reduzidos para o tamanho
+   do destino, com os mesmos tempos e até 255 cores — também para o GIF grande
+   demais para ir inteiro) ou **Recortar como imagem estática** (o primeiro
+   quadro, por escolha explícita, com a prévia do resultado).
 5. **Remover** pede confirmação e apaga a linha.
 
 A imagem chega na proporção da faixa, então a ocupa sem distorcer e sem cortar nada
