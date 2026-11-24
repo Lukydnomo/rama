@@ -118,6 +118,16 @@
 
   var CHANGELOG = [
     {
+      versao: "9.21.2",
+      codinome: "CHÃO",
+      data: "24/11/2026",
+      mudancas: {
+        "Corrigido": [
+          "Ficha de Ordem: o Bloqueio nunca fica negativo. Com Fortitude −5 (ou qualquer penalidade), ele vale 0, e a conta mostra a parcela “Mínimo”. Vale também no cartão da mesa e na importação do CRIS.",
+        ],
+      },
+    },
+    {
       versao: "9.21.1",
       codinome: "VÉU",
       data: "24/11/2026",

@@ -2064,6 +2064,11 @@
       t.igual("extra de Fortitude entra no bônus da perícia (+7)", RR.bonusDePericia(vig, "fortitude", invVig).total, 7);
       t.igual("  e no Bloqueio uma vez só (7 + 3 = 10)", RR.bloqueio(vig, invVig).total, 10);
       t.igual("  sem mudar o grau", RR.grauDaPericia(vig, "fortitude"), "treinado");
+      RR.definirAjusteDePericia(vig, "fortitude", { extra: -20 });
+      var bloqNeg = RR.bloqueio(vig, invVig);
+      t.ok("v9.21.2: Fortitude negativa não deixa o Bloqueio abaixo de 0", RR.bonusDePericia(vig, "fortitude", invVig).total < 0 && bloqNeg.total === 0 &&
+        bloqNeg.parcelas.reduce(function (s, x) { return s + x.valor; }, 0) === 0);
+      RR.definirAjusteDePericia(vig, "fortitude", { extra: 2 });
       RR.definirAjusteDePericia(vig, "reflexos", { extra: 1 });
       t.igual("extra de Reflexos reflete na Esquiva (18 + 11 + 1 = 30)", RR.esquiva(vig, invVig).total, 30);
       t.ok("  a composição mostra de onde veio (Reflexos · Bônus extra)",

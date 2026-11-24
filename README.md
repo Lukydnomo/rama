@@ -941,6 +941,9 @@ segredo nenhum — ele os lê das Script Properties. Publicá-lo não expõe nad
 
 ### Atualizar o backend
 
+**v9.21.2 — CHÃO:** o Bloqueio da ficha de Ordem nunca fica abaixo de 0.
+**Só o site muda.** Site: `js/ordem/regras.js` e `js/versao.js`.
+
 **v9.21.1 — VÉU:** em Ordem e Ordem II, esconder os status dos jogadores
 esconde também classe, origem e NEX/nível no cartão. **Backend muda:** atualize
 `Campanhas.gs`, `Ordem.gs` e `Ordem2.gs` e crie uma nova versão da implantação.
@@ -2240,7 +2243,7 @@ Três números diferentes, que não se misturam:
 
 | | Onde | O que é |
 |---|---|---|
-| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v9.21.1 |
+| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v9.21.2 |
 | `schemaVersion` | `js/ficha.js` | o formato da FICHA |
 | `versaoFormato` | `js/config.js` | o formato dos arquivos de importação |
 
