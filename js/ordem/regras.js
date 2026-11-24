@@ -1293,8 +1293,10 @@
     parcelasDaPericia(c, "Fortitude", fortitude);
     somarAjustes(c, ficha, "bloqueio");
     somarExtra(c, ficha, "bloqueio", "Bônus extra de Bloqueio");
-    /* v9.21.2: o Bloqueio é RD — nunca negativo, mesmo com Fortitude −5. */
-    c.piso(0, "Mínimo (Bloqueio nunca fica negativo)");
+    /* v9.21.2: o Bloqueio é RD — nunca negativo, mesmo com Fortitude −5.
+       Só o total para no 0: as parcelas continuam as de verdade, sem
+       uma compensação inventada. */
+    if (c.total < 0) c.total = 0;
     c.pericia = fortitude.total;
     return c;
   }

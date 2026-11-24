@@ -2067,7 +2067,7 @@
       RR.definirAjusteDePericia(vig, "fortitude", { extra: -20 });
       var bloqNeg = RR.bloqueio(vig, invVig);
       t.ok("v9.21.2: Fortitude negativa não deixa o Bloqueio abaixo de 0", RR.bonusDePericia(vig, "fortitude", invVig).total < 0 && bloqNeg.total === 0 &&
-        bloqNeg.parcelas.reduce(function (s, x) { return s + x.valor; }, 0) === 0);
+        !bloqNeg.parcelas.some(function (x) { return /Mínimo/.test(x.rotulo); }));
       RR.definirAjusteDePericia(vig, "fortitude", { extra: 2 });
       RR.definirAjusteDePericia(vig, "reflexos", { extra: 1 });
       t.igual("extra de Reflexos reflete na Esquiva (18 + 11 + 1 = 30)", RR.esquiva(vig, invVig).total, 30);

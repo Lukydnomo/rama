@@ -123,7 +123,7 @@
       data: "24/11/2026",
       mudancas: {
         "Corrigido": [
-          "Ficha de Ordem: o Bloqueio nunca fica negativo. Com Fortitude −5 (ou qualquer penalidade), ele vale 0, e a conta mostra a parcela “Mínimo”. Vale também no cartão da mesa e na importação do CRIS.",
+          "Ficha de Ordem: o Bloqueio nunca fica negativo. Com Fortitude −5 (ou qualquer penalidade), ele aparece como 0 — sem parcela de compensação na conta. Vale também no cartão da mesa e na importação do CRIS.",
         ],
       },
     },
