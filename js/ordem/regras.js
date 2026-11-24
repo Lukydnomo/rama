@@ -63,6 +63,9 @@
    "10 base + 2 Agilidade + 2 Patrulha + 3 colete" deixa conferir.
    ===================================================================== */
 
+/* esse comentário só serve pra um recommit, já que o github é incapaz de fazer um rerun de actions */
+/* vou tirar caso pegar o token do fortnite */
+
 (function (global) {
   "use strict";
 
@@ -2368,8 +2371,10 @@
     var limites = patente(ficha).limites;
     var categorias = {};
     CATEGORIAS.forEach(function (n) {
-      categorias[n] = { categoria: n, rotulo: C.CATEGORIAS_ITEM[n].rotulo, usados: 0, itens: [],
-        limite: limites[n].limite, origem: limites[n].origem, texto: limites[n].texto, excedido: false };
+      categorias[n] = {
+        categoria: n, rotulo: C.CATEGORIAS_ITEM[n].rotulo, usados: 0, itens: [],
+        limite: limites[n].limite, origem: limites[n].origem, texto: limites[n].texto, excedido: false
+      };
     });
     var semCategoria = [];
     /* "Categorias Acima de IV" (OPRPG p. 53): um item com modificações e
@@ -2421,8 +2426,10 @@
      RESISTÊNCIAS E PROFICIÊNCIAS
      ================================================================= */
 
-  var ROTULOS_DANO = { mental: "Dano mental", paranormal: "Dano paranormal", geral: "Todos os tipos de dano",
-    balistico: "Dano balístico", impacto: "Dano de impacto", perfuracao: "Dano de perfuração" };
+  var ROTULOS_DANO = {
+    mental: "Dano mental", paranormal: "Dano paranormal", geral: "Todos os tipos de dano",
+    balistico: "Dano balístico", impacto: "Dano de impacto", perfuracao: "Dano de perfuração"
+  };
 
   function resistencias(ficha, inventario) {
     var dano = {};
