@@ -2228,7 +2228,9 @@ t.grupo("Cartões da mesa — o jogador vê os recursos, edita só os seus, e a 
   t.ok("com a ocultação, os recursos alheios NEM chegam (Ordem)", alheio.recursos === undefined && alheio.recursosVisiveis === false &&
     !JSON.stringify(alheio).includes("\"maximo\""));
   t.ok("  nem os status (universal)", cartao(doBeto, anaUniversal).status === undefined);
-  t.ok("  mas a identificação continua", alheio.nome === "Ana de Ordem" && !!alheio.ordem.classe);
+  t.ok("  o nome continua", alheio.nome === "Ana de Ordem");
+  t.ok("  mas classe, origem, trilha e NEX/nível também ficam com a mestra (v9.21.1)", !alheio.ordem.classe && !alheio.ordem.trilha &&
+    alheio.ordem.nex === null && alheio.ordem.nivel === null && alheio.classe === "" && alheio.origem === "");
   t.ok("  e o jogador continua vendo os próprios", Array.isArray(cartao(doBeto, betoOrdem).recursos) || cartao(doBeto, betoOrdem).detalhado);
   t.ok("a mestra continua vendo tudo", listaDo(mestra).every((p) => p.detalhado && p.recursosVisiveis));
 

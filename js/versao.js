@@ -118,6 +118,19 @@
 
   var CHANGELOG = [
     {
+      versao: "9.21.1",
+      codinome: "VÉU",
+      data: "24/11/2026",
+      mudancas: {
+        "Corrigido": [
+          "Campanhas de Ordem Paranormal (e Ordem II): com “Esconder status dos jogadores” ligado, o cartão dos personagens dos outros jogadores esconde também a classe, a origem, a trilha e o NEX (ou nível/estágio); em Ordem II, o perfil, a ocupação e o nível. Fica o nome, o jogador e o retrato. O mestre e o dono continuam vendo tudo.",
+        ],
+        "Técnico": [
+          "Atualizar Campanhas.gs, Ordem.gs e Ordem2.gs e criar nova versão da implantação: quem não detalha o personagem nem recebe esses campos. js/campanha-painel.js não monta a progressão quando os status estão escondidos. Teste no backend.",
+        ],
+      },
+    },
+    {
       versao: "9.21.0",
       codinome: "GRAMÁTICA",
       data: "22/11/2026",

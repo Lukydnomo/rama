@@ -792,6 +792,12 @@ function acaoListarPersonagensCampanha(corpo, usuario) {
       if (modulo && modulo.painel && (!modulo.projecaoDoSistema || modulo.projecaoDoSistema(proj))) {
         Object.assign(saida, modulo.painel(proj, { detalhado: detalhado, recursosVisiveis: recursosVisiveis }));
       }
+      /* v9.21.1: em Ordem e Ordem II, "Esconder status dos jogadores"
+         esconde também a classe e a origem do cartão. */
+      if (!recursosVisiveis && (saida.tipoFicha === 'ordem' || saida.tipoFicha === 'ordem2')) {
+        saida.classe = '';
+        saida.origem = '';
+      }
       return saida;
     })
     .sort(function (a, b) { return String(a.nome).localeCompare(String(b.nome), 'pt-BR'); });

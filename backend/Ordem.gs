@@ -279,7 +279,12 @@ function painelDeOrdem(proj, o) {
     saida.resumoRecursos = normalizarResumoRecursos(proj.resumoRecursos);
     return saida;
   }
-  saida.ordem = ordemPublicaParaPainel(proj.ordem);
+  /* v9.21.1: com "Esconder status dos jogadores", a classe, a trilha e
+     o NEX (ou nível/estágio) também ficam com o mestre — nem chegam ao
+     navegador de quem não detalha. */
+  saida.ordem = o.recursosVisiveis
+    ? ordemPublicaParaPainel(proj.ordem)
+    : { classe: '', trilha: '', nex: null, nivel: null, estagio: null, opcionais: { nexExperiencia: false } };
   if (o.recursosVisiveis) {
     var resumidos = recursosResumidos(proj);
     saida.recursos = resumidos || [];

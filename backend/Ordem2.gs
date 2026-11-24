@@ -46,7 +46,8 @@ function sistemaOrdem2() {
     painel: function (proj, o) {
       var x = proj.ordem2;
       if (o.recursosVisiveis) return { ordem2: x };
-      return { ordem2: { perfilRegras: x.perfilRegras, perfil: x.perfil, perfilNome: x.perfilNome, ocupacao: x.ocupacao, nivel: x.nivel } };
+      /* v9.21.1: escondido, nem perfil, ocupação e nível vão. */
+      return { ordem2: { perfilRegras: x.perfilRegras } };
     },
     estadoDasMecanicas: { mesaOrdem2: ordem2TemMesa },
   };

@@ -296,6 +296,10 @@
     var bruto = p.ordem && typeof p.ordem === "object" ? p.ordem : {};
     if (!R()) return base;
 
+    /* v9.21.1: com "Esconder status dos jogadores", quem não detalha não
+       vê classe, trilha nem NEX/nível (o servidor nem manda) — e o cartão
+       não inventa o NEX padrão da ficha normalizada. */
+    if (!base.detalhado && p.recursosVisiveis === false) return base;
     var o = R().normalizar(bruto);
     var classe = nomeDoCatalogo(C() && C().CLASSES, o.classe);
     var trilha = nomeDoCatalogo(C() && C().TRILHAS, o.trilha);
