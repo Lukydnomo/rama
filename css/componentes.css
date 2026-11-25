@@ -975,7 +975,10 @@
 
 .r-dados {
   display: grid;
-  grid-template-columns: auto 1fr;
+  /* v9.21.3: o rótulo ocupa no máximo 45% (quebra por palavras); o valor
+     fica com o resto. Com "auto", um rótulo longo espremia o valor numa
+     coluna de uma palavra por linha. */
+  grid-template-columns: fit-content(45%) minmax(0, 1fr);
   gap: var(--e1) var(--e4);
   align-items: baseline;
 }
@@ -1118,7 +1121,7 @@
   color: var(--cor-texto);
   letter-spacing: var(--espaco-letra);
   min-width: 0;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 
 .item__descricao {
@@ -1126,7 +1129,7 @@
   font-size: var(--texto-base);
   line-height: var(--altura-linha);
   white-space: pre-wrap;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 
 .item__acoes {
@@ -1295,7 +1298,7 @@
 .recolhivel__cabeca .recolhivel__titulo {
   flex: none;
   white-space: normal;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
   font-size: calc(var(--texto-base) * 1.15);
   line-height: 1.3;
 }
@@ -1355,7 +1358,7 @@
   line-height: 1.5;
   letter-spacing: var(--espaco-letra-titulo);
   text-transform: uppercase;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
   border-radius: 2px;
 }
 
@@ -1642,9 +1645,9 @@
 .suplemento:not(.suplemento--ligado) .suplemento__capa { filter: grayscale(.85); opacity: .55; }
 .suplemento__capa { grid-area: capa; --capa-largura: calc(46px * var(--escala)); aspect-ratio: 1210 / 1623; }
 .suplemento__textos { grid-area: textos; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.suplemento__nome { font-weight: 700; overflow-wrap: anywhere; }
-.suplemento__descricao { font-size: var(--texto-mini); color: var(--cor-texto-2); overflow-wrap: anywhere; }
-.suplemento__nota { font-size: var(--texto-mini); color: var(--cor-aviso); overflow-wrap: anywhere; }
+.suplemento__nome { font-weight: 700; overflow-wrap: break-word; }
+.suplemento__descricao { font-size: var(--texto-mini); color: var(--cor-texto-2); overflow-wrap: break-word; }
+.suplemento__nota { font-size: var(--texto-mini); color: var(--cor-aviso); overflow-wrap: break-word; }
 
 /* O switch: forma além de cor (a bola muda de lado) e o texto. */
 .suplemento__switch {
@@ -1999,7 +2002,7 @@
   font-family: var(--fonte-mini);
   font-size: var(--texto-mini);
   color: var(--cor-texto-3);
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 
 /* O ícone: a mesma tela quadrada para base, camadas e máscara. As
@@ -2077,7 +2080,7 @@
 }
 
 .efeitos-item__nome { font-weight: 700; }
-.efeitos-item__texto { color: var(--cor-texto-2); overflow-wrap: anywhere; }
+.efeitos-item__texto { color: var(--cor-texto-2); overflow-wrap: break-word; }
 
 .efeitos-abas { flex-wrap: wrap; }
 
@@ -2176,7 +2179,7 @@
   background: var(--fundo-superficie);
   border-left: 3px solid var(--cor-paranormal);
 }
-.bib-aquisicao__titulo { overflow-wrap: anywhere; margin: 0; }
+.bib-aquisicao__titulo { overflow-wrap: break-word; margin: 0; }
 .bib-aquisicao__lista {
   list-style: none;
   margin: 0;
@@ -2348,32 +2351,30 @@
   gap: var(--e2);
 }
 
+/* v9.21.3: em linha que QUEBRA, não em grade com coluna que encolhe. A
+   grade antiga mudava só pela largura da TELA: numa janela estreita com
+   tela larga, o nome ficava com quase 0 px e saía uma letra por linha.
+   Agora cada parte tem um mínimo; faltou espaço, ela desce de linha. */
 .criacao-atributo {
-  display: grid;
-  grid-template-columns: 3rem minmax(0, 1fr) auto minmax(0, 9rem);
-  gap: var(--e2);
+  display: flex;
+  flex-wrap: wrap;
   align-items: center;
+  gap: var(--e1) var(--e2);
 }
 
 .criacao-atributo__sigla {
+  flex: 0 0 3rem;
   font-weight: 700;
   letter-spacing: var(--espaco-letra-titulo);
 }
 
 .criacao-atributo__nome {
+  flex: 1 1 7rem;
   color: var(--cor-texto-2);
-  min-width: 0;
 }
 
-@media (max-width: 560px) {
-  .criacao-atributo {
-    grid-template-columns: 3rem minmax(0, 1fr) auto;
-  }
-
-  .criacao-atributo>.t-mini {
-    grid-column: 2 / -1;
-  }
-}
+.criacao-atributo > .r-passo { flex: 0 0 auto; }
+.criacao-atributo > .t-mini { flex: 1 1 9rem; }
 
 .criacao-lista {
   display: grid;
@@ -2414,7 +2415,7 @@
   font-family: var(--fonte-mini);
   font-size: var(--texto-mini);
   color: var(--cor-texto-3);
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 
 .criacao-opcao__meta {
@@ -2724,7 +2725,7 @@
 .bib-item__nome {
   font-weight: 700;
   color: var(--cor-texto);
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 
 .bib-item__classe {
@@ -3391,7 +3392,7 @@ html.arrastando * {
   text-transform: uppercase;
   color: var(--cor-texto-3);
 }
-.ritual-conjuracao dd { margin: 0; color: var(--cor-texto); font-weight: 600; overflow-wrap: anywhere; }
+.ritual-conjuracao dd { margin: 0; color: var(--cor-texto); font-weight: 600; overflow-wrap: break-word; }
 
 /* O texto de leitura: fonte do corpo, linha folgada, largura de leitura. */
 .ritual-texto {
@@ -3399,7 +3400,7 @@ html.arrastando * {
   font-size: var(--texto-base);
   line-height: 1.6;
   color: var(--cor-texto);
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 .ritual-texto > * { margin: 0; }
 .ritual-texto > * + * { margin-top: var(--e2); }
@@ -3520,7 +3521,7 @@ html.arrastando * {
 }
 .editor-imagem__miniatura--circulo { border-radius: 50%; }
 
-.editor-imagem__info { color: var(--cor-texto-3); overflow-wrap: anywhere; }
+.editor-imagem__info { color: var(--cor-texto-3); overflow-wrap: break-word; }
 .editor-imagem__aviso { color: var(--cor-aviso); }
 .editor-imagem__acoes { display: flex; flex-wrap: wrap; gap: var(--e1); }
 
@@ -3598,7 +3599,7 @@ html.arrastando * {
 
 .criatura-painel .painel-numero { display: flex; flex-direction: column; gap: var(--e1); min-width: 0; }
 .criatura-painel__topo { display: flex; align-items: center; gap: var(--e2); flex-wrap: wrap; }
-.criatura-painel__topo .t-secao { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
+.criatura-painel__topo .t-secao { flex: 1 1 auto; min-width: 0; overflow-wrap: break-word; }
 .criatura-linha { color: var(--cor-texto-2); }
 .criatura-elementos { flex-wrap: wrap; gap: var(--e1); }
 
@@ -3618,7 +3619,7 @@ html.arrastando * {
 .criatura-corpo { display: block; max-width: 100%; max-height: 75vh; height: auto; object-fit: contain; }
 
 .criatura-dados { grid-template-columns: minmax(7em, auto) 1fr; }
-.criatura-dados dd { display: flex; flex-wrap: wrap; align-items: center; gap: var(--e1); min-width: 0; overflow-wrap: anywhere; }
+.criatura-dados dd { display: flex; flex-wrap: wrap; align-items: center; gap: var(--e1); min-width: 0; overflow-wrap: break-word; }
 .criatura-dados .faixa { flex-wrap: wrap; gap: var(--e1); }
 .criatura-rolar { font-variant-numeric: tabular-nums; text-transform: none; }
 .criatura-valor--na, .criatura-valor--nd { color: var(--cor-texto-3); }
@@ -3681,7 +3682,7 @@ html.arrastando * {
 .cris-tabela th[scope="row"] { width: 22%; }
 .cris-tabela td:nth-child(2),
 .cris-tabela td:nth-child(3),
-.cris-tabela td:nth-child(4) { width: 13%; overflow-wrap: anywhere; }
+.cris-tabela td:nth-child(4) { width: 13%; overflow-wrap: break-word; }
 .cris-tabela td:nth-child(5) { width: 11%; }
 .cris-tabela td:nth-child(6) { width: 28%; }
 .cris-tabela__igual { color: var(--cor-texto-3); }
@@ -3754,7 +3755,7 @@ html.arrastando * {
 .cris-entrada.cris-estado--conflito,
 .cris-entrada.cris-estado--voltou { border-left-color: var(--cor-erro); }
 .cris-entrada__topo { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: var(--e1) var(--e2); }
-.cris-entrada__nome { margin: 0; font-size: 0.9375rem; overflow-wrap: anywhere; }
+.cris-entrada__nome { margin: 0; font-size: 0.9375rem; overflow-wrap: break-word; }
 .cris-estado { display: inline-block; padding: 0 var(--e1); border: 1px solid currentColor; font-size: 0.75rem; white-space: nowrap; }
 .cris-estado.cris-estado--conferida { color: var(--cor-ok); }
 .cris-estado.cris-estado--sugerido { color: var(--cor-texto-2); }
@@ -3765,7 +3766,7 @@ html.arrastando * {
 .cris-antes-depois { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: var(--e2); align-items: start; }
 .cris-lado { min-width: 0; }
 .cris-lado__rotulo { display: block; font-size: 0.6875rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--cor-texto-3); margin: 0; }
-.cris-lado__valor { margin: 0; overflow-wrap: anywhere; white-space: pre-line; }
+.cris-lado__valor { margin: 0; overflow-wrap: break-word; white-space: pre-line; }
 .cris-lado--cris .cris-lado__valor { color: var(--cor-texto-2); }
 .cris-lado__destino { margin: var(--e1) 0 0; color: var(--cor-texto-3); }
 .cris-seta { color: var(--cor-texto-3); padding-top: 1.1em; }
@@ -3805,11 +3806,11 @@ html.arrastando * {
 /* Reconstrução da progressão (v9.16): a visão por etapa, a linha de
    resumo de cada entrada e o detalhe de cada opção. Estado sempre
    escrito; a cor só acompanha. */
-.cris-resumo-linha { margin: 0; color: var(--cor-texto-2); overflow-wrap: anywhere; }
+.cris-resumo-linha { margin: 0; color: var(--cor-texto-2); overflow-wrap: break-word; }
 .cris-check__detalhe { color: var(--cor-texto-3); }
 .cris-etapas { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; max-height: 24rem; overflow-y: auto; }
 .cris-etapa { display: grid; grid-template-columns: minmax(10rem, 1.2fr) minmax(0, 1.5fr) auto; gap: var(--e2); align-items: baseline; padding: var(--e1) 0; border-bottom: 1px solid var(--cor-traco-fraca); }
-.cris-etapa__oque { color: var(--cor-texto-2); overflow-wrap: anywhere; font-size: 0.875rem; }
+.cris-etapa__oque { color: var(--cor-texto-2); overflow-wrap: break-word; font-size: 0.875rem; }
 .cris-proc-extra { padding-left: 1.6em; }
 
 /* Aba Progressão (v9.16): etapas do histórico importado e aquisições
@@ -3817,7 +3818,7 @@ html.arrastando * {
 .ordem-historicos { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
 .ordem-historico { display: grid; grid-template-columns: minmax(9rem, 1fr) minmax(0, 1.4fr) auto; gap: 2px var(--e2); align-items: baseline; padding: var(--e1) 0; border-bottom: 1px solid var(--cor-traco-fraca); }
 .ordem-historico__etapa { font-weight: 600; font-size: 0.875rem; }
-.ordem-historico__oque { color: var(--cor-texto-2); font-size: 0.875rem; overflow-wrap: anywhere; }
+.ordem-historico__oque { color: var(--cor-texto-2); font-size: 0.875rem; overflow-wrap: break-word; }
 .ordem-historico__motivo, .ordem-historico__acoes { grid-column: 1 / -1; }
 .ordem-historico__acoes { gap: var(--e1); }
 @media (max-width: 640px) {
@@ -3883,7 +3884,7 @@ html.arrastando * {
 .tema-opcao__escolha { display: flex; align-items: center; gap: var(--e2); flex: 1 1 220px; min-width: 0; cursor: pointer; }
 .tema-opcao__escolha input { flex: 0 0 auto; width: 18px; height: 18px; accent-color: var(--cor-texto); }
 .tema-opcao__textos { display: flex; flex-direction: column; min-width: 0; }
-.tema-opcao__nome { color: var(--cor-texto); overflow-wrap: anywhere; }
+.tema-opcao__nome { color: var(--cor-texto); overflow-wrap: break-word; }
 .tema-opcao__descricao { color: var(--cor-texto-3); font-size: var(--texto-mini); font-family: var(--fonte-mini); }
 .tema-opcao__acoes { display: flex; gap: var(--e1); flex-wrap: wrap; }
 
@@ -3892,7 +3893,7 @@ html.arrastando * {
 .r-botao .tema-amostras__cor { width: 12px; height: 12px; border: var(--borda) solid var(--cor-contorno-cor); }
 
 .tema-personalizar { display: flex; flex-direction: column; gap: var(--e3); }
-.tema-personalizar__titulo { margin: 0; overflow-wrap: anywhere; }
+.tema-personalizar__titulo { margin: 0; overflow-wrap: break-word; }
 .tema-personalizar__topo { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: var(--e3); }
 .tema-categorias { display: flex; flex-direction: column; gap: var(--e2); }
 .tema-categoria .recolhivel__corpo { display: flex; flex-direction: column; gap: var(--e3); }
@@ -3976,7 +3977,7 @@ html.arrastando * {
 /* Recompensas do Perfil (v2.40). */
 .recompensas-lista { display: grid; gap: var(--e2); grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); margin: 0; padding: 0; list-style: none; }
 .recompensas-item { display: flex; align-items: center; gap: var(--e2); padding: var(--e2); border: var(--borda) solid var(--cor-traco-fraca); background: var(--fundo-superficie); min-width: 0; }
-.recompensas-item__textos { display: flex; flex-direction: column; gap: 2px; min-width: 0; overflow-wrap: anywhere; }
+.recompensas-item__textos { display: flex; flex-direction: column; gap: 2px; min-width: 0; overflow-wrap: break-word; }
 .recompensa-previa { display: flex; flex-wrap: wrap; align-items: center; gap: var(--e3); }
 .recompensa-previa .rolagem { flex: 1 1 240px; max-width: 320px; animation: none; box-shadow: none; }
 .tema-previa .r-entrada { pointer-events: none; }
@@ -4161,7 +4162,7 @@ html.arrastando * {
 .catalogo-categorias { flex-wrap: wrap; overflow-x: visible; margin: 0; row-gap: var(--e1); }
 .catalogo-categorias > .r-aba { white-space: nowrap; }
 .catalogo-ficha { min-width: 0; }
-.catalogo-texto { margin: 0; color: var(--cor-texto); overflow-wrap: anywhere; }
+.catalogo-texto { margin: 0; color: var(--cor-texto); overflow-wrap: break-word; }
 .catalogo-texto--longo { white-space: pre-wrap; }
 .catalogo-dados { margin: 0; }
 .catalogo-lista { margin: 0; padding-left: var(--e4); display: flex; flex-direction: column; gap: var(--e1); }
@@ -4213,7 +4214,7 @@ html.arrastando * {
   letter-spacing: var(--espaco-letra-titulo);
   text-transform: uppercase;
   line-height: 1.25;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 .estante-sistemas__marca {
   font-family: var(--fonte-mini);
@@ -4283,9 +4284,9 @@ html.arrastando * {
   background: var(--fundo-superficie);
 }
 .acesso-previa__titulo { margin: 0; font-weight: 700; }
-.acesso-previa__lista { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--e1) var(--e3); margin: 0; }
+.acesso-previa__lista { display: grid; grid-template-columns: fit-content(45%) minmax(0, 1fr); gap: var(--e1) var(--e3); margin: 0; }
 .acesso-previa__lista dt { margin: 0; }
-.acesso-previa__valor { margin: 0; overflow-wrap: anywhere; }
+.acesso-previa__valor { margin: 0; overflow-wrap: break-word; }
 .acesso-previa__senha { font-family: var(--fonte-mini); }
 @media (max-width: 720px) {
   .acesso-grade { grid-template-columns: minmax(0, 1fr); }
@@ -4322,7 +4323,7 @@ html.arrastando * {
   text-transform: uppercase;
   color: var(--cor-texto-3);
 }
-.ficha-destaque__valor { font-weight: 700; font-size: var(--texto-medio, 1.05rem); line-height: 1.15; overflow-wrap: anywhere; }
+.ficha-destaque__valor { font-weight: 700; font-size: var(--texto-medio, 1.05rem); line-height: 1.15; overflow-wrap: break-word; }
 .ficha-colunas {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 330px), 1fr));

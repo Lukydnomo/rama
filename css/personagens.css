@@ -129,7 +129,7 @@ html.arrastando .pasta-lateral--nova { opacity: .5; }
   border-bottom: var(--borda) solid var(--cor-traco-fraca);
 }
 .pp-conteudo__titulo { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--e1) var(--e2); min-width: 0; }
-.pp-conteudo__titulo .t-secao { margin: 0; overflow-wrap: anywhere; }
+.pp-conteudo__titulo .t-secao { margin: 0; overflow-wrap: break-word; }
 .pp-conteudo__titulo .t-mini { color: var(--cor-texto-3); }
 
 /* A lista da pasta nova entra com fade curto e 4 px; nada bloqueia. */

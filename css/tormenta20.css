@@ -25,17 +25,17 @@
 .t20-aba { display: flex; flex-direction: column; gap: var(--e4); min-width: 0; }
 .t20-colunas { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr)); gap: var(--e4); align-items: start; }
 .t20-lista { margin: 0; padding-left: var(--e4); display: flex; flex-direction: column; gap: var(--e1); min-width: 0; }
-.t20-lista > li { overflow-wrap: anywhere; }
+.t20-lista > li { overflow-wrap: break-word; }
 .t20-fonte { font-size: var(--texto-mini); color: var(--cor-texto-2); }
 .t20-link { background: none; border: 0; padding: 0; font: inherit; color: var(--cor-link); cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
 .t20-indisponivel { color: var(--cor-texto-3); }
 .t20-num { font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
 .t20-legenda { margin: 0; font-size: var(--texto-mini); color: var(--cor-texto-2); }
 .t20-erros { color: var(--cor-erro); margin: 0; padding-left: var(--e4); }
-.t20-pares { margin: 0; display: grid; grid-template-columns: max-content 1fr; gap: var(--e1) var(--e3); }
+.t20-pares { margin: 0; display: grid; grid-template-columns: fit-content(45%) minmax(0, 1fr); gap: var(--e1) var(--e3); }
 .t20-pares > div { display: contents; }
 .t20-pares dt { color: var(--cor-texto-2); font-size: var(--texto-mini); }
-.t20-pares dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+.t20-pares dd { margin: 0; min-width: 0; overflow-wrap: break-word; }
 .t20-pares--linha { display: flex; flex-wrap: wrap; gap: var(--e1) var(--e4); }
 .t20-pares--linha > div { display: flex; flex-direction: column; }
 .t20-pendencias {
@@ -154,7 +154,7 @@
 }
 .t20-cab__dados > div { display: flex; flex-direction: column-reverse; min-width: 0; border-bottom: 1px solid var(--cor-traco-media); padding-bottom: 2px; }
 .t20-cab__dados dt { font-size: var(--texto-mini); color: var(--cor-texto-2); text-transform: uppercase; letter-spacing: var(--espaco-letra); }
-.t20-cab__dados dd { margin: 0; overflow-wrap: anywhere; }
+.t20-cab__dados dd { margin: 0; overflow-wrap: break-word; }
 .t20-cab__xp { display: grid; grid-template-columns: auto auto minmax(4rem, 1fr); align-items: center; gap: var(--e1) var(--e3); }
 .t20-cab__marca { flex: none; opacity: .9; }
 .t20-estados { margin: 0; display: flex; flex-wrap: wrap; gap: var(--e1); }
@@ -258,7 +258,7 @@
   padding: var(--e1) 0; border-bottom: 1px solid var(--cor-traco-fraca);
 }
 .t20-linhas > li:last-child { border-bottom: 0; }
-.t20-linhas__principal { min-width: 0; overflow-wrap: anywhere; }
+.t20-linhas__principal { min-width: 0; overflow-wrap: break-word; }
 .t20-linhas__texto { grid-column: 1 / -1; margin: 0; font-size: var(--texto-mini); color: var(--cor-texto-2); }
 .t20-situacoes { border: 0; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: var(--e1) var(--e3); min-width: 0; }
 fieldset.t20-situacoes { border: var(--borda) solid var(--cor-traco-fraca); padding: var(--e2); }
@@ -279,7 +279,7 @@ fieldset.t20-situacoes { border: var(--borda) solid var(--cor-traco-fraca); padd
 .t20-per--treinada .t20-per__marca::before { content: "●"; color: var(--cor-aviso); }
 .t20-per__nome {
   background: none; border: 0; padding: var(--e1) 0; text-align: left;
-  font: inherit; color: var(--cor-texto); cursor: pointer; min-width: 0; overflow-wrap: anywhere;
+  font: inherit; color: var(--cor-texto); cursor: pointer; min-width: 0; overflow-wrap: break-word;
 }
 .t20-per__nome:hover { color: var(--cor-vida); text-decoration: underline; text-underline-offset: 2px; }
 .t20-per__nome:focus-visible { outline: 2px solid var(--cor-foco); outline-offset: 2px; }

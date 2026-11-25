@@ -941,6 +941,10 @@ segredo nenhum — ele os lê das Script Properties. Publicá-lo não expõe nad
 
 ### Atualizar o backend
 
+**v9.21.3 — RESPIRO:** texto não fica mais espremido em uma letra por linha;
+listas de rótulo e valor dividem melhor a largura. **Só o site muda.** Site:
+as folhas em `css/` e `css/modern20/componentes.css`, e `js/versao.js`.
+
 **v9.21.2 — CHÃO:** o Bloqueio da ficha de Ordem nunca fica abaixo de 0.
 **Só o site muda.** Site: `js/ordem/regras.js` e `js/versao.js`.
 
@@ -2243,7 +2247,7 @@ Três números diferentes, que não se misturam:
 
 | | Onde | O que é |
 |---|---|---|
-| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v9.21.2 |
+| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v9.21.3 |
 | `schemaVersion` | `js/ficha.js` | o formato da FICHA |
 | `versaoFormato` | `js/config.js` | o formato dos arquivos de importação |
 

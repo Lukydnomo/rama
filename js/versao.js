@@ -118,6 +118,21 @@
 
   var CHANGELOG = [
     {
+      versao: "9.21.3",
+      codinome: "RESPIRO",
+      data: "24/11/2026",
+      mudancas: {
+        "Corrigido": [
+          "Texto espremido em uma letra (ou uma palavra) por linha, no computador e no celular, dependendo do tamanho da tela: em todo o site, o texto não encolhe mais abaixo da maior palavra — o que não cabe desce de linha inteiro, e só uma palavra maior que o espaço todo é partida.",
+          "Listas de rótulo e valor (como “Itens por categoria (definidos pela mesa)” na ficha de Ordem, e os pares de Oblívio, Vampiro, Tormenta20, Ordem II e BRUTAL): o rótulo ocupa no máximo 45% da largura e quebra por palavras; o valor fica com o resto.",
+          "Atributos na criação de personagem de Ordem: sigla, nome, controle e dado descem de linha quando falta espaço, em vez de deixar o nome com largura zero.",
+        ],
+        "Técnico": [
+          "overflow-wrap: anywhere → break-word em todas as folhas (anywhere deixava o mínimo do texto em 1 caractere dentro de linhas flex e grades); r-dados e os pares com fit-content(45%) minmax(0, 1fr); .criacao-atributo em flex com quebra. O teste de tema impede a volta. Só o site muda.",
+        ],
+      },
+    },
+    {
       versao: "9.21.2",
       codinome: "CHÃO",
       data: "24/11/2026",

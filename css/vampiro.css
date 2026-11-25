@@ -37,7 +37,7 @@
   margin: 0;
 }
 .vamp-dl dt { color: var(--cor-texto-2); font-size: var(--texto-mini); }
-.vamp-dl dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+.vamp-dl dd { margin: 0; min-width: 0; overflow-wrap: break-word; }
 
 /* ---------- pontos ---------- */
 
@@ -122,7 +122,7 @@
 .vamp-bloco__estado { margin: 0; display: flex; flex-wrap: wrap; gap: var(--e1); }
 .vamp-bloco__trilhas {
   display: grid;
-  grid-template-columns: max-content minmax(0, 1fr);
+  grid-template-columns: fit-content(45%) minmax(0, 1fr);
   gap: var(--e1) var(--e2);
   align-items: center;
   margin: 0;
@@ -351,7 +351,7 @@ button.vamp-dado:focus-visible { outline: 3px solid var(--cor-foco); outline-off
 .vamp-cronica { min-width: 0; }
 .vamp-mapa { margin: 0; padding-left: var(--e3); display: flex; flex-direction: column; gap: var(--e2); }
 .vamp-mapa ul { margin: var(--e1) 0 0; padding-left: var(--e4); display: flex; flex-direction: column; gap: var(--e1); }
-.vamp-mapa li { overflow-wrap: anywhere; }
+.vamp-mapa li { overflow-wrap: break-word; }
 .vamp-registro { margin: 0; padding-left: var(--e4); font-size: var(--texto-mini); color: var(--cor-texto-2); display: flex; flex-direction: column; gap: 2px; }
 .vamp-cronica-acao { border-top: 1px solid var(--cor-traco-fraca); padding-top: var(--e2); }
 

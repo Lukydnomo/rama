@@ -614,7 +614,7 @@ button.mesa-recurso__valor { cursor: text; }
 }
 
 .combate-turno-imagem__vez { font-size: var(--texto-mini); color: var(--cor-texto-3); text-transform: uppercase; letter-spacing: var(--espaco-letra-titulo); }
-.combate-turno-imagem__nome { font-weight: 700; overflow-wrap: anywhere; }
+.combate-turno-imagem__nome { font-weight: 700; overflow-wrap: break-word; }
 .combate-turno-imagem--vazio { display: grid; place-items: center; min-height: 10rem; text-align: center; }
 
 .combate-controles__vida { font-size: var(--texto-mini); }
@@ -893,7 +893,7 @@ button.combate-linha__nome[aria-pressed="true"] { text-decoration-color: var(--c
   padding: var(--e1) 0;
   border-bottom: var(--borda) solid var(--cor-traco-fraca);
 }
-.hx-participante > .pilha { min-width: 0; overflow-wrap: anywhere; }
+.hx-participante > .pilha { min-width: 0; overflow-wrap: break-word; }
 
 /* ---------- Hacking (v2.38, Arquivos Secretos 4) ---------- */
 .hk-ps {
@@ -912,6 +912,6 @@ button.combate-linha__nome[aria-pressed="true"] { text-decoration-color: var(--c
   padding: var(--e1) 0;
   border-bottom: var(--borda) solid var(--cor-traco-fraca);
   min-width: 0;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 .hk-agente .faixa { flex-wrap: wrap; }

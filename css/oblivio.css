@@ -196,7 +196,7 @@ button.oblivio-corpo__regiao:disabled { cursor: not-allowed; opacity: 0.6; }
 .oblivio-composicao,
 .oblivio-mutaveis {
   display: grid;
-  grid-template-columns: max-content minmax(0, 1fr);
+  grid-template-columns: fit-content(45%) minmax(0, 1fr);
   gap: var(--e1) var(--e3);
   margin: 0;
 }

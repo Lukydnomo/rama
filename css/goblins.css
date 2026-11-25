@@ -197,7 +197,7 @@ button.gob-atributo__nome:focus-visible { outline: 2px solid var(--cor-foco); ou
   gap: var(--e1);
   min-width: 0;
 }
-.gob-item p { margin: 0; overflow-wrap: anywhere; }
+.gob-item p { margin: 0; overflow-wrap: break-word; }
 .gob-item__topo { display: flex; flex-wrap: wrap; gap: var(--e1) var(--e2); align-items: center; }
 .gob-item__nome { font-weight: 700; }
 .gob-item__texto { color: var(--cor-texto-2); }
@@ -306,7 +306,7 @@ button.gob-dado:disabled { cursor: default; }
   gap: var(--e1);
   min-width: 0;
 }
-.gob-participante p, .gob-sorteio-item p { margin: 0; overflow-wrap: anywhere; }
+.gob-participante p, .gob-sorteio-item p { margin: 0; overflow-wrap: break-word; }
 .gob-participante--vez { border-width: 2px; border-color: var(--cor-texto); }
 .gob-participante--goblin { border-left: 3px solid var(--cor-ok); }
 .gob-participante__topo { display: flex; flex-wrap: wrap; gap: var(--e1) var(--e2); align-items: center; }

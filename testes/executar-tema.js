@@ -938,6 +938,19 @@ t.grupo("Estilo da interface · as páginas e o isolamento das folhas");
     if (n) importantes.push(a + ": " + n);
   }
   t.ok("o Modern20 não usa !important", importantes.length === 0, importantes.join(", "));
+
+  /* v9.21.3: texto nunca encolhe a uma letra por linha. "anywhere" deixa
+     o mínimo do texto ser 1 caractere (e a coluna some numa linha flex);
+     o rótulo de r-dados não pode tomar a largura do valor. */
+  const todas = [];
+  for await (const e of Deno.readDir(new URL("../css/", import.meta.url))) if (e.name.endsWith(".css")) todas.push("../css/" + e.name);
+  for (const a of arquivos) todas.push("../css/modern20/" + a);
+  const quebraSolta = [];
+  for (const a of todas) if (/overflow-wrap:\s*anywhere|word-break:\s*break-all/.test(await Deno.readTextFile(new URL(a, import.meta.url)))) quebraSolta.push(a);
+  t.ok("nenhuma folha usa overflow-wrap: anywhere nem word-break: break-all", quebraSolta.length === 0, quebraSolta.join(", "));
+  const comp = await Deno.readTextFile(new URL("../css/componentes.css", import.meta.url));
+  t.ok("r-dados: o rótulo ocupa no máximo 45% e o valor fica com o resto", /\.r-dados \{[^}]*grid-template-columns: fit-content\(45%\) minmax\(0, 1fr\)/.test(comp));
+  t.ok("atributos da criação quebram de linha em vez de espremer o nome", /\.criacao-atributo \{[^}]*display: flex;[^}]*flex-wrap: wrap/.test(comp) && /\.criacao-atributo__nome \{[^}]*flex: 1 1 7rem/.test(comp));
 }
 
 t.grupo("Perfil (v8.2): uma seção por vez, teclado e movimento curto");

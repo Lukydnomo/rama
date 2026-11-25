@@ -200,7 +200,7 @@
 .brt-mesa__sob { border: 1px solid var(--cor-traco-media); border-top: 4px solid var(--brt-cor, #888); border-radius: var(--raio); padding: var(--e3); display: flex; flex-direction: column; gap: var(--e2); }
 .brt-mesa__sob--morta { opacity: .6; }
 .brt-mesa__sob-topo { display: flex; flex-wrap: wrap; gap: var(--e1) var(--e2); align-items: baseline; }
-.brt-mesa__sob-dados { display: grid; grid-template-columns: auto 1fr; gap: 2px var(--e2); margin: 0; font-size: var(--texto-mini); align-items: center; }
+.brt-mesa__sob-dados { display: grid; grid-template-columns: fit-content(45%) minmax(0, 1fr); gap: 2px var(--e2); margin: 0; font-size: var(--texto-mini); align-items: center; }
 .brt-mesa__sob-dados dt { font-weight: 700; }
 .brt-mesa__sob-dados dd { margin: 0; }
 .brt-mesa__sob-marcadores { display: flex; flex-wrap: wrap; gap: var(--e2); align-items: center; }

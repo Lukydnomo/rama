@@ -402,7 +402,7 @@
     padding: var(--e3) var(--e3) var(--e3) var(--e5);
     border-bottom: 1px solid var(--m20-borda);
   }
-  & .r-modal__topo .t-secao { font-size: calc(17px * var(--escala)); overflow-wrap: anywhere; }
+  & .r-modal__topo .t-secao { font-size: calc(17px * var(--escala)); overflow-wrap: break-word; }
   & .r-modal__corpo { padding: var(--e5); gap: var(--e4); }
   & .r-modal__rodape {
     padding: var(--e3) var(--e5);

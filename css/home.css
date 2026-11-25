@@ -118,7 +118,7 @@
 }
 .home-sistema .capa-sistema { --capa-largura: calc(64px * var(--escala)); }
 .home-sistema__textos { display: flex; flex-direction: column; gap: var(--e2); min-width: 0; }
-.home-sistema__nome { margin: 0; font-weight: 700; font-size: var(--texto-medio); letter-spacing: var(--espaco-letra-titulo); text-transform: uppercase; overflow-wrap: anywhere; }
+.home-sistema__nome { margin: 0; font-weight: 700; font-size: var(--texto-medio); letter-spacing: var(--espaco-letra-titulo); text-transform: uppercase; overflow-wrap: break-word; }
 .home-sistema__resumo { margin: 0; color: var(--cor-texto-2); line-height: var(--altura-linha); }
 .home-lista--mini li { font-size: var(--texto-mini); }
 .home-sistema__suplementos { margin: 0; display: flex; flex-direction: column; gap: var(--e1); }

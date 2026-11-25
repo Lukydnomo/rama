@@ -483,7 +483,7 @@ html.arrastando .pasta[data-arrastar-pasta] { border-style: dashed; border-color
   border-bottom: var(--borda) solid var(--cor-traco-fraca);
 }
 .pasta-aberta__titulo { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--e2); min-width: 0; }
-.pasta-aberta__titulo .t-secao { margin: 0; overflow-wrap: anywhere; }
+.pasta-aberta__titulo .t-secao { margin: 0; overflow-wrap: break-word; }
 .pasta-aberta__titulo .t-mini { color: var(--cor-texto-3); }
 
 .filtros--personagens .r-busca { flex: 1 1 260px; }
@@ -521,7 +521,7 @@ html.arrastando .pasta[data-arrastar-pasta] { border-style: dashed; border-color
   color: var(--cor-texto);
   text-align: left;
   cursor: pointer;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 .pasta-opcao:hover:not(:disabled) { border-color: var(--cor-traco-forte); }
 .pasta-opcao:disabled { color: var(--cor-texto-3); border-style: dashed; cursor: default; }
@@ -793,7 +793,7 @@ html.arrastando .pasta[data-arrastar-pasta] { border-style: dashed; border-color
   -webkit-box-orient: vertical;
   overflow: hidden;
   max-width: 100%;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
   font-family: var(--fonte-mini);
   font-size: var(--texto-mini);
   letter-spacing: var(--espaco-letra-titulo);
@@ -853,7 +853,7 @@ html.arrastando .soltos__titulo[data-arrastar-pasta] .soltos__soltar { display: 
   overflow: hidden;
   animation: pasta-abrir var(--tempo-medio) var(--curva);
 }
-.r-modal--pasta .r-modal__topo h2 { overflow-wrap: anywhere; }
+.r-modal--pasta .r-modal__topo h2 { overflow-wrap: break-word; }
 .pasta-expansao__resumo { margin: 0; color: var(--cor-texto-3); }
 .pasta-expansao__corpo { min-width: 0; }
 .r-fundo--saindo .r-modal--pasta { animation: pasta-fechar 160ms var(--curva) forwards; }
@@ -942,14 +942,14 @@ html[data-efeitos="off"] .r-modal--novidade .r-modal__rodape { animation: none !
   border-left: 3px solid var(--cor-traco-forte);
   background: var(--fundo-superficie-2);
 }
-.versao-novidade__numero { font-size: var(--texto-grande); line-height: 1.1; overflow-wrap: anywhere; }
+.versao-novidade__numero { font-size: var(--texto-grande); line-height: 1.1; overflow-wrap: break-word; }
 .versao-novidade__codinome {
   font-family: var(--fonte-mini);
   font-size: var(--texto-medio);
   font-weight: 700;
   letter-spacing: var(--espaco-letra-titulo);
   color: var(--cor-paranormal);
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 
 /* Histórico de versões: uma etiqueta por categoria, com a cor da natureza
