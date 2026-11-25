@@ -2401,3 +2401,30 @@ body.pagina-ficha--painel .ficha-topo__nome { font-size: var(--texto-medio); }
   .retratos__previa { flex-direction: column; }
   .retrato-mini--grande { width: 100%; max-width: 12rem; }
 }
+
+
+/* =====================================================================
+   CAMPOS PERSONALIZADOS DA FICHA DE ORDEM (v9.22.0)
+   ===================================================================== */
+.ordem-campos, .ordem-campos-edicao { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--e1); }
+.ordem-campo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--e1) var(--e2);
+  padding: var(--e1) 0;
+  border-bottom: var(--borda) solid var(--cor-traco-fraca);
+}
+.ordem-campo:last-child { border-bottom: 0; }
+.ordem-campo__nome { flex: 1 1 8rem; font-weight: 700; }
+.ordem-campo__valor { flex: 0 1 auto; color: var(--cor-texto-2); font-variant-numeric: tabular-nums; }
+.ordem-campo--anotacao { align-items: flex-start; flex-direction: column; }
+.ordem-campo__texto { margin: 0; white-space: pre-wrap; color: var(--cor-texto-2); }
+.ordem-campo__barra { flex: 1 1 100%; height: 6px; background: var(--cor-traco-fraca); overflow: hidden; }
+.ordem-campo__preenche { display: block; height: 100%; background: var(--cor-texto-2); transition: width var(--tempo-curto) var(--curva); }
+.ordem-campo-edicao { display: flex; flex-direction: column; gap: var(--e2); padding: var(--e2) 0; border-bottom: var(--borda) solid var(--cor-traco-fraca); }
+.ordem-campo-edicao__linha { display: flex; flex-wrap: wrap; gap: var(--e1) var(--e2); align-items: center; }
+.ordem-campo-edicao__nome { flex: 1 1 10rem; min-width: 0; }
+.ordem-campo-edicao__config { display: flex; flex-wrap: wrap; gap: var(--e2); }
+.ordem-campo__opcao { display: flex; flex-direction: column; gap: 2px; flex: 1 1 9rem; min-width: 0; }
+.ordem-campo__opcao--larga { flex-basis: 100%; }

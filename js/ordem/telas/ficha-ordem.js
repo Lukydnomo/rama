@@ -347,6 +347,7 @@
             painelAtaques(ctx, o),
             CS && SC && CS.ligada(o, "contagemMunicao") ? SC.painelMunicao(ctx) : null,
             painelPericiasRapidas(ctx, o),
+            painelCamposPersonalizados(ctx, o),
           ]),
         ]),
         el("section.ordem-personagem", { "aria-labelledby": "ordem-personagem-titulo" }, [
@@ -1757,6 +1758,217 @@
         return a ? R.atributo(o, a.chave) : undefined;
       },
     });
+  }
+
+  /* =================================================================
+     CAMPOS PERSONALIZADOS (v9.22.0)
+     -----------------------------------------------------------------
+     Embaixo das perícias, o que a mesa inventar: uma rolagem (qualquer
+     fórmula, com @AGI ou @Luta valendo o atributo ou o bônus da
+     perícia), um contador, um recurso com máximo, uma anotação ou um
+     marcador. Fora do modo edição, só se USA (rolar, contar, marcar);
+     criar, renomear, configurar, reordenar e apagar ficam na edição.
+     ================================================================= */
+
+  var TIPOS_CAMPO = [
+    { chave: "rolagem", nome: "Rolagem" },
+    { chave: "contador", nome: "Contador (só atual, ou atual/máximo)" },
+    { chave: "recurso", nome: "Recurso (atual/máximo)" },
+    { chave: "anotacao", nome: "Anotação" },
+    { chave: "marcador", nome: "Marcador" },
+  ];
+
+  /* @AGI, @Agilidade, @Luta, @{Profissão}…: o atributo efetivo ou o bônus
+     total da perícia, como entram nas rolagens da ficha. */
+  function valorDeReferenciaOrdem(ctx, o) {
+    return function (nome) {
+      var alvo = U.chaveDeBusca(nome);
+      var a = C.ATRIBUTOS.filter(function (x) { return U.chaveDeBusca(x.sigla) === alvo || U.chaveDeBusca(x.nome) === alvo; })[0];
+      if (a) return R.atributo(o, a.chave);
+      var p = C.PERICIAS.filter(function (x) { return U.chaveDeBusca(x.chave) === alvo || U.chaveDeBusca(x.nome) === alvo; })[0];
+      if (p) return R.bonusDePericia(o, p.chave, ctx.ficha.inventario).total;
+      return undefined;
+    };
+  }
+
+  function camposDe(o) {
+    if (!Array.isArray(o.camposPersonalizados)) o.camposPersonalizados = [];
+    return o.camposPersonalizados;
+  }
+
+  function rolarCampo(ctx, o, campo) {
+    var D = global.RAMADados;
+    if (!D || !global.RAMARolagens) return;
+    var nome = campo.nome || "Rolagem";
+    var r = D.formula({ nome: nome, formula: campo.formula, contagem: "soma", valorDe: valorDeReferenciaOrdem(ctx, o) });
+    if (!r.ok) { UI.avisoAtencao(nome + ": " + (r.mensagem || "a fórmula não pôde ser lida.")); return; }
+    global.RAMARolagens.mostrar(r, { nome: nome + " · " + r.expressao });
+  }
+
+  function usoDoCampo(ctx, o, campo) {
+    var rotulo = campo.nome || TIPOS_CAMPO.filter(function (t) { return t.chave === campo.tipo; })[0].nome;
+    if (campo.tipo === "rolagem") {
+      var previa = global.RAMADados ? global.RAMADados.previaDaFormula(campo.formula, valorDeReferenciaOrdem(ctx, o)) : null;
+      return el("li.ordem-campo.ordem-campo--rolagem", {}, [
+        el("span.ordem-campo__nome", { texto: rotulo }),
+        el("span.ordem-campo__valor.t-mini", { texto: !campo.formula ? "sem fórmula" : previa && previa.ok ? previa.texto : campo.formula, title: previa && !previa.ok ? previa.mensagem : campo.formula }),
+        el("button.r-icone", {
+          type: "button", disabled: !campo.formula || (previa && !previa.ok),
+          dataset: { foco: "campo-rolar-" + campo.id },
+          "aria-label": "Rolar " + rotulo + (campo.formula ? ", " + campo.formula : ""),
+          title: previa && !previa.ok ? previa.mensagem : "Rolar " + campo.formula,
+          onclick: function () { rolarCampo(ctx, o, campo); },
+        }, [UI.simbolo("dado", 16)]),
+      ]);
+    }
+    if (campo.tipo === "contador") {
+      var passo = UI.passo({
+        valor: campo.valor, minimo: campo.minimo === null || campo.minimo === undefined ? -99999 : campo.minimo,
+        maximo: campo.maximo === null || campo.maximo === undefined ? 99999 : campo.maximo,
+        rotulo: rotulo,
+        aoMudar: function (v) { campo.valor = v; ctx.alterou(); },
+      });
+      passo.classList.add("r-passo--mini");
+      return el("li.ordem-campo.ordem-campo--contador", {}, [
+        el("span.ordem-campo__nome", { texto: rotulo }),
+        campo.maximo !== null && campo.maximo !== undefined ? el("span.ordem-campo__valor.t-mini", { texto: "de " + campo.maximo }) : el("span.ordem-campo__valor"),
+        passo,
+      ]);
+    }
+    if (campo.tipo === "recurso") {
+      var barra = el("span.ordem-campo__preenche");
+      function pintarBarra() { barra.style.width = (campo.maximo ? Math.round((campo.valor / campo.maximo) * 100) : 0) + "%"; }
+      var passoR = UI.passo({
+        valor: campo.valor, minimo: 0, maximo: Math.max(0, campo.maximo || 0), rotulo: rotulo + " atual",
+        aoMudar: function (v) { campo.valor = v; pintarBarra(); ctx.alterou(); },
+      });
+      passoR.classList.add("r-passo--mini");
+      pintarBarra();
+      return el("li.ordem-campo.ordem-campo--recurso", {}, [
+        el("span.ordem-campo__nome", { texto: rotulo }),
+        el("span.ordem-campo__valor.t-mini", { texto: "de " + (campo.maximo || 0) }),
+        passoR,
+        el("span.ordem-campo__barra", { "aria-hidden": "true" }, [barra]),
+      ]);
+    }
+    if (campo.tipo === "anotacao") {
+      return el("li.ordem-campo.ordem-campo--anotacao", {}, [
+        el("span.ordem-campo__nome", { texto: rotulo }),
+        el("p.ordem-campo__texto", { texto: campo.texto || "—" }),
+      ]);
+    }
+    var id = "campo-marcador-" + campo.id;
+    return el("li.ordem-campo.ordem-campo--marcador", {}, [
+      el("label.r-marca", { for: id }, [
+        el("input", { id: id, type: "checkbox", checked: !!campo.marcado, dataset: { foco: id },
+          onchange: function (ev) { campo.marcado = ev.target.checked; ctx.alterou(); } }),
+        el("span", { texto: rotulo }),
+      ]),
+    ]);
+  }
+
+  function edicaoDoCampo(ctx, o, campo, i, total) {
+    var lista = camposDe(o);
+    function mudou(redesenhar) { ctx.alterou(); if (redesenhar) ctx.redesenhar(); }
+    function entrada(rotulo, valor, chave, atributos) {
+      return el("label.ordem-campo__opcao", {}, [
+        el("span.t-mini", { texto: rotulo }),
+        el("input.r-entrada", Object.assign({
+          value: valor === null || valor === undefined ? "" : String(valor),
+          dataset: { foco: "campo-" + chave + "-" + campo.id },
+          onchange: function (ev) {
+            var bruto = Object.assign({}, campo);
+            bruto[chave] = ev.target.value;
+            var limpo = R.normalizarCamposPersonalizados([bruto])[0];
+            Object.keys(limpo).forEach(function (k) { campo[k] = limpo[k]; });
+            mudou(chave !== "nome" && chave !== "formula" && chave !== "texto");
+          },
+        }, atributos || {})),
+      ]);
+    }
+    var tipo = el("select.r-selecao", {
+      "aria-label": "Tipo do campo",
+      dataset: { foco: "campo-tipo-" + campo.id },
+      onchange: function (ev) {
+        var novo = R.normalizarCamposPersonalizados([{ id: campo.id, nome: campo.nome, tipo: ev.target.value }])[0];
+        Object.keys(campo).forEach(function (k) { delete campo[k]; });
+        Object.assign(campo, novo);
+        mudou(true);
+      },
+    }, TIPOS_CAMPO.map(function (t) { return el("option", { value: t.chave, texto: t.nome, selected: t.chave === campo.tipo }); }));
+    var config = [];
+    if (campo.tipo === "rolagem") config.push(entrada("Fórmula (1d20+@AGI, 2d6!, 4d6d1…)", campo.formula, "formula", { type: "text", maxlength: 200, placeholder: "1d20 + @Luta" }));
+    if (campo.tipo === "contador") {
+      config.push(entrada("Mínimo (vazio: sem)", campo.minimo, "minimo", { type: "text", inputmode: "numeric" }));
+      config.push(entrada("Máximo (vazio: sem)", campo.maximo, "maximo", { type: "text", inputmode: "numeric" }));
+    }
+    if (campo.tipo === "recurso") config.push(entrada("Máximo", campo.maximo, "maximo", { type: "text", inputmode: "numeric" }));
+    if (campo.tipo === "anotacao") {
+      config.push(el("label.ordem-campo__opcao.ordem-campo__opcao--larga", {}, [
+        el("span.t-mini", { texto: "Texto" }),
+        el("textarea.r-area", { rows: 3, maxlength: 2000, dataset: { foco: "campo-texto-" + campo.id }, texto: campo.texto || "",
+          onchange: function (ev) { campo.texto = String(ev.target.value || "").slice(0, 2000); mudou(false); } }),
+      ]));
+    }
+    function mover(d) {
+      var j = i + d;
+      if (j < 0 || j >= lista.length) return;
+      lista.splice(j, 0, lista.splice(i, 1)[0]);
+      mudou(true);
+    }
+    return el("li.ordem-campo-edicao", {}, [
+      el("div.ordem-campo-edicao__linha", {}, [
+        el("input.r-entrada.ordem-campo-edicao__nome", {
+          value: campo.nome || "", maxlength: 60, placeholder: "Nome do campo", "aria-label": "Nome do campo",
+          dataset: { foco: "campo-nome-" + campo.id },
+          onchange: function (ev) { campo.nome = String(ev.target.value || "").trim().slice(0, 60); mudou(false); },
+        }),
+        tipo,
+        el("button.r-icone", { type: "button", "aria-label": "Subir " + (campo.nome || "campo"), title: "Subir", disabled: i === 0, onclick: function () { mover(-1); } }, [el("span", { "aria-hidden": "true", texto: "↑" })]),
+        el("button.r-icone", { type: "button", "aria-label": "Descer " + (campo.nome || "campo"), title: "Descer", disabled: i === total - 1, onclick: function () { mover(1); } }, [el("span", { "aria-hidden": "true", texto: "↓" })]),
+        el("button.r-icone", {
+          type: "button", "aria-label": "Apagar " + (campo.nome || "campo"), title: "Apagar",
+          onclick: function () {
+            UI.confirmar({ titulo: "Apagar campo", texto: "Apagar “" + (campo.nome || "campo sem nome") + "”? O valor guardado nele se perde.", rotuloConfirmar: "Apagar", perigo: true }).then(function (sim) {
+              if (!sim) return;
+              var k = lista.indexOf(campo);
+              if (k >= 0) lista.splice(k, 1);
+              mudou(true);
+            });
+          },
+        }, [UI.simbolo("x", 12)]),
+      ]),
+      config.length ? el("div.ordem-campo-edicao__config", {}, config) : null,
+    ]);
+  }
+
+  function painelCamposPersonalizados(ctx, o) {
+    var lista = camposDe(o);
+    var edicao = ctx.emEdicao();
+    if (!edicao && !lista.length) return null;
+    var corpo;
+    if (edicao) {
+      corpo = [
+        lista.length
+          ? el("ul.ordem-campos-edicao", { "aria-label": "Campos personalizados (edição)" }, lista.map(function (c, i) { return edicaoDoCampo(ctx, o, c, i, lista.length); }))
+          : el("p.t-mini", { texto: "Nenhum campo ainda. Crie rolagens, contadores, recursos, anotações ou marcadores que esta ficha precise." }),
+        el("div.faixa", {}, [
+          el("button.r-botao.r-botao--mini", {
+            type: "button", texto: "+ Campo", disabled: lista.length >= 30,
+            dataset: { foco: "campo-adicionar" },
+            onclick: function () {
+              lista.push(R.normalizarCamposPersonalizados([{ tipo: "rolagem", nome: "", formula: "1d20" }])[0]);
+              ctx.alterou();
+              ctx.redesenhar();
+            },
+          }),
+          el("span.t-mini", { texto: lista.length >= 30 ? "Até 30 campos." : "Fórmulas aceitam @AGI, @FOR… e o nome de uma perícia (@Luta)." }),
+        ]),
+      ];
+    } else {
+      corpo = [el("ul.ordem-campos", { "aria-label": "Campos personalizados" }, lista.map(function (c) { return usoDoCampo(ctx, o, c); }))];
+    }
+    return UI.painel("Campos personalizados", el("div.pilha--curta", { class: "pilha" }, corpo), { classe: "ordem-painel-campos" });
   }
 
   function painelDeCondicoes(ctx, o, c) {

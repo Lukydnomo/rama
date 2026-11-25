@@ -572,4 +572,10 @@
     transition: width var(--m20-mov-navegar) var(--m20-curva-mover), background var(--m20-mov-estado) var(--m20-curva-mover);
   }
   & .ordem-resumo__atual { border-radius: 4px; }
+
+  /* Campos personalizados (v9.22.0) */
+  & .ordem-campo { border-bottom-color: var(--m20-borda); }
+  & .ordem-campo__barra { border-radius: 999px; background: var(--m20-realce-forte); }
+  & .ordem-campo__preenche { border-radius: inherit; background: var(--cor-paranormal); }
+  & .ordem-campo-edicao { border-bottom-color: var(--m20-borda); }
 }

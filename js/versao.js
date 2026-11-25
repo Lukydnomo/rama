@@ -118,6 +118,19 @@
 
   var CHANGELOG = [
     {
+      versao: "9.22.0",
+      codinome: "ANEXO",
+      data: "24/11/2026",
+      mudancas: {
+        "Adicionado": [
+          "Ficha de Ordem: “Campos personalizados” embaixo das Perícias, na aba Geral. No modo edição, crie até 30 campos de cinco tipos — Rolagem (qualquer fórmula, como 1d20+@AGI ou 2d6+@Luta, com @ valendo o atributo ou o bônus da perícia), Contador (só o atual, ou o atual com um máximo), Recurso (atual e máximo, com barra), Anotação e Marcador —, dê nome, reordene e apague. Fora da edição é só usar: rolar, contar e marcar, e tudo fica salvo na ficha.",
+        ],
+        "Técnico": [
+          "ordem.camposPersonalizados, normalizado por RAMAOrdemRegras.normalizarCamposPersonalizados; js/ordem/telas/ficha-ordem.js (painelCamposPersonalizados), css/ficha.css e css/modern20/ficha.css. Documentado em docs/FICHA-ORDEM.md; testes em testes/casos.js. Só o site muda.",
+        ],
+      },
+    },
+    {
       versao: "9.21.3",
       codinome: "RESPIRO",
       data: "24/11/2026",

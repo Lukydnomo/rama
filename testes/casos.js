@@ -5121,6 +5121,29 @@
     t.ok("sem número, mantém um", sem.ok && sem.total === 4);
     t.ok("manter 0 é recusado com explicação", !D.formula({ formula: "3d20k0", contagem: "soma" }).ok);
 
+    t.grupo("v9.22.0 · campos personalizados da ficha de Ordem");
+    var RCP = global.RAMAOrdemRegras;
+    if (RCP && RCP.normalizarCamposPersonalizados) {
+      var cp = RCP.normalizarCamposPersonalizados([
+        { id: "a", tipo: "rolagem", nome: "Sorte", formula: "1d20+@AGI", valor: 9 },
+        { id: "b", tipo: "contador", nome: "Munição", valor: 12, maximo: "10" },
+        { id: "c", tipo: "contador", nome: "Pontos", valor: -3, minimo: "", maximo: "" },
+        { id: "d", tipo: "recurso", nome: "Fôlego", valor: 8, maximo: 5 },
+        { id: "e", tipo: "anotacao", texto: "linha 1\nlinha 2" },
+        { id: "f", tipo: "marcador", nome: "Inspirado", marcado: true },
+        { id: "g", tipo: "invalido" }, null,
+      ]);
+      t.igual("só os tipos conhecidos ficam (5 de 7)", cp.map(function (c) { return c.tipo; }).join(), "rolagem,contador,contador,recurso,anotacao,marcador");
+      t.ok("rolagem guarda só a fórmula (nada de valor solto)", cp[0].formula === "1d20+@AGI" && cp[0].valor === undefined);
+      t.ok("contador com máximo: o atual não passa dele (12 → 10)", cp[1].valor === 10 && cp[1].maximo === 10 && cp[1].minimo === null);
+      t.ok("contador sem limite: só o atual, pode ser negativo", cp[2].valor === -3 && cp[2].minimo === null && cp[2].maximo === null);
+      t.ok("recurso: atual entre 0 e o máximo (8 → 5)", cp[3].valor === 5 && cp[3].maximo === 5);
+      t.ok("anotação e marcador guardam texto e estado", cp[4].texto === "linha 1\nlinha 2" && cp[5].marcado === true);
+      t.ok("a ficha normalizada leva os campos (e uma ficha antiga começa sem nenhum)",
+        RCP.normalizar({ camposPersonalizados: [{ id: "x", tipo: "marcador", nome: "M" }] }).camposPersonalizados.length === 1 && RCP.normalizar({}).camposPersonalizados.length === 0);
+      t.ok("até 30 campos", RCP.normalizarCamposPersonalizados(Array.from({ length: 40 }, function (_, i) { return { id: "z" + i, tipo: "marcador" }; })).length === 30);
+    }
+
     t.grupo("v9.21.0 · a sintaxe do Rollem (v1 e as funções do v2)");
     function rola(f, seq) { return comDados(seq, function () { return D.formula({ formula: f, contagem: "soma" }); }); }
     var r1 = rola("4d6d1", [3, 1, 5, 6]);

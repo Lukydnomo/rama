@@ -266,6 +266,9 @@
 
       /* --- temporário: fica até alguém tirar --- */
       temporarios: { pv: 0, pe: 0, san: 0, defesa: 0, capacidade: 0 },
+      /* v9.22.0: campos personalizados (embaixo das perícias na aba Geral):
+         rolagem, contador, recurso, anotação e marcador. */
+      camposPersonalizados: [],
 
       /* --- Arquivos Secretos 1 (v2.29) ---
          temporariosDeCena     pontos temporários que somem com a cena
@@ -3145,6 +3148,7 @@
     });
 
     ficha.temporariosDeCena = normalizarTemporariosDeCena(b.temporariosDeCena);
+    ficha.camposPersonalizados = normalizarCamposPersonalizados(b.camposPersonalizados);
     ficha.retencoes = normalizarRetencoes(b.retencoes);
     ficha.maldicoesMemorizadas = normalizarMaldicoesMemorizadas(b.maldicoesMemorizadas);
     ficha.contadores = normalizarContadores(b.contadores);
@@ -3263,6 +3267,47 @@
 
   function extraValido(valor) {
     return Math.max(-LIMITE_EXTRA, Math.min(LIMITE_EXTRA, inteiro(valor, 0)));
+  }
+
+  /* v9.22.0 — campos personalizados. Até 30, cada um de um tipo:
+       rolagem    { formula }                 (a sintaxe das fórmulas, com @AGI, @Luta…)
+       contador   { valor, minimo?, maximo? } (sem limite quando vazio)
+       recurso    { valor, maximo }           (atual e máximo, com barra)
+       anotacao   { texto }
+       marcador   { marcado }
+     O que não vale para o tipo é descartado; nada é calculado aqui. */
+  var TIPOS_DE_CAMPO = ["rolagem", "contador", "recurso", "anotacao", "marcador"];
+  var MAX_CAMPOS = 30;
+  function normalizarCamposPersonalizados(bruto) {
+    var lista = Array.isArray(bruto) ? bruto : [];
+    var vistos = {};
+    function limitado(v, padrao) {
+      if (v === null || v === undefined || v === "") return padrao;
+      var n = inteiro(v, padrao === null ? 0 : padrao);
+      return Math.max(-99999, Math.min(99999, n));
+    }
+    return lista.filter(function (c) { return c && typeof c === "object" && TIPOS_DE_CAMPO.indexOf(c.tipo) >= 0; }).slice(0, MAX_CAMPOS).map(function (c) {
+      var id = String(c.id || "").slice(0, 60) || (global.RAMAUtil ? global.RAMAUtil.uuid() : String(Math.random()));
+      if (vistos[id]) id = global.RAMAUtil ? global.RAMAUtil.uuid() : id + "-" + Math.random();
+      vistos[id] = true;
+      var x = { id: id, tipo: c.tipo, nome: String(c.nome || "").trim().slice(0, 60) };
+      if (c.tipo === "rolagem") x.formula = String(c.formula || "").trim().slice(0, 200);
+      if (c.tipo === "contador") {
+        x.minimo = limitado(c.minimo, null);
+        x.maximo = limitado(c.maximo, null);
+        if (x.minimo !== null && x.maximo !== null && x.maximo < x.minimo) x.maximo = x.minimo;
+        x.valor = limitado(c.valor, x.minimo !== null ? x.minimo : 0);
+        if (x.minimo !== null) x.valor = Math.max(x.minimo, x.valor);
+        if (x.maximo !== null) x.valor = Math.min(x.maximo, x.valor);
+      }
+      if (c.tipo === "recurso") {
+        x.maximo = Math.max(0, limitado(c.maximo, 0));
+        x.valor = Math.max(0, Math.min(x.maximo, limitado(c.valor, x.maximo)));
+      }
+      if (c.tipo === "anotacao") x.texto = String(c.texto || "").slice(0, 2000);
+      if (c.tipo === "marcador") x.marcado = c.marcado === true;
+      return x;
+    });
   }
 
   function normalizarBonusExtra(bruto) {
@@ -3632,6 +3677,8 @@
 
   global.RAMAOrdemRegras = {
     normalizar: normalizar,
+    normalizarCamposPersonalizados: normalizarCamposPersonalizados,
+    TIPOS_DE_CAMPO: TIPOS_DE_CAMPO,
     acoplamentoDe: acoplamentoDe,
     metadeAcoplada: metadeAcoplada,
     formaAtivaDe: formaAtivaDe,

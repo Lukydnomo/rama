@@ -331,3 +331,21 @@ uma versão nova da implantação. Sem `setupRama`, salvar um plano responde
 `js/ordem/telas/ficha-ordem.js`, `js/ordem/progressao.js`,
 `js/ordem/regras.js`, `js/paginas/ficha.js`, `js/api.js`, `ficha/index.html`,
 `css/ficha.css`, `css/modern20/ficha.css` e `js/versao.js`.
+
+## Campos personalizados — v9.22.0
+
+Embaixo das Perícias, na aba Geral, a ficha pode ter até 30 campos que a mesa
+inventar (`ordem.camposPersonalizados`, normalizado por
+`RAMAOrdemRegras.normalizarCamposPersonalizados`):
+
+| Tipo | Guarda | Fora da edição |
+|---|---|---|
+| `rolagem` | `formula` | rola pelo leitor de fórmulas (sintaxe do Rollem); `@AGI`, `@Agilidade` valem o atributo efetivo e `@Luta`, o bônus total da perícia |
+| `contador` | `valor`, `minimo`, `maximo` (vazios = sem limite) | só o atual, ou atual de um máximo |
+| `recurso` | `valor`, `maximo` | atual e máximo, com barra |
+| `anotacao` | `texto` | o texto |
+| `marcador` | `marcado` | caixa de marcar |
+
+Usar (rolar, contar, marcar) vale sempre; criar, nomear, trocar o tipo,
+configurar, reordenar e apagar (com confirmação), só no modo edição. Sem campos,
+o painel não aparece fora da edição. Nada é calculado no servidor.
