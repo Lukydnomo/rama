@@ -593,4 +593,8 @@
   & .inv-mensagem { border-radius: 0 var(--m20-raio-controle) var(--m20-raio-controle) 0; background: var(--m20-realce); }
   & .inv-cel--selecionada { outline-color: var(--cor-paranormal); }
   & .inv-cel--cheia, & .inv-slot, & .inv-cel__fracao { transition: background var(--m20-mov-estado) var(--m20-curva-mover), border-color var(--m20-mov-estado) var(--m20-curva-mover); }
+  & .inv-ctx { border-radius: 8px; border-color: var(--m20-borda); box-shadow: var(--m20-sombra-3); padding: 4px; animation: m20-surgir var(--m20-mov-estado) var(--m20-curva-sair); }
+  & .inv-ctx__titulo { border-bottom-color: var(--m20-borda); }
+  & .inv-ctx__item { border-radius: 4px; }
+  & .inv-ctx__item:hover, & .inv-ctx__item:focus-visible { background: var(--m20-realce-forte); color: var(--cor-texto); }
 }

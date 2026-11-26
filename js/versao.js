@@ -118,6 +118,16 @@
 
   var CHANGELOG = [
     {
+      versao: "9.23.2",
+      codinome: "ATALHO",
+      data: "26/11/2026",
+      mudancas: {
+        "Alterado": [
+          "Inventário em grade, no computador: o clique direito num slot do corpo abre um menu pequeno na posição do clique, como os menus do sistema (Adicionar slot extra; Excluir slot nos extras), em vez de uma janela no meio da tela. Setas navegam, Enter escolhe; Esc, clicar fora ou rolar a página fecham. No celular, o toque prolongado continua abrindo a janela de antes.",
+        ],
+      },
+    },
+    {
       versao: "9.23.1",
       codinome: "RECOLHA",
       data: "26/11/2026",

@@ -941,6 +941,11 @@ segredo nenhum — ele os lê das Script Properties. Publicá-lo não expõe nad
 
 ### Atualizar o backend
 
+**v9.23.2 — ATALHO:** no computador, o clique direito num slot do corpo abre
+um menu de contexto pequeno no lugar do clique; no celular, nada muda. **Só o
+site muda.** Site: `js/ordem/telas/ficha-grade.js`, `css/ficha.css`,
+`css/modern20/ficha.css` e `js/versao.js`.
+
 **v9.23.1 — RECOLHA:** com o inventário em grade, a lista antiga fica
 recolhida por padrão e a grade ganha “+ Adicionar” e “Da biblioteca”. **Só o
 site muda.** Site: `js/paginas/ficha-inventario.js`,
@@ -2272,7 +2277,7 @@ Três números diferentes, que não se misturam:
 
 | | Onde | O que é |
 |---|---|---|
-| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v9.23.1 |
+| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v9.23.2 |
 | `schemaVersion` | `js/ficha.js` | o formato da FICHA |
 | `versaoFormato` | `js/config.js` | o formato dos arquivos de importação |
 

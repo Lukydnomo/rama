@@ -409,7 +409,82 @@
 
   /* ---------------- slots: menu de contexto ---------------- */
 
-  function menuDoSlot(ctx, api, o, slotId) {
+  /* O menu de contexto de um slot (v9.23.2): pequeno, na posição do clique
+     direito no computador, como os menus do sistema (no celular, o toque
+     prolongado continua abrindo a janela) —
+     nada de janela cobrindo a tela. Setas navegam, Enter escolhe, Esc,
+     clique fora, rolagem ou troca de janela fecham. */
+  var menuAberto = null;
+  function fecharMenu() {
+    if (!menuAberto) return;
+    var m = menuAberto;
+    menuAberto = null;
+    document.removeEventListener("pointerdown", m.fora, true);
+    document.removeEventListener("keydown", m.tecla, true);
+    window.removeEventListener("scroll", fecharMenu, true);
+    window.removeEventListener("blur", fecharMenu);
+    window.removeEventListener("resize", fecharMenu);
+    if (m.lista.parentNode) m.lista.parentNode.removeChild(m.lista);
+    if (m.voltar && m.voltar.isConnected) m.voltar.focus({ preventScroll: true });
+  }
+
+  function menuDoSlot(ctx, api, o, slotId, x, y, origem) {
+    fecharMenu();
+    var config = o.inventarioGrade;
+    var s = G().slots(config).filter(function (q) { return q.id === slotId; })[0];
+    if (!s) return;
+    var itens = [{ rotulo: "Adicionar slot extra", acao: function () {
+      var novo = G().adicionarSlot(config, s.parte);
+      mensagem = novo ? { texto: "Slot extra criado em " + G().nomeDoSlot(config, novo.id) + ".", erro: false } : { texto: "Limite de slots extras atingido.", erro: true };
+      api.aoMudar(); api.redesenhar();
+    } }];
+    if (!s.base) itens.push({ rotulo: "Excluir slot", perigo: true, acao: function () {
+      var est = montar(o, ctx.ficha.inventario);
+      var ref = est.corpo[slotId];
+      if (!ref) { G().removerSlot(config, slotId); mensagem = { texto: "Slot excluído.", erro: false }; api.aoMudar(); api.redesenhar(); return; }
+      escolherDestinoAoExcluir(ctx, api, o, est, ref, slotId);
+    } });
+    var botoes = itens.map(function (it) {
+      return el("button.inv-ctx__item", {
+        type: "button", role: "menuitem", class: it.perigo ? "inv-ctx__item--perigo" : "", texto: it.rotulo,
+        onclick: function () { fecharMenu(); it.acao(); },
+      });
+    });
+    var lista = el("div.inv-ctx", { role: "menu", "aria-label": G().nomeDoSlot(config, slotId) }, [
+      el("div.inv-ctx__titulo", { "aria-hidden": "true", texto: G().nomeDoSlot(config, slotId) + (s.base ? "" : " · extra") }),
+    ].concat(botoes));
+    document.body.appendChild(lista);
+    /* Na posição do ponteiro, sem sair da tela. */
+    var r = lista.getBoundingClientRect();
+    var px = Math.max(4, Math.min(x, window.innerWidth - r.width - 4));
+    var py = y + r.height > window.innerHeight - 4 ? Math.max(4, y - r.height) : y;
+    lista.style.left = px + "px";
+    lista.style.top = py + "px";
+    var m = {
+      lista: lista, voltar: origem || null,
+      fora: function (ev) { if (!lista.contains(ev.target)) fecharMenu(); },
+      tecla: function (ev) {
+        var i = botoes.indexOf(document.activeElement);
+        if (ev.key === "Escape") { ev.preventDefault(); fecharMenu(); }
+        else if (ev.key === "ArrowDown") { ev.preventDefault(); botoes[(i + 1) % botoes.length].focus(); }
+        else if (ev.key === "ArrowUp") { ev.preventDefault(); botoes[(i - 1 + botoes.length) % botoes.length].focus(); }
+        else if (ev.key === "Tab") fecharMenu();
+      },
+    };
+    menuAberto = m;
+    setTimeout(function () {
+      if (menuAberto !== m) return;
+      document.addEventListener("pointerdown", m.fora, true);
+      window.addEventListener("scroll", fecharMenu, true);
+      window.addEventListener("blur", fecharMenu);
+      window.addEventListener("resize", fecharMenu);
+    }, 0);
+    document.addEventListener("keydown", m.tecla, true);
+    botoes[0].focus({ preventScroll: true });
+  }
+
+  /* No celular (toque prolongado), continua a janela de sempre. */
+  function menuDoSlotJanela(ctx, api, o, slotId) {
     var est = montar(o, ctx.ficha.inventario);
     var config = o.inventarioGrade;
     var s = G().slots(config).filter(function (x) { return x.id === slotId; })[0];
@@ -579,7 +654,10 @@
       if (!slot) return;
       ev.preventDefault();
       if (pressao && pressao.abriu) return;
-      menuDoSlot(ctx, api, o, slot.dataset.slot);
+      /* Pela tecla de menu (sem coordenadas), abre junto do slot. */
+      var rs = slot.getBoundingClientRect();
+      var cx = ev.clientX || ev.clientY ? ev.clientX : rs.left + 8, cy = ev.clientX || ev.clientY ? ev.clientY : rs.bottom;
+      menuDoSlot(ctx, api, o, slot.dataset.slot, cx, cy, slot);
     });
     raiz.addEventListener("pointerdown", function (ev) {
       if (ev.pointerType === "mouse") return;
@@ -589,7 +667,7 @@
         if (!pressao) return;
         pressao.abriu = true;
         suprimirClique = true;
-        menuDoSlot(ctx, api, o, slot.dataset.slot);
+        menuDoSlotJanela(ctx, api, o, slot.dataset.slot);
       }, 550) };
     });
     function soltarPressao(ev) {
