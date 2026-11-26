@@ -349,3 +349,51 @@ inventar (`ordem.camposPersonalizados`, normalizado por
 Usar (rolar, contar, marcar) vale sempre; criar, nomear, trocar o tipo,
 configurar, reordenar e apagar (com confirmação), só no modo edição. Sem campos,
 o painel não aparece fora da edição. Nada é calculado no servidor.
+
+## Inventário em grade — v9.23.0 (regra opcional dos Extras)
+
+Regra `inventarioGrade` (fonte `EXTRA`, categoria "Equipamento e carga"),
+desligada por padrão e liberada pelo suplemento Extras. Desligada, valem a
+lista e a carga de sempre.
+
+**Uma coleção só.** Os itens continuam em `inventario.itens`. Cada item ganha
+`ordem.grade.unidades` — uma entrada por unidade:
+`{ local: "grade", recipiente, x, y, forma, meia }`, `{ local: "corpo", slot }`
+ou `{ local: "pendente" }`. A ficha guarda `ordem.inventarioGrade`
+(`slotsExtras`, `colunas` de cada grade). Tudo fica guardado com a regra
+desligada; religar recupera as posições ainda válidas.
+
+**Capacidade** (`RAMAOrdemRegras.capacidade`, campo `grade`):
+
+| Número | Conta |
+|---|---|
+| B | o limite normal SEM os itens que aumentam a capacidade (Força, efeitos, ajustes, temporário) |
+| grade principal | 2 × B células |
+| cada mochila | uma grade de C células (o registro conta uma vez, mesmo com quantidade > 1) |
+| S | máx(0, bruto + soma de C) − B — a contribuição das mochilas, derivada antes do piso |
+| sem penalidade até | B + S |
+| máximo absoluto | 2 × B + S |
+| carga efetiva | a ocupação de sempre menos as unidades SEGURADAS nas mãos-base |
+
+**Encaixe** (`js/ordem/grade.js`): espaços efetivos por unidade; n cheias numa
+forma ligada pelas laterais (qualquer n — formas prontas, girar, espelhar e
+editor livre) e a fração numa célula vizinha, que outras frações completam até
+1. Espaço 0 fica na faixa do recipiente. A peça cabe inteira numa grade só. O
+movimento vai para o lugar exato apontado: arrastar (mouse, com sombra verde ou
+vermelha) ou tocar na peça e na célula (a célula pela qual ela foi pega é a
+referência). Recusado, a peça fica na origem e o motivo aparece; no toque, ela
+continua selecionada. A carga também é conferida: um movimento que leve acima
+do máximo é desfeito.
+
+**Corpo:** cabeça, peitoral, mãos esquerda e direita, pernas e pés. Clique
+direito ou toque prolongado num slot: "Adicionar slot extra" (sobreposição) e,
+nos extras, "Excluir slot" (ocupado: escolher destino ou cancelar). Só as
+mãos-base seguram; arma de duas mãos ocupa as duas (`slot: "maos"`). Proteção no
+corpo = `emUso`; na mão-base = `empunhada`; vestimenta (ou RD) vestida =
+`vestida`.
+
+**Fichas existentes:** ligar organiza uma vez o que não tem lugar (em uso vai
+para o corpo). O que não cabe fica "A organizar" — visível, contado, nunca
+destino. Item novo (criar, biblioteca, duplicar, quantidade maior) só entra se
+couber. Tirar uma mochila deixa o conteúdo pendente, sem apagar nada; uma
+mochila não vai dentro de si mesma. Testes: `testes/executar-grade.js`.

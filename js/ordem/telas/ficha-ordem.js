@@ -2759,9 +2759,14 @@
       ]),
       el("span.ordem-equacao__sinal", { "aria-hidden": "true", texto: "=" }),
       el("span.ordem-equacao__termo", {}, [
-        el("span.t-mini", { texto: "Capacidade final" }),
-        el("span.ordem-equacao__valor", { texto: String(carga.final) }),
+        el("span.t-mini", { texto: carga.grade ? "Limite normal (B)" : "Capacidade final" }),
+        el("span.ordem-equacao__valor", { texto: String(carga.grade ? carga.grade.B : carga.final) }),
       ]),
+      carga.grade && carga.grade.somaMochilas ? el("span.ordem-equacao__sinal", { "aria-hidden": "true", texto: "+" }) : null,
+      carga.grade && carga.grade.somaMochilas ? el("span.ordem-equacao__termo", {}, [
+        el("span.t-mini", { texto: "Mochilas (grades próprias)" }),
+        el("span.ordem-equacao__valor", { texto: String(carga.grade.S) }),
+      ]) : null,
     ]);
 
     var controle = null;
@@ -2806,7 +2811,7 @@
       el("dl.r-dados", {}, [
         el("dt", { texto: "Ocupado" }), el("dd", { texto: I.rotuloEspacos(carga.ocupado) + " espaços" }),
         el("dt", { texto: "Sem penalidade até" }), el("dd", { texto: carga.final + " espaços" }),
-        el("dt", { texto: "Máximo absoluto" }), el("dd", { texto: carga.maximo + " espaços (o dobro)" }),
+        el("dt", { texto: "Máximo absoluto" }), el("dd", { texto: carga.maximo + (carga.grade ? " espaços (2 × B + mochilas)" : " espaços (o dobro)") }),
       ]),
       carga.sobrecarregado
         ? el("p.t-mini.t-erro", {
@@ -4771,7 +4776,7 @@
       el("p.t-mini", { texto: r.efeito }),
       ES.etiquetaAutomacao(r.automacao),
       el("p.criacao-fonte", {
-        texto: global.RAMAOrdemCatalogo.nomeDoLivro(r.fonte) + ", p. " + r.pagina + (r.fa ? " · conteúdo de fã (" + r.fa.autor + "), não oficial" : "") +
+        texto: global.RAMAOrdemCatalogo.nomeDoLivro(r.fonte) + (r.pagina ? ", p. " + r.pagina : "") + (r.fa ? " · conteúdo de fã (" + r.fa.autor + "), não oficial" : "") +
           (r.naoOficial ? " · não oficial e não canônica (" + r.naoOficial.procedencia + ")" : ""),
       }),
       /* Arquivos Secretos 6: Evolução Modular — associar as escolhas e
@@ -4822,7 +4827,7 @@
 
     /* Fechado, o cartão ainda diz o que importa: o resumo, por que não
        dá para ligar e se há dados guardados. */
-    var fonte = global.RAMAOrdemCatalogo.nomeDoLivro(r.fonte) + ", p. " + r.pagina;
+    var fonte = global.RAMAOrdemCatalogo.nomeDoLivro(r.fonte) + (r.pagina ? ", p. " + r.pagina : "");
     return cartaoCompacto(ctx, "regra:" + r.chave, r.nome, [
       el("span.t-mini", { texto: r.resumo }),
       r.fa ? el("span.t-mini.t-aviso", { texto: "Conteúdo de fã: não oficial e não canônico (" + r.fa.autor + ")." }) : null,
@@ -4880,6 +4885,40 @@
      tocado — só o estado de uso. */
   function definirProtecaoEmUso(ctx, alvo, usar) {
     var ehEscudo = R.tipoDeProtecao(alvo) === "escudo";
+    /* Inventário em grade: usar = vestir no slot (peitoral; escudo na
+       mão); tirar de uso = guardar no primeiro lugar que couber. O estado
+       "em uso" sai do lugar, como no arraste. */
+    var GR = global.RAMAOrdemGrade, FG = global.RAMAFichaGrade;
+    if (GR && FG && R.gradeLigada(ordemDe(ctx))) {
+      var o = ordemDe(ctx);
+      var est = FG.montar(o, ctx.ficha.inventario);
+      var ref = est.unidades.filter(function (u) { return u.item === alvo; })[0];
+      if (!ref) return;
+      var destino = null;
+      if (usar) {
+        var opcoes = ehEscudo ? ["maoEsquerda", "maoDireita"] : ["peitoral"].concat(GR.slotsDaParte(o.inventarioGrade, "peitoral").filter(function (s) { return !s.base; }).map(function (s) { return s.id; }));
+        var livre = opcoes.filter(function (s) { return GR.cabe(est, ref, { local: "corpo", slot: s }).ok; })[0];
+        if (!livre) { UI.avisoAtencao((ehEscudo ? "As duas mãos estão ocupadas." : "O peitoral está ocupado.") + " Libere o slot ou crie um slot extra (clique direito ou toque prolongado no corpo)."); return; }
+        destino = { local: "corpo", slot: livre };
+      } else {
+        destino = GR.primeiroEncaixe(est, ref);
+        if (!destino) { UI.avisoAtencao("Não há lugar na grade para guardar " + (alvo.nome || "a proteção") + ". Arraste-a para onde couber ou abra espaço."); return; }
+      }
+      var antes = JSON.stringify(alvo.ordem.grade || null);
+      var ocupadoAntes = est.capacidade.ocupado;
+      var r = GR.mover(est, ref, destino);
+      if (!r.ok) { UI.avisoAtencao(r.motivo); return; }
+      GR.sincronizar(alvo);
+      var depois = R.capacidade(o, ctx.ficha.inventario);
+      if (depois.acimaDoMaximo && depois.ocupado > ocupadoAntes) {
+        alvo.ordem.grade = JSON.parse(antes); GR.sincronizar(alvo);
+        UI.avisoAtencao("A carga passaria do máximo. " + (alvo.nome || "A proteção") + " ficou onde estava.");
+        return;
+      }
+      aoMudarOrdem(ctx);
+      ctx.redesenhar();
+      return;
+    }
     (ctx.ficha.inventario.itens || []).forEach(function (i) {
       if (!i || i.tipo !== "armadura") return;
       if ((R.tipoDeProtecao(i) === "escudo") !== ehEscudo) return;
@@ -4963,7 +5002,22 @@
        o ajuste temporário e os itens por categoria, logo acima dos itens
        que eles contam. */
     cabecalho: function (ctx) {
-      return painelCarga(ctx, ordemDe(ctx), calculo(ctx));
+      var o = ordemDe(ctx);
+      var carga = painelCarga(ctx, o, calculo(ctx));
+      /* v9.23.0: com o Inventário em grade (Extras), o corpo, as grades
+         e as mochilas logo abaixo da carga; a lista de itens (criar,
+         editar, biblioteca, atacar, usar) continua embaixo. */
+      if (!R.gradeLigada(o) || !global.RAMAFichaGrade) return carga;
+      return el("div.pilha", {}, [carga, global.RAMAFichaGrade.painel(ctx, {
+        o: o,
+        aoMudar: function () { aoMudarOrdem(ctx); },
+        redesenhar: function () { ctx.redesenhar(); },
+      })]);
+    },
+
+    /* Inventário em grade: pode entrar este item novo? (null = pode) */
+    motivoParaRecusar: function (ctx, item) {
+      return global.RAMAFichaGrade ? global.RAMAFichaGrade.motivoParaRecusar(ctx, ordemDe(ctx), item) : null;
     },
 
     /* Mochila é peso; Ordem não usa peso. Uma mochila de verdade em
@@ -5000,6 +5054,10 @@
       }
       if (item.tipo === "armadura") {
         pares.push(["Defesa", U.comSinal(R.defesaDaProtecao(item).total)]);
+      }
+      if (ctx && global.RAMAFichaGrade && R.gradeLigada(ordemDe(ctx))) {
+        var onde = global.RAMAFichaGrade.lugarDoItem(ctx, ordemDe(ctx), item);
+        if (onde) pares.push(["Onde", onde]);
       }
       return pares;
     },

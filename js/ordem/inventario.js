@@ -222,6 +222,13 @@
     /* O estado de uso que a origem registrava num item que o R.A.M.A.
        não liga a uma conta (arma empunhada, item amaldiçoado guardado). */
     if (b.equipadoNaOrigem === true || b.equipadoNaOrigem === false) dados.equipadoNaOrigem = b.equipadoNaOrigem;
+    /* Inventário em grade (v9.23.0): onde cada unidade está. Guardado
+       mesmo com a regra desligada, para ela voltar com as posições. */
+    if (b.grade && typeof b.grade === "object") {
+      var GR = global.RAMAOrdemGrade;
+      var grade = GR ? GR.normalizarDadosDoItem(b.grade, dados.quantidade) : JSON.parse(JSON.stringify(b.grade));
+      if (grade) dados.grade = grade;
+    }
     var mods = (Array.isArray(b.modificacoes) ? b.modificacoes : []).map(modificacaoValida).filter(Boolean).slice(0, MAX_MODIFICACOES);
     if (mods.length) dados.modificacoes = mods;
     /* Arquivos Secretos 4 (v2.38). Cada campo só existe quando vale. */

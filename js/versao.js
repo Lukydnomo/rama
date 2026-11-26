@@ -118,6 +118,22 @@
 
   var CHANGELOG = [
     {
+      versao: "9.23.0",
+      codinome: "ENCAIXE",
+      data: "26/11/2026",
+      mudancas: {
+        "Adicionado": [
+          "Ordem Paranormal: regra opcional “Inventário em grade”, nos Extras (aba Regras, Equipamento e carga; desligada por padrão). Os itens ganham lugar numa grade principal de 2 × B células (B: o limite normal sem as mochilas), em mochilas com grades próprias (+C = C células, com o nome da mochila) e no corpo — cabeça, peitoral, mãos, pernas e pés. Sem penalidade até B + mochilas; máximo absoluto 2 × B + mochilas.",
+          "Você escolhe a posição exata: no computador, segure, arraste e solte (a sombra da peça inteira mostra se cabe); no celular, toque na peça e depois na célula — a parte pela qual você pegou cai ali. Forma e orientação à escolha (formas prontas, girar, espelhar, desenhar qualquer forma ligada), frações dividindo uma célula (1,5 = uma célula e meia) e itens de espaço 0 na faixa do recipiente.",
+          "Corpo e mãos: a unidade segurada na mão não pesa; vestida continua contando. Arma de duas mãos ocupa as duas. Proteção vestida fica em uso (soma na Defesa). Clique direito ou toque prolongado num slot cria um slot extra para sobrepor peças (camisa e casaco) ou exclui um extra, escolhendo para onde vai o que estava nele.",
+          "Fichas existentes: ligar organiza sozinho, uma vez, o que ainda não tem lugar; o que não couber fica em “A organizar”, visível e contado. Desligar volta à lista de sempre, e religar recupera as posições. Disponível em Legacy e Modern20.",
+        ],
+        "Técnico": [
+          "js/ordem/grade.js (RAMAOrdemGrade, puro: formas, encaixe, corpo, montagem), js/ordem/telas/ficha-grade.js (a tela), ordem.grade.unidades nos itens e ordem.inventarioGrade na ficha; RAMAOrdemRegras.capacidade com o ramo da grade. Documentado em docs/FICHA-ORDEM.md; testes em testes/executar-grade.js. Só o site muda.",
+        ],
+      },
+    },
+    {
       versao: "9.22.0",
       codinome: "ANEXO",
       data: "24/11/2026",

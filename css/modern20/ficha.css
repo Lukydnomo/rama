@@ -578,4 +578,19 @@
   & .ordem-campo__barra { border-radius: 999px; background: var(--m20-realce-forte); }
   & .ordem-campo__preenche { border-radius: inherit; background: var(--cor-paranormal); }
   & .ordem-campo-edicao { border-bottom-color: var(--m20-borda); }
+
+  /* Inventário em grade (v9.23.0) */
+  & .inv-cel { border-radius: 4px; border-color: var(--m20-borda); }
+  & .inv-cel--cheia { border-radius: 0; background: hsl(var(--inv-matiz) 60% 55% / .28); border-color: hsl(var(--inv-matiz) 55% 55% / .9); }
+  & .inv-cel--cheia.inv-cel--borda-cima.inv-cel--borda-esq { border-top-left-radius: 6px; }
+  & .inv-cel--cheia.inv-cel--borda-cima.inv-cel--borda-dir { border-top-right-radius: 6px; }
+  & .inv-cel--cheia.inv-cel--borda-baixo.inv-cel--borda-esq { border-bottom-left-radius: 6px; }
+  & .inv-cel--cheia.inv-cel--borda-baixo.inv-cel--borda-dir { border-bottom-right-radius: 6px; }
+  & .inv-cel__fracao, & .inv-chip, & .inv-slot { border-radius: var(--m20-raio-controle); }
+  & .inv-slot { border-color: var(--m20-borda-controle); }
+  & .inv-faixa { border-radius: var(--m20-raio-controle); border-color: var(--m20-borda); }
+  & .inv-barra { border-radius: var(--m20-raio-cartao); border-color: var(--m20-borda); box-shadow: var(--m20-sombra-2); }
+  & .inv-mensagem { border-radius: 0 var(--m20-raio-controle) var(--m20-raio-controle) 0; background: var(--m20-realce); }
+  & .inv-cel--selecionada { outline-color: var(--cor-paranormal); }
+  & .inv-cel--cheia, & .inv-slot, & .inv-cel__fracao { transition: background var(--m20-mov-estado) var(--m20-curva-mover), border-color var(--m20-mov-estado) var(--m20-curva-mover); }
 }

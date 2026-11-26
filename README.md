@@ -941,6 +941,20 @@ segredo nenhum — ele os lê das Script Properties. Publicá-lo não expõe nad
 
 ### Atualizar o backend
 
+**v9.23.0 — ENCAIXE:** regra opcional “Inventário em grade” (Extras) na ficha
+de Ordem: grade principal, mochilas com grade própria, corpo e mãos, formas à
+escolha e arraste ou toque para a posição exata. **Só o site muda.** Site:
+`js/ordem/grade.js` (novo), `js/ordem/telas/ficha-grade.js` (novo),
+`js/ordem/regras.js`, `js/ordem/inventario.js`, `js/ordem/opcionais.js`,
+`js/ordem/telas/ficha-ordem.js`, `js/ordem/telas/ordem-criar.js`,
+`js/paginas/ficha-inventario.js`, `js/paginas/ficha-inventario-biblioteca.js`,
+`css/ficha.css`, `css/modern20/ficha.css`, as páginas que carregam as regras de
+Ordem e `js/versao.js`.
+
+**Inventário em grade** — `deno run --allow-read testes/executar-grade.js`:
+capacidade com mochilas, mãos e duas mãos, slots extras, formas, frações,
+espaço zero, fichas antigas, desligar e religar.
+
 **v9.22.0 — ANEXO:** campos personalizados na ficha de Ordem (rolagem,
 contador, recurso, anotação e marcador), embaixo das Perícias. **Só o site
 muda.** Site: `js/ordem/regras.js`, `js/ordem/telas/ficha-ordem.js`,
@@ -2252,7 +2266,7 @@ Três números diferentes, que não se misturam:
 
 | | Onde | O que é |
 |---|---|---|
-| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v9.22.0 |
+| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v9.23.0 |
 | `schemaVersion` | `js/ficha.js` | o formato da FICHA |
 | `versaoFormato` | `js/config.js` | o formato dos arquivos de importação |
 

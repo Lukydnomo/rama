@@ -1119,7 +1119,7 @@
         el("p.t-mini", { texto: r.resumo }),
         el("p.t-mini", { texto: r.efeito }),
         ES.etiquetaAutomacao(r.automacao),
-        referencia(C.nomeDoLivro(r.fonte) + ", p. " + r.pagina),
+        referencia(C.nomeDoLivro(r.fonte) + (r.pagina ? ", p. " + r.pagina : "")),
       ];
 
       /* Evolução por Patentes ainda não tem a tabela estruturada: ligar

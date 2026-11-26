@@ -269,6 +269,9 @@
       /* v9.22.0: campos personalizados (embaixo das perícias na aba Geral):
          rolagem, contador, recurso, anotação e marcador. */
       camposPersonalizados: [],
+      /* v9.23.0: Inventário em grade (Extras) — o corpo (slots extras) e
+         as colunas de cada grade. Guardado mesmo com a regra desligada. */
+      inventarioGrade: { slotsExtras: [], colunas: {} },
 
       /* --- Arquivos Secretos 1 (v2.29) ---
          temporariosDeCena     pontos temporários que somem com a cena
@@ -1382,6 +1385,11 @@
      itens, na Força nem nos limites por categoria.
      ================================================================= */
 
+  function gradeLigada(ficha) {
+    var O = global.RAMAOrdemOpcionais;
+    return !!(O && global.RAMAOrdemGrade && O.ligada(ficha, "inventarioGrade"));
+  }
+
   function capacidade(ficha, inventario) {
     var forca = atributo(ficha, "for");
     var comp = conta();
@@ -1408,10 +1416,16 @@
 
     /* Itens que aumentam a capacidade (Mochila Militar, OPRPG p.66).
        Cada item conta uma vez, não por unidade: duas mochilas na
-       quantidade não viram duas mochilas vestidas. */
+       quantidade não viram duas mochilas vestidas.
+       Inventário em grade (v9.23.0, Extras): eles viram RECIPIENTES —
+       cada um uma grade de C células — e saem da conta de B. */
+    var emGrade = gradeLigada(ficha);
+    var recipientes = [];
     itensDe(inventario).forEach(function (item) {
       var d = I() ? I().dadosDoItem(item) : { capacidade: 0 };
-      if (d.capacidade > 0) comp.soma(item.nome || "Item", d.capacidade, "item que aumenta a capacidade");
+      if (!(d.capacidade > 0)) return;
+      if (emGrade) recipientes.push({ id: item.id, nome: item.nome || "Mochila", celulas: d.capacidade, item: item });
+      else comp.soma(item.nome || "Item", d.capacidade, "item que aumenta a capacidade");
     });
 
     somarAjustes(comp, ficha, "capacidade");
@@ -1422,6 +1436,50 @@
     var final = Math.max(0, bruto);
 
     var ocupacao = ocupacaoDoInventario(ficha, inventario);
+
+    if (emGrade) {
+      /* B: o limite normal sem as mochilas, com as outras fontes e o
+         temporário. As mochilas entram DEPOIS, sobre o valor ainda sem
+         piso: um ajuste negativo come primeiro a contribuição delas
+         (limite = máx(0, bruto + C) — o mesmo da conta sem grade). */
+      var semPiso = comp.total + temporario;
+      var B = Math.max(0, semPiso);
+      var somaC = recipientes.reduce(function (s, r) { return s + r.celulas; }, 0);
+      var S = Math.max(0, semPiso + somaC) - B;
+      /* Só a unidade SEGURADA nas mãos deixa de pesar. */
+      var G = global.RAMAOrdemGrade;
+      var livreNaMao = 0;
+      ocupacao.itens.forEach(function (oc) {
+        var item = itensDe(inventario).filter(function (i) { return i.id === oc.id; })[0];
+        var n = G && item ? G.seguradas(item) : 0;
+        if (!n) return;
+        var tirar = Math.min(oc.total, n * oc.unitarioEfetivo);
+        if (tirar > 0) { oc.segurado = Math.round(tirar * 100) / 100; oc.totalNaGrade = Math.round((oc.total - tirar) * 100) / 100; livreNaMao += tirar; }
+      });
+      var ocupado = Math.max(0, Math.round((ocupacao.total - livreNaMao) * 100) / 100);
+      var limiteG = B + S;
+      var maximoG = 2 * B + S;
+      return {
+        composicao: comp,
+        calculada: calculada,
+        temporario: temporario,
+        final: limiteG,
+        abaixoDeZero: bruto < 0,
+        semTemporario: calculada,
+        limite: limiteG,
+        maximo: maximoG,
+        ocupado: ocupado,
+        itens: ocupacao.itens,
+        sobrecarregado: ocupado > limiteG,
+        acimaDoMaximo: ocupado > maximoG,
+        forca: forca,
+        grade: {
+          B: B, S: S, somaMochilas: somaC, principal: 2 * B,
+          recipientes: recipientes, segurado: Math.round(livreNaMao * 100) / 100,
+          ocupadoTotal: ocupacao.total,
+        },
+      };
+    }
 
     return {
       composicao: comp,
@@ -3149,6 +3207,8 @@
 
     ficha.temporariosDeCena = normalizarTemporariosDeCena(b.temporariosDeCena);
     ficha.camposPersonalizados = normalizarCamposPersonalizados(b.camposPersonalizados);
+    ficha.inventarioGrade = global.RAMAOrdemGrade ? global.RAMAOrdemGrade.normalizarConfig(b.inventarioGrade)
+      : (b.inventarioGrade && typeof b.inventarioGrade === "object" ? JSON.parse(JSON.stringify(b.inventarioGrade)) : { slotsExtras: [], colunas: {} });
     ficha.retencoes = normalizarRetencoes(b.retencoes);
     ficha.maldicoesMemorizadas = normalizarMaldicoesMemorizadas(b.maldicoesMemorizadas);
     ficha.contadores = normalizarContadores(b.contadores);
@@ -3678,6 +3738,7 @@
   global.RAMAOrdemRegras = {
     normalizar: normalizar,
     normalizarCamposPersonalizados: normalizarCamposPersonalizados,
+    gradeLigada: gradeLigada,
     TIPOS_DE_CAMPO: TIPOS_DE_CAMPO,
     acoplamentoDe: acoplamentoDe,
     metadeAcoplada: metadeAcoplada,

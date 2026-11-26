@@ -612,6 +612,26 @@
     ],
   });
 
+  /* v9.23.0 — Extras: o inventário em grade. Uma apresentação nova do
+     MESMO inventário: os itens ganham lugar (grade, mochila ou corpo) e
+     a carga passa a ter mochilas como grades próprias. Desligar volta à
+     lista e à conta de sempre; as posições ficam guardadas. */
+  REGRAS.push({
+    chave: "inventarioGrade",
+    nome: "Inventário em grade",
+    resumo: "Organize os itens por encaixe numa grade, guarde objetos em mochilas com grades próprias e vista ou segure equipamentos no corpo.",
+    fonte: "EXTRA", pagina: null,
+    afetaFicha: true,
+    automacao: "calculo",
+    efeito: "A grade principal tem 2 × B células, sendo B o limite normal sem as mochilas; cada mochila que dá +C vira uma grade de C células. Sem penalidade até B + mochilas; máximo absoluto 2 × B + mochilas. Cada item ocupa células conforme os espaços efetivos, na forma e orientação que você escolher (frações dividem uma célula; espaço 0 fica na faixa do recipiente). No corpo: cabeça, peitoral, mãos, pernas e pés, com slots extras para sobrepor peças. Só a unidade segurada nas mãos deixa de contar na carga; o que está vestido continua contando. Proteção vestida fica em uso; o que está na mão fica empunhado.",
+    parametros: [], depende: [], incompativel: [],
+    consequencias: [
+      "Ligar organiza sozinho, uma vez, o que ainda não tem lugar: o que estava em uso vai para o corpo e o resto para a grade. O que não couber fica em “A organizar”, visível e contado na carga.",
+      "O máximo absoluto muda: as mochilas deixam de dobrar (2 × B + mochilas, em vez de 2 × (B + mochilas)).",
+      "Desligar volta à lista e à conta de sempre. As posições ficam guardadas e voltam se a regra for ligada de novo.",
+    ],
+  });
+
   var POR_CHAVE = {};
   REGRAS.forEach(function (r) { POR_CHAVE[r.chave] = r; });
 
@@ -645,6 +665,8 @@
       regras: ["aliadosEmPerigo", "beneficiosDeAliados", "boasRecordacoes", "regrasDaPaixao"] },
     { chave: "exploracao", nome: "Exploração e transporte",
       regras: ["semMapa", "veiculosOperacionais", "animaisTreinados"] },
+    { chave: "equipamento", nome: "Equipamento e carga",
+      regras: ["inventarioGrade"] },
     { chave: "hexatombe", nome: "Hexatombe e desafios",
       regras: ["participacaoHexatombe", "batalhasDeIntencoes", "jogosDoCirco"] },
   ];

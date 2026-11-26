@@ -1548,18 +1548,18 @@
 
       /* v2.20: + contagem de munição (OPRPG p. 174) e controle de
          componentes ritualísticos (da mesa). */
-      t.igual("31 regras opcionais: treze do SAH, duas do AS1, quatro do AS2, oito do AS3, duas do AS5, uma do AS6 e uma do AS7", OP.REGRAS.length, 31);
+      t.igual("32 regras opcionais: treze do SAH, duas do AS1, quatro do AS2, oito do AS3, duas do AS5, uma do AS6, uma do AS7 e uma dos Extras", OP.REGRAS.length, 32);
       t.iguais("  as duas do AS1 começam desligadas", ["reterRitual", "transcenderComItens"].map(function (k) { return OP.ligada(R.fichaVazia(), k); }), [false, false]);
 
       /* v2.48.3: as categorias da aba Regras, de um registro só. */
       var naTela = ["patente"].concat(OP.REGRAS.map(function (r) { return r.chave; }));
       var grupos = OP.categorizar(naTela);
       var todasNaTela = grupos.reduce(function (l, g) { return l.concat(g.regras); }, []);
-      t.igual("categorias: as 31 regras e o cartão de patente, cada um uma vez só", todasNaTela.length + "/" + naTela.length + "/" + new Set(todasNaTela).size, "32/32/32");
+      t.igual("categorias: as 32 regras e o cartão de patente, cada um uma vez só", todasNaTela.length + "/" + naTela.length + "/" + new Set(todasNaTela).size, "33/33/33");
       t.ok("  nenhuma regra atual cai em “Outras regras”", grupos.every(function (g) { return g.chave !== "outras"; }));
-      t.iguais("  sete categorias, na ordem do registro", grupos.map(function (g) { return g.nome + " " + g.regras.length; }),
+      t.iguais("  oito categorias, na ordem do registro", grupos.map(function (g) { return g.nome + " " + g.regras.length; }),
         ["Personagem e progressão 4", "Rituais e paranormal 8", "Combate e sobrevivência 4", "Poderes e trilhas 6", "Aliados e vínculos 4",
-          "Exploração e transporte 3", "Hexatombe e desafios 3"]);
+          "Exploração e transporte 3", "Equipamento e carga 1", "Hexatombe e desafios 3"]);
       t.iguais("  a patente abre Personagem e progressão; as do AS5 em Poderes e em Aliados",
         [grupos[0].regras[0], OP.categoriaDe("poderesDeTransmissao").chave, OP.categoriaDe("beneficiosDeAliados").chave], ["patente", "poderes", "aliados"]);
       t.iguais("  uma regra futura sem categoria vai para “Outras regras”, por último", OP.categorizar(["semMapa", "regraDoFuturo"]).map(function (g) { return g.chave; }), ["exploracao", "outras"]);
@@ -1570,8 +1570,8 @@
       t.ok("  categorizar não liga nem grava nada na ficha", OP.ligadas(fichaCat).length === 0 && !("categoria" in fichaCat));
       t.ok("as duas novas começam desligadas numa ficha nova",
         !OP.ligada(R2.fichaVazia(), "contagemMunicao") && !OP.ligada(R2.fichaVazia(), "controleComponentes"));
-      t.ok("todas com fonte e página",
-        OP.REGRAS.every(function (r) { return r.fonte && r.pagina > 0; }));
+      t.ok("todas com fonte e página (os Extras não têm livro nem página)",
+        OP.REGRAS.every(function (r) { return r.fonte && (r.pagina > 0 || r.fonte === "EXTRA"); }));
       t.ok("todas com resumo e efeito",
         OP.REGRAS.every(function (r) { return r.resumo && r.efeito; }));
 

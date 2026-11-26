@@ -361,8 +361,15 @@
           copia.adicionadoEm = U.agoraISO();
           if (copia.ordem) {
             delete copia.ordem.emUso;
+            /* A cópia é outro item: nada de dividir o lugar do original. */
+            delete copia.ordem.grade;
+            delete copia.ordem.empunhada;
+            delete copia.ordem.vestida;
             (copia.ordem.modificacoes || []).forEach(function (m) { m.id = U.uuid(); });
           }
+          var perfilD = perfilDe(ctx);
+          var recusaD = perfilD && perfilD.motivoParaRecusar ? perfilD.motivoParaRecusar(ctx, copia) : null;
+          if (recusaD) { UI.avisoAtencao(recusaD); return; }
           ctx.ficha.inventario.itens.push(copia);
           ctx.alterou();
           ctx.redesenhar();
@@ -607,6 +614,10 @@
             var montado = coletar(tipo, atual, nome, descricao, extras);
             if (!montado) return;
 
+            /* Inventário em grade (Ordem): só entra o que tem lugar. Num
+               item que já existe, só as unidades a mais precisam caber. */
+            var recusa = perfilDoEditor && perfilDoEditor.motivoParaRecusar ? perfilDoEditor.motivoParaRecusar(ctx, criando ? montado : unidadesAMais(item, montado)) : null;
+            if (recusa) { UI.avisoAtencao(recusa); return; }
             if (criando) {
               montado.adicionadoEm = U.agoraISO();
               ctx.ficha.inventario.itens.push(montado);
@@ -628,6 +639,19 @@
     });
 
     nome.entrada.focus();
+  }
+
+  /* As unidades que uma edição ACRESCENTA, como um item à parte, para a
+     conferência de espaço do inventário em grade. Nada a mais: null. */
+  function unidadesAMais(antigo, novo) {
+    var qa = antigo && antigo.ordem ? U.inteiro(antigo.ordem.quantidade, 1) : 1;
+    var qn = novo && novo.ordem ? U.inteiro(novo.ordem.quantidade, 1) : 1;
+    if (qn <= qa) return null;
+    var extra = JSON.parse(JSON.stringify(novo));
+    extra.id = "conferencia-" + U.uuid();
+    extra.ordem.quantidade = qn - qa;
+    delete extra.ordem.grade;
+    return extra;
   }
 
   /* Lê os campos, valida e devolve o item pronto — ou null, deixando

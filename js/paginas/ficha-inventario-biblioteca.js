@@ -59,6 +59,12 @@
 
   function ordemDe(ctx) { return ctx.ficha.ordem; }
 
+  /* Inventário em grade (v9.23.0): o motivo de não caber, ou null. */
+  function semLugar(ctx, item) {
+    var FG = global.RAMAFichaGrade;
+    return deOrdem(ctx) && FG && ctx.ficha.ordem ? FG.motivoParaRecusar(ctx, ctx.ficha.ordem, item) : null;
+  }
+
   function itensDaFicha(ctx) { return (ctx.ficha.inventario && ctx.ficha.inventario.itens) || []; }
 
   /* A quantidade só aparece onde faz sentido contar unidades. */
@@ -542,6 +548,9 @@
       try {
         item = F.criarItem(montado.tipo, montado.dados);
         item.adicionadoEm = U.agoraISO();
+        /* Inventário em grade (Ordem): só entra o que tem lugar. */
+        var recusa = semLugar(ctx, item);
+        if (recusa) { global.RAMAUI.avisoAtencao(recusa); return; }
         ctx.ficha.inventario.itens.push(item);
         ctx.alterou();
         ctx.redesenhar();
@@ -902,7 +911,9 @@
           copia.ordem = I().normalizarDados(Object.assign({}, copia.ordem || {}, { quantidade: qtd }), copia.tipo);
           (copia.ordem.modificacoes || []).forEach(function (mod) { mod.id = U.uuid(); });
         }
-        if (copia.ordem) delete copia.ordem.emUso;
+        if (copia.ordem) { delete copia.ordem.emUso; delete copia.ordem.grade; }
+        var recusaH = semLugar(ctx, copia);
+        if (recusaH) { global.RAMAUI.avisoAtencao(recusaH); return; }
         ctx.ficha.inventario.itens.push(copia);
         ctx.alterou();
         ctx.redesenhar();
