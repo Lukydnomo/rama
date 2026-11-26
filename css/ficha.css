@@ -2569,3 +2569,19 @@ body.pagina-ficha--painel .ficha-topo__nome { font-size: var(--texto-medio); }
 .inv-ctx__item { padding: var(--e1) var(--e3); border: 0; background: transparent; color: var(--cor-texto); text-align: left; cursor: pointer; font: inherit; }
 .inv-ctx__item:hover, .inv-ctx__item:focus-visible { background: var(--fundo-selecao); color: var(--cor-selecao-texto); outline: none; }
 .inv-ctx__item--perigo { color: var(--cor-erro); }
+/* Lixeira do inventário em grade (v9.23.3) */
+.inv-lixo {
+  align-self: flex-start;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-width: 72px;
+  padding: var(--e2);
+  border: var(--borda) dashed var(--cor-erro);
+  background: transparent;
+  color: var(--cor-erro);
+  font-size: var(--texto-mini);
+  cursor: pointer;
+}
+.inv-lixo--alvo, .inv--com-selecao .inv-lixo:hover { background: color-mix(in srgb, var(--cor-erro) 25%, transparent); border-style: solid; }

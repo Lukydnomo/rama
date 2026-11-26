@@ -118,6 +118,16 @@
 
   var CHANGELOG = [
     {
+      versao: "9.23.3",
+      codinome: "DESCARTE",
+      data: "26/11/2026",
+      mudancas: {
+        "Adicionado": [
+          "Inventário em grade: uma lixeira ao lado das grades. Arraste uma peça até ela (computador) ou toque na peça e depois na lixeira (celular) para tirar UMA unidade do inventário — numa pilha, as outras continuam onde estão; a última leva o item. Sempre pede confirmação antes, e cancelar deixa tudo como estava.",
+        ],
+      },
+    },
+    {
       versao: "9.23.2",
       codinome: "ATALHO",
       data: "26/11/2026",

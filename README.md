@@ -941,6 +941,10 @@ segredo nenhum — ele os lê das Script Properties. Publicá-lo não expõe nad
 
 ### Atualizar o backend
 
+**v9.23.3 — DESCARTE:** lixeira no inventário em grade (uma unidade por vez,
+com confirmação). **Só o site muda.** Site: `js/ordem/telas/ficha-grade.js`,
+`css/ficha.css`, `css/modern20/ficha.css` e `js/versao.js`.
+
 **v9.23.2 — ATALHO:** no computador, o clique direito num slot do corpo abre
 um menu de contexto pequeno no lugar do clique; no celular, nada muda. **Só o
 site muda.** Site: `js/ordem/telas/ficha-grade.js`, `css/ficha.css`,
@@ -2277,7 +2281,7 @@ Três números diferentes, que não se misturam:
 
 | | Onde | O que é |
 |---|---|---|
-| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v9.23.2 |
+| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v9.23.3 |
 | `schemaVersion` | `js/ficha.js` | o formato da FICHA |
 | `versaoFormato` | `js/config.js` | o formato dos arquivos de importação |
 

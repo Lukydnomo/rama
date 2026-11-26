@@ -167,6 +167,7 @@
       if (ref.duasMaos && G().MAOS.indexOf(slot) >= 0) slot = G().DUAS_MAOS;
       return { local: "corpo", slot: slot };
     }
+    if (tipo === "lixo") return { local: "lixo" };
     if (tipo === "faixa") {
       if (!zero) return { erro: "Só itens de espaço 0 ficam nesta faixa. Solte numa célula." };
       return { local: "grade", recipiente: alvo.dataset.rec, x: 0, y: 0, forma: [] };
@@ -186,6 +187,7 @@
      não couber), depois a carga total. Recusado, a peça fica na origem. */
   function tentarMover(ctx, api, o, est, ref, destino) {
     if (!destino) return false;
+    if (destino.local === "lixo") { jogarFora(ctx, api, ref); return false; }
     if (destino.erro) { mensagem = { texto: destino.erro, erro: true }; return false; }
     var item = ref.item;
     var antesGrade = JSON.stringify(item.ordem && item.ordem.grade || null);
@@ -214,6 +216,34 @@
   }
   var nomesDeRecipiente = {};
   function nomeDoRecipiente(id) { return nomesDeRecipiente[id] || "mochila"; }
+
+  /* A lixeira: uma unidade sai (a pilha diminui; a última leva o item).
+     Apagar não tem volta, então pergunta antes. */
+  function jogarFora(ctx, api, ref) {
+    var item = ref.item;
+    var q = I().dadosDoItem(item).quantidade;
+    var nome = item.nome || "item";
+    UI.confirmar({
+      titulo: "Tirar do inventário",
+      texto: q > 1 ? "Tirar 1 de " + q + " unidades de “" + nome + "”? As outras continuam onde estão." : "Tirar “" + nome + "” do inventário? Isso não pode ser desfeito.",
+      rotuloConfirmar: "Tirar", perigo: true,
+    }).then(function (sim) {
+      if (!sim) return;
+      var itens = ctx.ficha.inventario.itens || [];
+      if (q > 1) {
+        if (!item.ordem || typeof item.ordem !== "object") item.ordem = I().normalizarDados(item.ordem, item.tipo);
+        if (item.ordem.grade && Array.isArray(item.ordem.grade.unidades)) item.ordem.grade.unidades.splice(ref.indice, 1);
+        item.ordem.quantidade = q - 1;
+        G().sincronizar(item);
+      } else {
+        var i = itens.indexOf(item);
+        if (i >= 0) itens.splice(i, 1);
+      }
+      sel = null;
+      mensagem = { texto: q > 1 ? "1 unidade de " + nome + " saiu do inventário (restam " + (q - 1) + ")." : nome + " saiu do inventário.", erro: false };
+      api.aoMudar(); api.redesenhar();
+    });
+  }
 
   /* ---------------- desenho ---------------- */
 
@@ -553,8 +583,8 @@
       return e && e.closest ? e.closest("[data-alvo]") : null;
     }
     function limparSombra() {
-      Array.prototype.forEach.call(raiz.querySelectorAll(".inv-cel--sombra-ok, .inv-cel--sombra-nao, .inv-slot--sombra-ok, .inv-slot--sombra-nao"), function (c) {
-        c.classList.remove("inv-cel--sombra-ok", "inv-cel--sombra-nao", "inv-slot--sombra-ok", "inv-slot--sombra-nao");
+      Array.prototype.forEach.call(raiz.querySelectorAll(".inv-cel--sombra-ok, .inv-cel--sombra-nao, .inv-slot--sombra-ok, .inv-slot--sombra-nao, .inv-lixo--alvo"), function (c) {
+        c.classList.remove("inv-cel--sombra-ok", "inv-cel--sombra-nao", "inv-slot--sombra-ok", "inv-slot--sombra-nao", "inv-lixo--alvo");
       });
     }
     /* A sombra da peça inteira onde ela cairia, verde ou vermelha. */
@@ -565,6 +595,7 @@
       if (!ref) return;
       var d = destinoDoAlvo(est, ref, alvo);
       if (!d) return;
+      if (d.local === "lixo") { alvo.classList.add("inv-lixo--alvo"); return; }
       var ok = !d.erro && G().cabe(est, ref, d).ok;
       if (alvo.dataset.alvo === "slot" || alvo.dataset.alvo === "faixa") { alvo.classList.add(ok ? "inv-slot--sombra-ok" : "inv-slot--sombra-nao"); return; }
       var rec = alvo.dataset.rec;
@@ -719,7 +750,15 @@
       barraDeForma(ctx, api, o, est),
       el("div.inv-area", {}, [
         desenharCorpo(est, o),
-        el("div.inv-recipientes", {}, Object.keys(est.grades).map(function (k) { return desenharGrade(est, est.grades[k], o); })),
+        el("div.inv-recipientes", {}, Object.keys(est.grades).map(function (k) { return desenharGrade(est, est.grades[k], o); }).concat([
+          /* v9.23.3: a lixeira — solte (ou toque com uma peça selecionada)
+             para tirar UMA unidade do inventário, com confirmação. */
+          el("button.inv-lixo", {
+            type: "button", "data-alvo": "lixo",
+            "aria-label": "Lixeira: tirar a peça selecionada do inventário",
+            title: "Solte aqui (ou toque com uma peça selecionada) para tirar uma unidade do inventário",
+          }, [UI.simbolo("lixeira", 18), el("span", { texto: "Lixeira" })]),
+        ])),
       ]),
       pendentes.length ? el("section.inv-pendentes", { "aria-label": "A organizar" }, [
         el("h4.inv-recipiente__nome", { texto: "A organizar (" + pendentes.length + ")" }),
