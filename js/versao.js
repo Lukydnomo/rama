@@ -118,6 +118,16 @@
 
   var CHANGELOG = [
     {
+      versao: "9.23.1",
+      codinome: "RECOLHA",
+      data: "26/11/2026",
+      mudancas: {
+        "Alterado": [
+          "Inventário em grade: a lista de itens antiga fica recolhida por padrão (“Lista de itens — editar, atacar, usar”, abre com um clique), e “+ Adicionar” e “Da biblioteca” aparecem também no painel da grade.",
+        ],
+      },
+    },
+    {
       versao: "9.23.0",
       codinome: "ENCAIXE",
       data: "26/11/2026",

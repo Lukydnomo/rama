@@ -2552,4 +2552,4 @@ body.pagina-ficha--painel .ficha-topo__nome { font-size: var(--texto-medio); }
   .inv-corpo { align-self: stretch; }
   .inv-corpo__figura { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
-
+.inventario-lista-recolhida > summary { cursor: pointer; padding: var(--e2) 0; }

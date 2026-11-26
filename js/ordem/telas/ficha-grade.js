@@ -658,7 +658,11 @@
       ]) : null,
     ]);
     ligarInteracao(raiz, ctx, api, o, est);
-    return UI.painel("Inventário em grade", raiz, { classe: "ordem-painel-grade" });
+    var acoes = api.acoes ? [
+      el("button.r-botao.r-botao--mini", { type: "button", texto: "+ Adicionar", onclick: function (ev) { api.acoes.adicionar(ev); } }),
+      el("button.r-botao.r-botao--mini", { type: "button", texto: "Da biblioteca", onclick: function () { api.acoes.biblioteca(); } }),
+    ] : null;
+    return UI.painel("Inventário em grade", raiz, { classe: "ordem-painel-grade", acoes: acoes });
   }
 
   /* Pode entrar um item novo (criar, biblioteca, duplicar)? Cabe em

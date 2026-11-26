@@ -5001,7 +5001,9 @@
     /* No lugar do peso, o painel inteiro de carga e capacidade: a conta,
        o ajuste temporário e os itens por categoria, logo acima dos itens
        que eles contam. */
-    cabecalho: function (ctx) {
+    emGrade: function (ctx) { return !!global.RAMAFichaGrade && R.gradeLigada(ordemDe(ctx)); },
+
+    cabecalho: function (ctx, acoes) {
       var o = ordemDe(ctx);
       var carga = painelCarga(ctx, o, calculo(ctx));
       /* v9.23.0: com o Inventário em grade (Extras), o corpo, as grades
@@ -5012,6 +5014,7 @@
         o: o,
         aoMudar: function () { aoMudarOrdem(ctx); },
         redesenhar: function () { ctx.redesenhar(); },
+        acoes: acoes || null,
       })]);
     },
 

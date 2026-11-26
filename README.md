@@ -941,6 +941,12 @@ segredo nenhum — ele os lê das Script Properties. Publicá-lo não expõe nad
 
 ### Atualizar o backend
 
+**v9.23.1 — RECOLHA:** com o inventário em grade, a lista antiga fica
+recolhida por padrão e a grade ganha “+ Adicionar” e “Da biblioteca”. **Só o
+site muda.** Site: `js/paginas/ficha-inventario.js`,
+`js/ordem/telas/ficha-ordem.js`, `js/ordem/telas/ficha-grade.js`,
+`css/ficha.css` e `js/versao.js`.
+
 **v9.23.0 — ENCAIXE:** regra opcional “Inventário em grade” (Extras) na ficha
 de Ordem: grade principal, mochilas com grade própria, corpo e mãos, formas à
 escolha e arraste ou toque para a posição exata. **Só o site muda.** Site:
@@ -2266,7 +2272,7 @@ Três números diferentes, que não se misturam:
 
 | | Onde | O que é |
 |---|---|---|
-| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v9.23.0 |
+| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v9.23.1 |
 | `schemaVersion` | `js/ficha.js` | o formato da FICHA |
 | `versaoFormato` | `js/config.js` | o formato dos arquivos de importação |
 

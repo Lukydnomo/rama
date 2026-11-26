@@ -50,9 +50,17 @@
   function aba(ctx) {
     var perfil = perfilDe(ctx);
     if (perfil) {
+      var acoes = {
+        adicionar: function (ev) { menuAdicionar(ctx, ev); },
+        biblioteca: function () { daBiblioteca(ctx); },
+      };
+      /* v9.23.1: com o Inventário em grade, a lista vira uma seção
+         recolhida (fechada por padrão) — editar, atacar e usar continuam
+         lá; adicionar e biblioteca ficam também no painel da grade. */
+      var emGrade = perfil.emGrade && perfil.emGrade(ctx);
       return el("div.pilha--larga", { class: "pilha" }, [
-        perfil.cabecalho(ctx),
-        painelDoInventario(ctx),
+        perfil.cabecalho(ctx, acoes),
+        emGrade ? listaRecolhida(ctx) : painelDoInventario(ctx),
       ]);
     }
 
@@ -83,6 +91,16 @@
 
       painelDoInventario(ctx),
     ]);
+  }
+
+  var listaAberta = false;
+  function listaRecolhida(ctx) {
+    var det = el("details.inventario-lista-recolhida", { open: listaAberta }, [
+      el("summary.t-secao", { texto: "Lista de itens (" + (ctx.ficha.inventario.itens || []).length + ") — editar, atacar, usar" }),
+      painelDoInventario(ctx),
+    ]);
+    det.addEventListener("toggle", function () { listaAberta = det.open; });
+    return det;
   }
 
   function painelDoInventario(ctx) {
