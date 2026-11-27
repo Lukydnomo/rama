@@ -941,6 +941,18 @@ segredo nenhum — ele os lê das Script Properties. Publicá-lo não expõe nad
 
 ### Atualizar o backend
 
+**v9.25.0 — FOCINHO:** Companheiro Animal na ficha de Ordem (suplemento de fã
+“Melhor Amigo da Ordem”, de @_Lesm0_): “Criar aliado” oferece aliado
+convencional ou companheiro animal, com criação guiada, ficha jogável e evolução
+de NEX 5% a 99%. **Só o site muda.** Site: `js/ordem/companheiro.js` (novo),
+`js/ordem/telas/companheiro-ficha.js` (novo), `js/ordem/telas/companheiro-criar.js`
+(novo), `js/paginas/ficha-aliados.js`, `js/criaturas.js`, `css/ficha.css`,
+`css/modern20/ficha.css`, as páginas que carregam as criaturas e `js/versao.js`.
+
+**Companheiro Animal** — `deno run --allow-read testes/executar-companheiro.js`:
+números de criação e de 10%, substitutas de perícia, marcos 60→75, crescimento,
+Elo que cai e volta, Transcender, Cobaia, conexão, trauma e normalização.
+
 **v9.24.0 — EMBLEMA:** ícone (imagem recortada) nos itens do inventário.
 **Backend muda:** atualize `Codigo.gs` (tipo `item` nas imagens da ficha) e crie
 uma nova versão da implantação. Site: `js/ficha.js`, `js/imagem-editor.js`,
@@ -2287,7 +2299,7 @@ Três números diferentes, que não se misturam:
 
 | | Onde | O que é |
 |---|---|---|
-| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v9.24.0 |
+| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v9.25.0 |
 | `schemaVersion` | `js/ficha.js` | o formato da FICHA |
 | `versaoFormato` | `js/config.js` | o formato dos arquivos de importação |
 

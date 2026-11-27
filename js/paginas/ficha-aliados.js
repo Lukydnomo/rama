@@ -6,6 +6,31 @@
 
   function atual(ctx, id) { return U.porId(ctx.ficha.aliados || [], id); }
   function permitido(ctx) { return !ctx.podeEditar || ctx.podeEditar(); }
+  /* Companheiro animal de Ordem (v9.25.0): registro próprio, sem criatura. */
+  function ehCompanheiro(a) { return !!(a && a.tipo === "companheiro" && a.companheiro); }
+  function nomeDoAliado(a) { return ehCompanheiro(a) ? (a.companheiro.nome || "Companheiro") : (a && a.criatura ? a.criatura.nome : "Aliado"); }
+  function comCompanheiro(ctx) { return !!(ctx.ficha.ordem && global.RAMAOrdemCompanheiro && global.RAMAOrdemCompanheiroCriar && global.RAMAOrdemCompanheiroFicha); }
+
+  /* "Criar aliado" na ficha de Ordem: convencional (o editor de sempre)
+     ou companheiro animal (criação guiada). Fora de Ordem, direto o editor. */
+  function criar(ctx) {
+    if (!ctx.emEdicao() || !permitido(ctx)) return;
+    if (!comCompanheiro(ctx)) { editar(ctx); return; }
+    var m = UI.modal({ titulo: "Criar aliado", conteudo: el("div.criacao-lista", {}, [
+      el("button.criacao-opcao", { type: "button", onclick: function () { m.fechar(); editar(ctx); } }, [
+        el("span.criacao-opcao__nome", { texto: "Aliado convencional" }),
+        el("span.criacao-opcao__texto", { texto: "Uma criatura com atributos, perícias, ataques e habilidades — o editor de sempre." }),
+      ]),
+      el("button.criacao-opcao", { type: "button", onclick: function () {
+        m.fechar();
+        global.RAMAOrdemCompanheiroCriar.abrir(ctx, function (aliado) { ctx.redesenhar(); global.RAMAOrdemCompanheiroFicha.abrir(ctx, aliado.id); });
+      } }, [
+        el("span.criacao-opcao__nome", { texto: "Companheiro animal" }),
+        el("span.criacao-opcao__texto", { texto: "Criação guiada de um animal com ficha jogável: porte, origem, especialização, Elo e evolução de NEX 5% a 99%." }),
+        el("span.criacao-opcao__fonte", { texto: global.RAMAOrdemCompanheiro.FONTE }),
+      ]),
+    ]), botoes: [{ rotulo: "Cancelar", classe: "r-botao--fantasma" }] });
+  }
 
   function editar(ctx, aliado) {
     if (!ctx.emEdicao() || !permitido(ctx)) return;
@@ -48,7 +73,7 @@
     if (!ctx.emEdicao() || !permitido(ctx)) return;
     var a = atual(ctx, id);
     if (!a) return;
-    var sim = await UI.confirmar({ titulo: "Remover aliado?", texto: "Remover " + a.criatura.nome + " desta ficha? A criatura da biblioteca e outros aliados serão preservados.",
+    var sim = await UI.confirmar({ titulo: "Remover aliado?", texto: "Remover " + nomeDoAliado(a) + " desta ficha? A criatura da biblioteca e outros aliados serão preservados.",
       rotuloConfirmar: "Remover aliado", perigo: true, exigeDecisao: true });
     if (!sim || !ctx.emEdicao() || !permitido(ctx)) return;
     ctx.ficha.aliados = ctx.ficha.aliados.filter(function (x) { return x.id !== id; });
@@ -58,6 +83,7 @@
   function consultar(ctx, id) {
     var a = atual(ctx, id);
     if (!a) return;
+    if (ehCompanheiro(a)) { if (global.RAMAOrdemCompanheiroFicha) global.RAMAOrdemCompanheiroFicha.abrir(ctx, id); return; }
     var painel = global.RAMACriaturaPainel.criar(a.criatura, {
       nome: a.criatura.nome, rotulo: "Aliado de " + ctx.ficha.nome, resultadosLocais: true,
       permitirRolagem: !ctx.emEdicao() && permitido(ctx),
@@ -150,11 +176,11 @@
   function arriscar(ctx, id) {
     var a = atual(ctx, id);
     if (!a || !permitido(ctx)) return;
-    var r = global.RAMADados.total("1d6", { nome: "Aliados em Perigo · " + a.criatura.nome });
+    var r = global.RAMADados.total("1d6", { nome: "Aliados em Perigo · " + nomeDoAliado(a) });
     if (!r.ok) return;
     var res = A2().arriscarAliado(a, A2().cenaDe(ctx.ficha.ordem), r.total, "perigo-" + U.uuid(), "", ctx.ficha.ordem);
     if (!res.ok) { UI.avisoAtencao(res.motivo); return; }
-    if (global.RAMARolagens) global.RAMARolagens.mostrar(r, { nome: "Aliados em Perigo · " + a.criatura.nome,
+    if (global.RAMARolagens) global.RAMARolagens.mostrar(r, { nome: "Aliados em Perigo · " + nomeDoAliado(a),
       notas: [res.ferido ? (res.pendente ? "Ímpar: segundo ferimento nesta cena — a morte espera a confirmação da mesa." : "Ímpar: o aliado se feriu.") : "Par: o aliado segue intacto."] });
     ctx.alterou(); ctx.redesenhar();
   }
@@ -178,6 +204,15 @@
   function abaDosAliados(ctx) {
     var aliados = ctx.ficha.aliados || [];
     return UI.painel("Aliados", aliados.length ? el("div.aliados-grade", {}, aliados.map(function (a) {
+      if (ehCompanheiro(a)) {
+        var acoes = el("div.faixa", {}, [
+          el("button.r-botao.r-botao--mini", { type: "button", texto: "Abrir ficha", onclick: function () { consultar(ctx, a.id); } }),
+          ctx.emEdicao() ? el("button.r-botao.r-botao--mini.r-botao--perigo", { type: "button", texto: "Remover", onclick: function () { remover(ctx, a.id); } }) : null,
+        ]);
+        return global.RAMAOrdemCompanheiroFicha
+          ? global.RAMAOrdemCompanheiroFicha.cartao(ctx, a, el("div.pilha--curta", { class: "pilha" }, [linhaDePerigo(ctx, a), acoes]))
+          : el("article.r-painel", {}, [el("h3.t-secao", { texto: nomeDoAliado(a) }), el("p.t-mini", { texto: "Companheiro animal" }), acoes]);
+      }
       return el("article.r-painel", {}, [
         retratoDoAliado(a),
         el("h3.t-secao", { texto: a.criatura.nome }),
@@ -191,7 +226,7 @@
       ]);
     })) : UI.vazio({ titulo: "Nenhum aliado", texto: "No modo edição, crie um companheiro ou traga uma criatura da biblioteca. O vínculo não aplica regras automáticas." }), {
       acoes: ctx.emEdicao() ? [
-        el("button.r-botao.r-botao--mini", { type: "button", texto: "Criar aliado", onclick: function () { editar(ctx); } }),
+        el("button.r-botao.r-botao--mini", { type: "button", texto: "Criar aliado", onclick: function () { criar(ctx); } }),
         el("button.r-botao.r-botao--mini", { type: "button", texto: "Da biblioteca", onclick: function (ev) { biblioteca(ctx, ev.currentTarget); } }),
       ] : [],
     });

@@ -118,6 +118,21 @@
 
   var CHANGELOG = [
     {
+      versao: "9.25.0",
+      codinome: "FOCINHO",
+      data: "27/11/2026",
+      mudancas: {
+        "Adicionado": [
+          "Ordem Paranormal: Companheiro Animal, do suplemento de fã “Melhor Amigo da Ordem” (de @_Lesm0_). Na aba Aliados, “Criar aliado” agora oferece “Aliado convencional” (o editor de sempre) ou “Companheiro animal”, com criação guiada: conceito, porte (minúsculo a grande, com crescimento de filhote), atributos, 14 origens, especialização (Agressor, Utilitário ou Predador) e perícias. Cancelar não grava nada.",
+          "Ficha jogável do companheiro, aberta pela lista de aliados: PV, PE e COR com dano, gasto e recuperação; Defesa, resistências, deslocamento, limite de PE por turno, perícias e ataques com rolagem; Elo de 0 a 100% com os ajustes da tabela, obediência e poderes de Elo; trauma ao chegar a COR 0; inventário próprio com armas e proteções adaptadas.",
+          "Evolução de NEX 5% a 99% pela aba Progressão: cada decisão fica no seu marco (atributos, poderes, graus de treinamento, conexão em 50%, crescimento), e reabrir, sincronizar ou recalcular nunca concede nada de novo. Uma escolha de Elo continua guardada se o Elo cair e volta quando ele sobe. Disponível em Legacy e Modern20.",
+        ],
+        "Técnico": [
+          "js/ordem/companheiro.js (RAMAOrdemCompanheiro, motor puro), js/ordem/telas/companheiro-ficha.js e companheiro-criar.js; aliado com tipo \"companheiro\" e bloco companheiro, preservado por RAMACriaturas.normalizarAliados. Documentado em docs/FICHA-ORDEM.md; testes em testes/executar-companheiro.js. Só o site muda.",
+        ],
+      },
+    },
+    {
       versao: "9.24.0",
       codinome: "EMBLEMA",
       data: "26/11/2026",

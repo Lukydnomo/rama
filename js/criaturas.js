@@ -1471,12 +1471,29 @@
     };
   }
 
+  /* Companheiro animal de Ordem (v9.25.0): `tipo: "companheiro"` e um
+     bloco `companheiro`, sem `criatura`. Com o motor carregado, ele
+     normaliza; sem ele (páginas que não desenham a ficha), o bloco passa
+     como veio — nunca se perde numa gravação. */
+  function normalizarCompanheiro(a, id) {
+    var M = global.RAMAOrdemCompanheiro;
+    var bloco = M ? M.normalizar(a.companheiro) : JSON.parse(JSON.stringify(a.companheiro));
+    var saida = { id: id, tipo: "companheiro", origemId: null, companheiro: bloco,
+      imagem: typeof a.imagem === "string" && /^data:image\/(png|jpeg|webp|gif|bmp);base64,[A-Za-z0-9+/=]+$/.test(a.imagem) ? a.imagem : "" };
+    var perigo = normalizarPerigo(a.perigo);
+    if (perigo) saida.perigo = perigo;
+    return saida;
+  }
+
   function normalizarAliados(bruto) {
     var ids = {};
-    return lista(bruto).filter(function (a) { return a && a.criatura && typeof a.criatura === "object"; })
+    return lista(bruto).filter(function (a) {
+      return a && ((a.tipo === "companheiro" && a.companheiro && typeof a.companheiro === "object") || (a.criatura && typeof a.criatura === "object"));
+    })
       .map(function (a) {
         var id = a.id && !ids[a.id] ? String(a.id) : U.uuid();
         ids[id] = true;
+        if (a.tipo === "companheiro" && a.companheiro && typeof a.companheiro === "object") return normalizarCompanheiro(a, id);
         var c = normalizar(a.criatura);
         delete c.id;
         c.visibilidade = "privado";

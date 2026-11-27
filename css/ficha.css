@@ -2593,3 +2593,50 @@ body.pagina-ficha--painel .ficha-topo__nome { font-size: var(--texto-medio); }
 .item-icone--celula { width: 100%; height: 100%; border: 0; background: transparent; pointer-events: none; }
 .campo-icone-item { display: flex; flex-direction: column; gap: var(--e1); }
 .campo-icone-item .faixa { align-items: center; }
+
+/* =====================================================================
+   COMPANHEIRO ANIMAL — Ordem Paranormal (v9.25.0)
+   ===================================================================== */
+.comp-ficha { min-width: 0; }
+.comp-cabecalho { align-items: flex-start; flex-wrap: nowrap; }
+.comp-cabecalho > .pilha { min-width: 0; flex: 1 1 0; }
+.comp-retrato { width: 88px; height: 88px; flex: 0 0 auto; }
+.comp-previa { width: 88px; height: 88px; display: flex; align-items: center; justify-content: center; border: var(--borda) dashed var(--cor-traco-media); overflow: hidden; flex: 0 0 auto; color: var(--cor-texto-3); }
+.comp-previa img { width: 100%; height: 100%; object-fit: cover; }
+.comp-recursos { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: var(--e3); }
+.comp-recurso { display: grid; grid-template-columns: auto auto 1fr; gap: var(--e1) var(--e2); align-items: center; padding: var(--e2); border: var(--borda) solid var(--cor-traco-fraca); min-width: 0; }
+.comp-recurso__nome { font-weight: 700; }
+.comp-recurso__max { color: var(--cor-texto-3); white-space: nowrap; }
+.comp-recurso > .faixa { grid-column: 1 / -1; }
+.comp-atributos { display: flex; flex-wrap: wrap; gap: var(--e2); }
+.comp-atributo { display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 64px; padding: var(--e2); border: var(--borda) solid var(--cor-traco-media); background: transparent; color: var(--cor-texto); cursor: pointer; }
+.comp-atributo:disabled { cursor: default; }
+.comp-atributo__sigla { font-size: var(--texto-mini); color: var(--cor-texto-3); }
+.comp-atributo__valor { font-size: 1.4em; font-weight: 700; }
+.comp-pericias { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: var(--e1); }
+.comp-pericia { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.comp-pericia__rolar { display: grid; grid-template-columns: 1fr auto; grid-template-areas: "nome total" "meta total"; gap: 0 var(--e2); align-items: center; width: 100%; padding: var(--e1) var(--e2); border: var(--borda) solid var(--cor-traco-fraca); background: transparent; color: var(--cor-texto-2); text-align: left; cursor: pointer; }
+.comp-pericia__rolar:disabled { cursor: default; }
+.comp-pericia__rolar > .comp-pericia__nome { grid-area: nome; overflow-wrap: break-word; min-width: 0; }
+.comp-pericia__rolar > .t-mini { grid-area: meta; }
+.comp-pericia__total { grid-area: total; font-weight: 700; }
+.comp-pericia--treinada .comp-pericia__rolar { border-color: var(--cor-traco-media); color: var(--cor-texto); }
+.comp-usos summary { cursor: pointer; }
+.comp-ataque, .comp-item, .comp-habilidade { display: flex; flex-direction: column; gap: 2px; padding: var(--e2); border: var(--borda) solid var(--cor-traco-fraca); min-width: 0; }
+.comp-habilidade--inativa { opacity: .6; }
+.comp-trauma { padding: var(--e2); border: var(--borda) solid var(--cor-erro); }
+.comp-elo-barra { height: 8px; border: var(--borda) solid var(--cor-traco-media); background: linear-gradient(90deg, var(--cor-paranormal, var(--cor-texto-2)) var(--comp-elo, 0%), transparent var(--comp-elo, 0%)); }
+.comp-marco { display: flex; flex-direction: column; gap: var(--e2); padding: var(--e2) 0; border-top: var(--borda) solid var(--cor-traco-fraca); }
+.comp-marco__titulo { margin: 0; text-transform: uppercase; letter-spacing: .04em; color: var(--cor-texto-3); }
+.comp-vaga { display: flex; flex-direction: column; gap: var(--e1); min-width: 0; }
+.comp-vaga--pendente { padding-left: var(--e2); border-left: 3px solid var(--cor-erro); }
+.comp-vaga__rotulo { margin: 0; font-weight: 700; color: var(--cor-texto-2); }
+.comp-resumo { margin-top: var(--e2); }
+.comp-tabela-rolavel { overflow-x: auto; max-width: 100%; }
+.comp-tabela { border-collapse: collapse; font-size: var(--texto-mini); }
+.comp-tabela th, .comp-tabela td { padding: 2px var(--e2); border-bottom: var(--borda) solid var(--cor-traco-fraca); text-align: left; white-space: nowrap; }
+@media (max-width: 560px) {
+  .comp-cabecalho { flex-wrap: wrap; }
+  .comp-pericias { grid-template-columns: minmax(0, 1fr); }
+}
+

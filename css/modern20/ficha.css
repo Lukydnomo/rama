@@ -602,4 +602,13 @@
   & .item-icone--grande { border-radius: var(--m20-raio-cartao); }
   & .item-icone--mini { border-radius: 4px; }
   & .item-icone--celula { border-radius: 4px; }
+
+  /* Companheiro animal (v9.25.0) */
+  & .comp-recurso, & .comp-ataque, & .comp-item, & .comp-habilidade, & .comp-trauma { border-radius: var(--m20-raio-cartao); border-color: var(--m20-borda); }
+  & .comp-trauma { border-color: var(--cor-erro); }
+  & .comp-atributo, & .comp-pericia__rolar { border-radius: var(--m20-raio-controle); border-color: var(--m20-borda-controle); transition: background var(--m20-mov-estado) var(--m20-curva-mover); }
+  & .comp-atributo:hover:not(:disabled), & .comp-pericia__rolar:hover:not(:disabled) { background: var(--m20-realce); }
+  & .comp-previa, & .comp-retrato { border-radius: var(--m20-raio-cartao); }
+  & .comp-elo-barra { border-radius: 999px; border-color: var(--m20-borda); overflow: hidden; }
+  & .comp-vaga--pendente { border-radius: 0 var(--m20-raio-controle) var(--m20-raio-controle) 0; }
 }

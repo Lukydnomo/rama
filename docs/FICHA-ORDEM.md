@@ -397,3 +397,54 @@ para o corpo). O que não cabe fica "A organizar" — visível, contado, nunca
 destino. Item novo (criar, biblioteca, duplicar, quantidade maior) só entra se
 couber. Tirar uma mochila deixa o conteúdo pendente, sem apagar nada; uma
 mochila não vai dentro de si mesma. Testes: `testes/executar-grade.js`.
+
+## Companheiro Animal — v9.25.0 (suplemento de fã “Melhor Amigo da Ordem”, de @_Lesm0_)
+
+Na aba Aliados da ficha de Ordem, “Criar aliado” pergunta: **Aliado
+convencional** (o editor de criatura de sempre) ou **Companheiro animal**
+(criação guiada: Conceito, Porte, Atributos, Origem, Especialização,
+Perícias, Avanço — só com NEX inicial acima de 5% — e Revisão). Cancelar não
+grava nada; “Criar companheiro” põe um registro só na lista de aliados.
+
+**Onde mora.** `ficha.aliados[i] = { id, tipo: "companheiro", origemId: null,
+imagem, companheiro: {…} }`, sem `criatura`. Nada vira Homebrew, personagem
+solto ou combatente. `RAMACriaturas.normalizarAliados` mantém o registro
+(normalizado por `RAMAOrdemCompanheiro.normalizar` quando o motor está
+carregado; senão, como veio). Exportar/importar, mescla de conflitos e o
+servidor (que guarda `fichaJson` opaco) não precisam de nada novo.
+
+**Uma escolha por vaga.** Cada decisão fica em `companheiro.escolhas[<id>]`:
+`esp.fixa`, `esp.pericias`, `esp.subst.<perícia>`, `origem.sequela`,
+`origem.paranormal`, `hab.burroCarga`, `atr.30|50|90`, `cresc.<NEX>`,
+`poder.20|50|80` (e `.atributo`, `.armamento`, `.paranormal`, `.pericias`),
+`grau.35|70`, `conexao`, `elo.20|50|80`. PV, PE, COR, pontos e poderes são
+recalculados a cada leitura a partir do estado: reabrir, sincronizar ou
+recalcular nunca concede de novo. Trocar porte, origem ou INT preserva as
+escolhas e marca, em cada vaga, o que deixou de valer.
+
+**Decisões de interpretação:** especialização em 5% (pacote), primeira
+habilidade em 10%; poderes em 20/50/80 (nada a mais em 60%); grau de
+treinamento em 35/70 (nada em 75%); terceira habilidade do Agressor em 70%,
+Pata Amiga e Caçada em 65%; Presa Fácil +1d6/2d6/3d6/4d6 em 10/40/70/99;
+errata (Luta no lugar de “Agressividade”; Distrair 3 PE); Elo com escolhas em
+20/50/80 e habilidades fixas em 30/60/90/100. Deslocamento base 9 m.
+
+**Contas.** Porte de cada ganho = porte inicial + crescimentos de marcos
+ANTERIORES (a infância não vira adulta). PV/PE com VIG/PRE atuais; Sobrevivente
+e Corajoso +1 por marco; Cobaia Paranormal: metade da COR inicial;
+Transcender: sem COR naquele marco. Limite de PE por turno = marcos atingidos
+(1 em 5%, 20 em 99%). Elo = ajustes + 10 (Amigo de longa data), 0–100; uma
+escolha de Elo continua guardada quando ele cai (inativa) e volta ao subir.
+COR 0 vinda de cima abre um episódio de trauma (reabrir em 0 não abre outro);
+três na mesma missão: incapaz de lutar.
+
+**Ficha** (`js/ordem/telas/companheiro-ficha.js`): Geral, Habilidades e
+poderes, Inventário, Progressão, Descrição. PV/PE/COR, Elo, trauma e rolagens
+para quem pode editar a ficha do tutor; NEX, escolhas, inventário e descrição
+só no modo edição; o Leitor só consulta. Consultar não gasta nada; “Usar”
+desconta os PE e a mesa decide o gatilho.
+
+Arquivos: `js/ordem/companheiro.js` (motor, puro),
+`js/ordem/telas/companheiro-ficha.js`, `js/ordem/telas/companheiro-criar.js`,
+`js/paginas/ficha-aliados.js`. Testes: `testes/executar-companheiro.js`.
+
