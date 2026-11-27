@@ -941,6 +941,10 @@ segredo nenhum — ele os lê das Script Properties. Publicá-lo não expõe nad
 
 ### Atualizar o backend
 
+**v9.25.2 — SOBREPOSTO:** o resultado do dado aparece por cima de janela aberta
+(a ficha do aliado), em vez de atrás dela. **Só o site muda.** Site:
+`css/tokens.css`, `css/componentes.css` e `js/versao.js`.
+
 **v9.25.1 — MOSTRUARIO:** no Companheiro Animal, os poderes (de companheiro,
 paranormais e de Elo) são escolhidos numa janela com busca, filtro por elemento,
 descrição, requisitos e motivo de indisponível, como na ficha de Ordem; Placas
@@ -2306,7 +2310,7 @@ Três números diferentes, que não se misturam:
 
 | | Onde | O que é |
 |---|---|---|
-| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v9.25.1 |
+| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v9.25.2 |
 | `schemaVersion` | `js/ficha.js` | o formato da FICHA |
 | `versaoFormato` | `js/config.js` | o formato dos arquivos de importação |
 

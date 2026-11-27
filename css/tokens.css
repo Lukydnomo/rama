@@ -216,6 +216,7 @@
    --z-cabecalho: 30;
    --z-flutuante: 40;
    --z-modal: 50;
+   --z-rolagem: 55;   /* o dado aparece por cima de janela aberta (ficha do aliado) */
    --z-aviso: 60;
 
    /* ---------- medidas do esqueleto ---------- */

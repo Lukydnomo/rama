@@ -118,6 +118,19 @@
 
   var CHANGELOG = [
     {
+      versao: "9.25.2",
+      codinome: "SOBREPOSTO",
+      data: "27/11/2026",
+      mudancas: {
+        "Corrigido": [
+          "O resultado de uma rolagem feita dentro de uma janela aberta (a ficha do Companheiro Animal, por exemplo) aparecia atrás dela, e era preciso fechar a janela para ver o dado. Agora o resultado fica por cima de qualquer janela; os avisos continuam acima dele.",
+        ],
+        "Técnico": [
+          "Nova camada --z-rolagem (55), entre --z-modal (50) e --z-aviso (60), usada por .rolagens. Só o site muda.",
+        ],
+      },
+    },
+    {
       versao: "9.25.1",
       codinome: "MOSTRUARIO",
       data: "27/11/2026",

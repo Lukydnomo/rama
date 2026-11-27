@@ -1870,7 +1870,7 @@
   position: fixed;
   right: var(--e4);
   bottom: var(--e4);
-  z-index: var(--z-flutuante);
+  z-index: var(--z-rolagem);
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
