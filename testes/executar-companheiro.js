@@ -163,6 +163,23 @@ t.ok("Fúria Bestial pede outros 2 de Sangue", /Sangue 2/.test(C.calcular(pFuria
 t.ok("Aprender Ritual fica fora", !C.paranormais().some((p) => /aprenderRitual/.test(p.chave)));
 t.ok("poderes de Ordem entram", C.paranormais().some((p) => p.chave === "ordem:resistirAElemento"));
 
+/* --- Janela de escolha: candidatos --- */
+t.grupo("Candidatos da janela de escolha (v9.25.1)");
+const jc = C.normalizar(ate(C.normalizar(base), 20));
+jc.escolhas["poder.20"] = "transcender"; jc.escolhas["poder.20.paranormal"] = "hiperfagia";
+r = C.calcular(jc);
+const candP = C.candidatos(r, "poder.20.paranormal");
+const achar = (k) => candP.find((c) => c.entrada.chave === k);
+t.igual("todos os paranormais aparecem", candP.length, C.paranormais().length);
+t.ok("trocar o único de Sangue: Sangue Vivo (pede outro de Sangue) fica indisponível", !achar("ordem:sangueVivo").disponivel && /Sangue 1/.test(achar("ordem:sangueVivo").motivo));
+t.ok("o próprio escolhido continua disponível", achar("hiperfagia").disponivel);
+t.ok("Placas Sanguinolentas: requisito de ritual impossível, escrito", !achar("ordem:placasSanguinolentas").disponivel && /não aprende rituais/.test(achar("ordem:placasSanguinolentas").requisitos[0].texto));
+const candG = C.candidatos(r, "poder.20");
+t.igual("poder geral: um candidato por poder", candG.length, C.PODERES.length);
+t.ok("Tanque Animal sem VIG 2: indisponível, com ✗ no requisito", !candG.find((c) => c.entrada.chave === "tanqueAnimal").disponivel && candG.find((c) => c.entrada.chave === "tanqueAnimal").requisitos[0].ok === false);
+t.ok("Reflexos Defensivos com AGI 2: disponível", candG.find((c) => c.entrada.chave === "reflexosDefensivos").disponivel);
+t.igual("vaga desconhecida: lista vazia", C.candidatos(r, "nada"), []);
+
 /* --- Trauma --- */
 t.grupo("Trauma");
 const medo = C.normalizar(base); medo.trauma.missao = "m1";

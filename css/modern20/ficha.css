@@ -606,6 +606,7 @@
   /* Companheiro animal (v9.25.0) */
   & .comp-recurso, & .comp-ataque, & .comp-item, & .comp-habilidade, & .comp-trauma { border-radius: var(--m20-raio-cartao); border-color: var(--m20-borda); }
   & .comp-trauma { border-color: var(--cor-erro); }
+  & .comp-escolhido { border-radius: var(--m20-raio-cartao); border-color: var(--m20-borda); }
   & .comp-atributo, & .comp-pericia__rolar { border-radius: var(--m20-raio-controle); border-color: var(--m20-borda-controle); transition: background var(--m20-mov-estado) var(--m20-curva-mover); }
   & .comp-atributo:hover:not(:disabled), & .comp-pericia__rolar:hover:not(:disabled) { background: var(--m20-realce); }
   & .comp-previa, & .comp-retrato { border-radius: var(--m20-raio-cartao); }

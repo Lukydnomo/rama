@@ -130,32 +130,146 @@
           aoEscolher(marcado ? null : a.chave);
         }, noTeto ? { "aria-disabled": "true", class: "criacao-pericia--bloqueada" } : null);
       })));
-    } else if (v.tipo === "poder") {
-      var ops = C.PODERES.map(function (p) {
-        var falta = (p.requisitos || []).filter(function (q) { return !C.cumpre(q, { atributos: r.atributos, graus: r.graus, porElemento: {}, c: r.c }); });
-        return { valor: p.chave, rotulo: p.nome + (falta.length ? " — requer " + falta.map(C.textoDoRequisito).join(", ") : "") };
-      });
-      var pd = C.poderGeral(v.valor);
-      corpo.push(selecao(ops, v.valor, pd ? pd.texto : ""));
-    } else if (v.tipo === "paranormal") {
-      var grupos = {};
-      C.paranormais().forEach(function (p) { (grupos[p.elemento || "variado"] = grupos[p.elemento || "variado"] || []).push(p); });
-      var opsP = [];
-      ["sangue", "morte", "conhecimento", "energia", "medo", "variado"].forEach(function (g) {
-        (grupos[g] || []).forEach(function (p) {
-          opsP.push({ valor: p.chave, rotulo: (g === "variado" ? "" : C.nomeElemento(g) + " · ") + p.nome + (p.deOrdem ? " (Ordem)" : "") +
-            ((p.requisitos || []).length ? " — requer " + p.requisitos.map(C.textoDoRequisito).join(", ") : "") });
-        });
-      });
-      var pp = C.paranormal(v.valor);
-      corpo.push(selecao(opsP, v.valor, pp ? pp.texto + (pp.afinidade ? " Afinidade: " + pp.afinidade : "") : "Os exclusivos de companheiro e os poderes paranormais de Ordem que servem ao animal (sem Aprender Ritual)."));
-    } else if (v.tipo === "poderElo") {
-      var pe = C.PODERES_ELO.filter(function (x) { return x.chave === v.valor; })[0];
-      corpo.push(selecao(C.PODERES_ELO.map(function (x) { return { valor: x.chave, rotulo: x.nome + (x.custo ? " (" + x.custo + " PE)" : "") }; }), v.valor, pe ? pe.texto : ""));
-      if (!v.ativa) corpo.push(el("p.t-mini.t-aviso", { texto: "Inativo: o Elo está abaixo de " + v.elo + "%. A escolha fica guardada e volta quando o Elo subir." }));
+    } else if (v.tipo === "poder" || v.tipo === "paranormal" || v.tipo === "poderElo") {
+      corpo.push(el("p.t-mini.comp-vaga__rotulo", { texto: v.rotulo }));
+      var escolhido = entradaDaVaga(v);
+      corpo.push(escolhido
+        ? el("div.comp-escolhido", {}, conteudoDoCartao(escolhido, v.tipo, null))
+        : el("p.t-mini", { texto: "Nada escolhido ainda." }));
+      if (!desabilitado) {
+        corpo.push(el("div.faixa", {}, [
+          el("button.r-botao.r-botao--mini", { type: "button", class: escolhido ? "" : "r-botao--principal", texto: escolhido ? "Trocar…" : "Escolher…",
+            onclick: function () { janelaDeEscolha(v, r, aoEscolher); } }),
+          escolhido ? el("button.r-botao.r-botao--mini.r-botao--fantasma", { type: "button", texto: "Desfazer escolha", onclick: function () { aoEscolher(null); } }) : null,
+        ]));
+      }
+      if (v.tipo === "poderElo" && !v.ativa) corpo.push(el("p.t-mini.t-aviso", { texto: "Inativo: o Elo está abaixo de " + v.elo + "%. A escolha fica guardada e volta quando o Elo subir." }));
     }
     if (v.problema && v.ativa) corpo.push(el("p.t-mini.t-erro", { role: "status", texto: v.problema }));
     return el("div.comp-vaga", { class: v.problema && v.ativa ? "comp-vaga--pendente" : "", dataset: { vaga: v.id } }, corpo);
+  }
+
+  /* ---------------- janela de escolha de poder ----------------
+     Como a da ficha de Ordem: busca, filtros, cada opção com descrição,
+     requisitos (✓/✗) e o motivo de estar indisponível. A conta vem do
+     motor (`candidatos`), a mesma que valida a vaga. */
+
+  var ROTULO_TIPO = { poder: "Poder de companheiro", paranormal: "Poder paranormal", poderElo: "Poder de Elo" };
+  var FILTROS_DE_ESCOLHA = {};
+
+  function entradaDaVaga(v) {
+    var C = M();
+    if (!v.valor) return null;
+    if (v.tipo === "poder") return C.poderGeral(v.valor);
+    if (v.tipo === "paranormal") return C.paranormal(v.valor);
+    return C.PODERES_ELO.filter(function (x) { return x.chave === v.valor; })[0] || null;
+  }
+
+  function referenciaDe(e) {
+    if (!e.deOrdem) return "Melhor Amigo da Ordem (suplemento de fã)";
+    var OC = global.RAMAOrdemCatalogo;
+    var livros = OC && OC.mapaDosLivros ? OC.mapaDosLivros("curto") : {};
+    return (livros[e.fonte] || e.fonte || "Ordem Paranormal") + (e.pagina ? ", p. " + e.pagina : "");
+  }
+
+  function conteudoDoCartao(e, tipo, cand) {
+    var C = M();
+    var marcas = [el("span.etiqueta", { texto: ROTULO_TIPO[tipo] + (e.elemento ? " · " + C.nomeElemento(e.elemento) : "") })];
+    if (e.deOrdem) marcas.push(el("span.etiqueta", { texto: "de Ordem" }));
+    if (e.custo) marcas.push(el("span.etiqueta", { texto: e.custo + " PE" }));
+    if (e.repetivel) marcas.push(el("span.etiqueta", { texto: "repetível" }));
+    var reqs = cand ? cand.requisitos : (e.requisitos || []).map(function (q) { return { texto: C.textoDoRequisito(q), ok: null }; });
+    return [
+      el("span.criacao-opcao__nome", { texto: e.nome }),
+      el("span.escolha-marcas", {}, marcas),
+      el("span.criacao-opcao__texto.escolha-cartao__resumo", { texto: e.texto || "" }),
+      e.afinidade ? el("span.criacao-opcao__texto", { texto: "Afinidade: " + e.afinidade }) : null,
+      reqs.length ? el("span.escolha-requisitos", {}, reqs.map(function (q) {
+        if (q.ok === null) return el("span.escolha-requisito", { texto: "Requisito: " + q.texto });
+        return el("span.escolha-requisito", { class: q.ok ? "escolha-requisito--ok" : "escolha-requisito--falta" }, [
+          el("span", { "aria-hidden": "true", texto: q.ok ? "✓ " : "✗ " }),
+          el("span.so-leitor", { texto: q.ok ? "cumprido: " : "não cumprido: " }),
+          el("span", { texto: q.texto }),
+        ]);
+      })) : null,
+      cand && !cand.disponivel ? el("span.escolha-motivo", { texto: "Indisponível. " + cand.motivo }) : null,
+      el("span.criacao-opcao__fonte", { texto: referenciaDe(e) }),
+    ];
+  }
+
+  function janelaDeEscolha(v, r, aoEscolher) {
+    var C = M();
+    var cands = C.candidatos(r, v.id);
+    var f = FILTROS_DE_ESCOLHA[v.tipo] || (FILTROS_DE_ESCOLHA[v.tipo] = { busca: "", elemento: "", soDisponiveis: false });
+    f.busca = ""; /* a busca recomeça a cada abertura; elemento e "só disponíveis" ficam */
+    var lista = el("div.criacao-lista.escolha-lista", { role: "list" });
+    var contagem = el("p.t-mini", { "aria-live": "polite" });
+    var janela;
+
+    function pintarLista() {
+      var termo = U.chaveDeBusca(f.busca);
+      var visiveis = cands.filter(function (c) {
+        var e = c.entrada;
+        if (termo && U.chaveDeBusca(e.nome + " " + (e.texto || "") + " " + (e.afinidade || "")).indexOf(termo) < 0) return false;
+        if (f.elemento && (e.elemento || "sem") !== f.elemento) return false;
+        if (f.soDisponiveis && !c.disponivel && c.entrada.chave !== v.valor) return false;
+        return true;
+      }).sort(function (a, b) {
+        if (a.entrada.chave === v.valor) return -1;
+        if (b.entrada.chave === v.valor) return 1;
+        if (a.disponivel !== b.disponivel) return a.disponivel ? -1 : 1;
+        return a.entrada.nome.localeCompare(b.entrada.nome, "pt-BR");
+      });
+      U.trocar(lista, visiveis.length ? visiveis.map(function (c) {
+        var e = c.entrada, marcado = e.chave === v.valor;
+        return el("div", { role: "listitem" }, [el("button.criacao-opcao.escolha-cartao", {
+          type: "button",
+          class: (marcado ? "criacao-opcao--escolhida " : "") + (c.disponivel ? "" : "escolha-cartao--indisponivel"),
+          "aria-pressed": String(marcado), "aria-disabled": c.disponivel ? null : "true",
+          "aria-label": e.nome + (c.disponivel ? "" : ", indisponível: " + c.motivo) + ". " + (e.texto || ""),
+          onclick: function () {
+            if (!c.disponivel && !marcado) { UI.avisoAtencao(e.nome + ": " + c.motivo); return; }
+            janela.fechar();
+            if (!marcado) aoEscolher(e.chave);
+          },
+        }, conteudoDoCartao(e, v.tipo, c))]);
+      }) : el("p.t-mini", { texto: "Nada corresponde aos filtros." }));
+      var disp = cands.filter(function (c) { return c.disponivel; }).length;
+      contagem.textContent = visiveis.length + " mostrado(s) · " + disp + " disponível(is) de " + cands.length;
+    }
+
+    var busca = el("input.r-entrada", { type: "search", placeholder: "Buscar por nome ou efeito", "aria-label": "Buscar", value: f.busca,
+      oninput: function (ev) { f.busca = ev.target.value; pintarLista(); } });
+    var filtros = null;
+    if (v.tipo === "paranormal") {
+      var botoes = [];
+      filtros = el("div.filtros", {}, [el("div.filtros__grupo", { role: "group", "aria-label": "Elemento" },
+        [{ v: "", r: "Todos os elementos" }].concat(C.ELEMENTOS.map(function (x) { return { v: x.chave, r: x.nome }; })).concat([{ v: "sem", r: "Sem elemento fixo" }])
+          .filter(function (x) { return !x.v || cands.some(function (c) { return (c.entrada.elemento || "sem") === x.v; }); })
+          .map(function (x) {
+            var b = el("button.filtro", { type: "button", texto: x.r, "aria-pressed": String(f.elemento === x.v), onclick: function () {
+              f.elemento = x.v;
+              botoes.forEach(function (o) { o.b.setAttribute("aria-pressed", String(o.v === f.elemento)); });
+              pintarLista();
+            } });
+            botoes.push({ b: b, v: x.v });
+            return b;
+          }))]);
+    }
+    var so = el("label.r-marca", {}, [
+      el("input", { type: "checkbox", checked: f.soDisponiveis, onchange: function (ev) { f.soDisponiveis = ev.target.checked; pintarLista(); } }),
+      el("span", { texto: "Só as disponíveis" }),
+    ]);
+    pintarLista();
+    janela = UI.modal({
+      titulo: v.rotulo, largo: true,
+      conteudo: el("div.pilha--curta.escolha-seletor", { class: "pilha" }, [
+        el("div.r-busca", {}, [el("span.r-busca__marca", {}, [UI.simbolo("busca")]), busca]),
+        filtros, so, contagem, lista,
+      ]),
+      botoes: [{ rotulo: "Cancelar", classe: "r-botao--fantasma" }],
+    });
+    setTimeout(function () { try { busca.focus(); } catch (e) { void e; } }, 0);
   }
 
   /* As vagas agrupadas pelo marco, em ordem: NEX crescente, depois Elo. */

@@ -444,6 +444,14 @@ para quem pode editar a ficha do tutor; NEX, escolhas, inventário e descrição
 só no modo edição; o Leitor só consulta. Consultar não gasta nada; “Usar”
 desconta os PE e a mesa decide o gatilho.
 
+**Escolher um poder (v9.25.1).** Vagas de poder de companheiro, paranormal
+e de Elo abrem uma janela como a da ficha de Ordem: busca, filtro por
+elemento, descrição, afinidade, requisitos ✓/✗ e o motivo de indisponível.
+A conta vem de `RAMAOrdemCompanheiro.candidatos(calculo, idDaVaga)`, que roda
+a mesma validação da vaga com cada opção no lugar da atual. Requisito de
+conjurar ritual (Placas Sanguinolentas) é impossível para o animal e aparece
+escrito como tal.
+
 Arquivos: `js/ordem/companheiro.js` (motor, puro),
 `js/ordem/telas/companheiro-ficha.js`, `js/ordem/telas/companheiro-criar.js`,
 `js/paginas/ficha-aliados.js`. Testes: `testes/executar-companheiro.js`.

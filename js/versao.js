@@ -118,6 +118,22 @@
 
   var CHANGELOG = [
     {
+      versao: "9.25.1",
+      codinome: "MOSTRUARIO",
+      data: "27/11/2026",
+      mudancas: {
+        "Melhorado": [
+          "Companheiro Animal: poderes de companheiro, poderes paranormais e poderes de Elo agora são escolhidos numa janela igual à da ficha de Ordem, com busca, filtro por elemento, a descrição e a afinidade de cada poder, os requisitos marcados (✓/✗) e o motivo de um poder estar indisponível. A escolha feita aparece na ficha com a descrição inteira, em vez de só o nome numa lista.",
+        ],
+        "Corrigido": [
+          "Companheiro Animal: Placas Sanguinolentas mostrava “Requisito do livro (conferir pela mesa)” e podia ser escolhida. O requisito é conjurar um ritual de Sangue, e o companheiro não aprende rituais: agora aparece como indisponível, com o motivo escrito.",
+        ],
+        "Técnico": [
+          "RAMAOrdemCompanheiro.candidatos(calculo, idDaVaga): as opções de uma vaga de poder com a mesma validação da vaga. Testes em testes/executar-companheiro.js. Só o site muda.",
+        ],
+      },
+    },
+    {
       versao: "9.25.0",
       codinome: "FOCINHO",
       data: "27/11/2026",

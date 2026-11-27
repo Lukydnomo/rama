@@ -941,6 +941,13 @@ segredo nenhum — ele os lê das Script Properties. Publicá-lo não expõe nad
 
 ### Atualizar o backend
 
+**v9.25.1 — MOSTRUARIO:** no Companheiro Animal, os poderes (de companheiro,
+paranormais e de Elo) são escolhidos numa janela com busca, filtro por elemento,
+descrição, requisitos e motivo de indisponível, como na ficha de Ordem; Placas
+Sanguinolentas passa a indisponível (pede ritual). **Só o site muda.** Site:
+`js/ordem/companheiro.js`, `js/ordem/telas/companheiro-ficha.js`, `css/ficha.css`,
+`css/modern20/ficha.css` e `js/versao.js`.
+
 **v9.25.0 — FOCINHO:** Companheiro Animal na ficha de Ordem (suplemento de fã
 “Melhor Amigo da Ordem”, de @_Lesm0_): “Criar aliado” oferece aliado
 convencional ou companheiro animal, com criação guiada, ficha jogável e evolução
@@ -2299,7 +2306,7 @@ Três números diferentes, que não se misturam:
 
 | | Onde | O que é |
 |---|---|---|
-| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v9.25.0 |
+| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v9.25.1 |
 | `schemaVersion` | `js/ficha.js` | o formato da FICHA |
 | `versaoFormato` | `js/config.js` | o formato dos arquivos de importação |
 

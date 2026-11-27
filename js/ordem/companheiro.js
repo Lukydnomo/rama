@@ -254,6 +254,8 @@
         if (r.tipo === "elemento") return { elemento: r.elemento, quantidade: r.quantidade };
         if (r.tipo === "atributo") return { atributo: r.atributo, minimo: r.minimo };
         if (r.tipo === "nex") return { nex: r.minimo };
+        /* O companheiro não aprende rituais: requisito impossível, à mostra. */
+        if (r.tipo === "conjurarRitual") return { impossivel: true, texto: "Conjurar ritual" + (r.elemento ? " de " + nomeElemento(r.elemento) : "") + " de " + (r.circulo || 1) + "º círculo (o companheiro não aprende rituais)" };
         if (r.tipo === "treinado") {
           var doAnimal = PERICIAS.filter(function (x) { return x.ordem === r.pericia || x.chave === r.pericia; })[0];
           if (doAnimal) return { treinada: doAnimal.chave };
@@ -513,6 +515,7 @@
   }
 
   function cumpre(req, ctx) {
+    if (req.impossivel) return false;
     if (req.atributo) return ctx.atributos[req.atributo] >= req.minimo;
     if (req.treinada) return GRAUS_IDX(ctx.graus[req.treinada]) >= 1;
     if (req.umaTreinada) return req.umaTreinada.some(function (p) { return GRAUS_IDX(ctx.graus[p]) >= 1; });
@@ -736,6 +739,7 @@
     var tudoVagas = vagas(c, atributos, graus, { elo: elo });
     var ctxReq = { atributos: atributos, graus: graus, porElemento: porElemento, c: c };
     tudoVagas.forEach(function (v) { v.problema = problemaDaVaga(c, v, ctxReq, tudoVagas, atributos, graus, portAtual); });
+    var simulacao = { ctx: ctxReq, atributos: atributos, graus: graus, porte: portAtual };
 
     return {
       c: c, nex: nexAtual, nexIndice: c.nexIndice, proximoNex: NEX[c.nexIndice + 1] || null,
@@ -760,7 +764,7 @@
       usoCategoria: usoCategoria,
       amedrontado: corAtual > 0 && corAtual < cor,
       trauma: { emTrauma: corAtual <= 0, aberto: aberto, daMissao: daMissao.length, incapaz: daMissao.length >= 3, missao: missao },
-      vagas: tudoVagas,
+      vagas: tudoVagas, simulacao: simulacao,
       pendentes: tudoVagas.filter(function (v) { return v.ativa && v.problema; }),
       problemasDistribuicao: problemasDaDistribuicao(c),
       pontosIniciais: pontosIniciais(c),
@@ -880,6 +884,31 @@
     return true;
   }
 
+  /* As opções de uma vaga de poder (geral, paranormal ou de Elo), cada
+     uma com o que a validação diria se fosse escolhida AGORA nessa vaga:
+     a mesma conta de `problemaDaVaga`, para a janela de escolha mostrar
+     o motivo antes do clique. O valor atual da vaga sai da contagem de
+     elementos e o candidato entra no lugar dele. */
+  function candidatos(r, idVaga) {
+    var v = (r.vagas || []).filter(function (x) { return x.id === idVaga; })[0];
+    if (!v || !r.simulacao) return [];
+    var s = r.simulacao;
+    var lista = v.tipo === "poder" ? PODERES : v.tipo === "paranormal" ? paranormais() : v.tipo === "poderElo" ? PODERES_ELO : [];
+    var atualP = v.tipo === "paranormal" && v.valor ? paranormal(v.valor) : null;
+    return lista.map(function (e) {
+      var porElemento = Object.assign({}, s.ctx.porElemento);
+      if (atualP && atualP.elemento) porElemento[atualP.elemento] = Math.max(0, (porElemento[atualP.elemento] || 0) - 1);
+      if (v.tipo === "paranormal" && e.elemento) porElemento[e.elemento] = (porElemento[e.elemento] || 0) + 1;
+      var ctx = Object.assign({}, s.ctx, { porElemento: porElemento });
+      var problema = problemaDaVaga(r.c, Object.assign({}, v, { valor: e.chave }), ctx, r.vagas, s.atributos, s.graus, s.porte);
+      var semEste = Object.assign({}, porElemento);
+      if (v.tipo === "paranormal" && e.elemento) semEste[e.elemento]--;
+      var ctxReq = Object.assign({}, ctx, { porElemento: semEste });
+      var requisitos = (e.requisitos || []).map(function (q) { return { texto: textoDoRequisito(q), ok: cumpre(q, v.tipo === "paranormal" ? ctxReq : ctx) }; });
+      return { entrada: e, disponivel: !problema, motivo: problema || "", requisitos: requisitos };
+    });
+  }
+
   global.RAMAOrdemCompanheiro = {
     NEX: NEX, ATRIBUTOS: ATRIBUTOS, ELEMENTOS: ELEMENTOS, PORTES: PORTES, PERICIAS: PERICIAS, GRAUS: GRAUS,
     ORIGENS: ORIGENS, SEQUELAS: SEQUELAS, ESPECIALIZACOES: ESPECIALIZACOES, PODERES: PODERES,
@@ -890,7 +919,7 @@
     vazio: vazio, normalizar: normalizar, calcular: calcular, atributosIniciais: atributosIniciais, pontosIniciais: pontosIniciais,
     porteNoMarco: porteNoMarco, nomeAtr: nomeAtr, nomeElemento: nomeElemento,
     definirRecurso: definirRecurso, subirNex: subirNex, descerNex: descerNex, crescer: crescer, desfazerCrescimento: desfazerCrescimento,
-    ajustarElo: ajustarElo,
+    ajustarElo: ajustarElo, candidatos: candidatos,
     FONTE: "Melhor Amigo da Ordem — suplemento de fã de @_Lesm0_ (não oficial)",
   };
 })(typeof window !== "undefined" ? window : globalThis);

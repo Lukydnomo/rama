@@ -2631,6 +2631,7 @@ body.pagina-ficha--painel .ficha-topo__nome { font-size: var(--texto-medio); }
 .comp-vaga { display: flex; flex-direction: column; gap: var(--e1); min-width: 0; }
 .comp-vaga--pendente { padding-left: var(--e2); border-left: 3px solid var(--cor-erro); }
 .comp-vaga__rotulo { margin: 0; font-weight: 700; color: var(--cor-texto-2); }
+.comp-escolhido { display: flex; flex-direction: column; gap: var(--e1); padding: var(--e2) var(--e3); background: var(--fundo-superficie); border: var(--borda) solid var(--cor-traco-fraca); min-width: 0; }
 .comp-resumo { margin-top: var(--e2); }
 .comp-tabela-rolavel { overflow-x: auto; max-width: 100%; }
 .comp-tabela { border-collapse: collapse; font-size: var(--texto-mini); }
