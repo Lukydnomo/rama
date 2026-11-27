@@ -3473,7 +3473,8 @@ function acaoSalvarFoto(corpo, usuario) {
    e não toca no que já existe.
    ===================================================================== */
 
-var LIMITES_IMAGENS_PERSONAGEM = { retrato: 30, anotacao: 60, porNota: 12 };
+/* v9.24.0: `item` — o ícone de um item do inventário (alvo = id do item). */
+var LIMITES_IMAGENS_PERSONAGEM = { retrato: 30, anotacao: 60, porNota: 12, item: 100 };
 var REF_IMAGEM_PERSONAGEM = /^[A-Za-z0-9_-]{6,64}$/;
 var MAX_REFS_POR_PEDIDO = 40;
 

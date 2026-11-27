@@ -60,6 +60,11 @@
       titulo: "Imagem do aliado", proporcao: 1, guia: "circulo", lado: ladoFoto,
       explicacao: "A imagem aparece quadrada no cartão do aliado e redonda nas miniaturas — a linha tracejada mostra esse corte.",
     },
+    /* v9.24.0: o ícone de um item do inventário — quadrado, como as fotos. */
+    item: {
+      titulo: "Ícone do item", proporcao: 1, guia: "circulo", lado: ladoFoto,
+      explicacao: "O ícone aparece quadrado no cartão do item e nas peças do inventário em grade. A área clara é o que vai ser salvo.",
+    },
     /* A faixa 3:1 da Visão geral, gravada com até 1500 × 500. */
     capa: {
       titulo: "Capa da campanha", proporcao: 3, largura: 1500, gifMaximo: 4096,

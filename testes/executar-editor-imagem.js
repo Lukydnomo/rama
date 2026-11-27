@@ -32,7 +32,7 @@ const perto = (a, b, e = 1e-6) => Math.abs(a - b) <= e;
 const dentro = (R, W, H) => R.x >= -1e-9 && R.y >= -1e-9 && R.x + R.w <= W + 1e-6 && R.y + R.h <= H + 1e-6 && R.w > 0 && R.h > 0;
 
 t.grupo("Destinos");
-t.igual("os nove destinos (v9.14: ilustração e símbolo do Homebrew)", E.DESTINOS, ["avatar", "retrato", "criatura", "aliado", "capa", "pacote", "ilustracao", "simbolo", "documento"]);
+t.igual("os dez destinos (v9.14: ilustração e símbolo do Homebrew; v9.24: ícone de item)", E.DESTINOS, ["avatar", "retrato", "criatura", "aliado", "item", "capa", "pacote", "ilustracao", "simbolo", "documento"]);
 t.ok("ilustração e símbolo vão inteiros por padrão, com proporção livre", ["ilustracao", "simbolo"].every((d) => { const c = E.configuracao ? E.configuracao(d) : null; return !c || (c.livre && c.inteiraPorPadrao); }));
 const pacote = E.configuracao("pacote");
 t.ok("pacote: 2:3 (a moldura das capas dos sistemas), 320 × 480 exato, sempre estática", Math.abs(pacote.proporcao - 2 / 3) < 1e-9 && pacote.largura === 320 && pacote.altura === 480 && pacote.exato && pacote.somenteEstatica);

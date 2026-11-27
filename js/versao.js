@@ -118,6 +118,19 @@
 
   var CHANGELOG = [
     {
+      versao: "9.24.0",
+      codinome: "EMBLEMA",
+      data: "26/11/2026",
+      mudancas: {
+        "Adicionado": [
+          "Ícone nos itens do inventário (todas as fichas): ao criar ou editar um item, “Escolher imagem” abre o editor de recorte de sempre (quadrado, com arrastar, zoom e GIF animado), e “Tirar ícone” remove. O ícone aparece no cartão do item e, com o Inventário em grade, na peça, no corpo e nas faixas.",
+        ],
+        "Técnico": [
+          "Atualizar Codigo.gs e criar nova versão da implantação: PERSONAGENS_IMAGENS aceita o tipo `item` (até 100 por ficha). O item guarda só `imagemRef`; uma cópia (duplicar) divide a ref, e a imagem sai do servidor quando nenhum item a usa mais. Destino `item` no editor de imagem.",
+        ],
+      },
+    },
+    {
       versao: "9.23.3",
       codinome: "DESCARTE",
       data: "26/11/2026",

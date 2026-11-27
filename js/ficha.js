@@ -899,6 +899,11 @@
     var adicionadoEm = U.carimbo(d.adicionadoEm);
     if (adicionadoEm) base.adicionadoEm = adicionadoEm;
 
+    /* v9.24.0: o ícone do item, por ref (PERSONAGENS_IMAGENS, tipo
+       "item"). Só existe no item que o tem. */
+    var imagemRef = refValida(d.imagemRef);
+    if (imagemRef) base.imagemRef = imagemRef;
+
     /* Espaços, quantidade e categoria de Ordem Paranormal. O bloco só
        existe no item que já o tinha — um item da ficha universal nunca
        ganha campo novo por causa disto. */

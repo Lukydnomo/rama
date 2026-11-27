@@ -941,6 +941,12 @@ segredo nenhum — ele os lê das Script Properties. Publicá-lo não expõe nad
 
 ### Atualizar o backend
 
+**v9.24.0 — EMBLEMA:** ícone (imagem recortada) nos itens do inventário.
+**Backend muda:** atualize `Codigo.gs` (tipo `item` nas imagens da ficha) e crie
+uma nova versão da implantação. Site: `js/ficha.js`, `js/imagem-editor.js`,
+`js/paginas/ficha-inventario.js`, `js/ordem/telas/ficha-grade.js`,
+`css/ficha.css`, `css/modern20/ficha.css` e `js/versao.js`.
+
 **v9.23.3 — DESCARTE:** lixeira no inventário em grade (uma unidade por vez,
 com confirmação). **Só o site muda.** Site: `js/ordem/telas/ficha-grade.js`,
 `css/ficha.css`, `css/modern20/ficha.css` e `js/versao.js`.
@@ -2281,7 +2287,7 @@ Três números diferentes, que não se misturam:
 
 | | Onde | O que é |
 |---|---|---|
-| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v9.23.3 |
+| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v9.24.0 |
 | `schemaVersion` | `js/ficha.js` | o formato da FICHA |
 | `versaoFormato` | `js/config.js` | o formato dos arquivos de importação |
 

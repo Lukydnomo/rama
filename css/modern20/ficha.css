@@ -598,4 +598,8 @@
   & .inv-ctx__item { border-radius: 4px; }
   & .inv-ctx__item:hover, & .inv-ctx__item:focus-visible { background: var(--m20-realce-forte); color: var(--cor-texto); }
   & .inv-lixo { border-radius: var(--m20-raio-cartao); }
+  & .item-icone { border-radius: 6px; border-color: var(--m20-borda); }
+  & .item-icone--grande { border-radius: var(--m20-raio-cartao); }
+  & .item-icone--mini { border-radius: 4px; }
+  & .item-icone--celula { border-radius: 4px; }
 }

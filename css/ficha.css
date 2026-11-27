@@ -2585,3 +2585,11 @@ body.pagina-ficha--painel .ficha-topo__nome { font-size: var(--texto-medio); }
   cursor: pointer;
 }
 .inv-lixo--alvo, .inv--com-selecao .inv-lixo:hover { background: color-mix(in srgb, var(--cor-erro) 25%, transparent); border-style: solid; }
+/* Ícone do item (v9.24.0) */
+.item-icone { display: inline-grid; place-items: center; flex: 0 0 auto; width: 32px; height: 32px; overflow: hidden; border: var(--borda) solid var(--cor-traco-fraca); background: var(--fundo-superficie); }
+.item-icone img { width: 100%; height: 100%; object-fit: cover; image-rendering: auto; }
+.item-icone--grande { width: 64px; height: 64px; }
+.item-icone--mini { width: 18px; height: 18px; border: 0; vertical-align: middle; margin-right: 4px; }
+.item-icone--celula { width: 100%; height: 100%; border: 0; background: transparent; pointer-events: none; }
+.campo-icone-item { display: flex; flex-direction: column; gap: var(--e1); }
+.campo-icone-item .faixa { align-items: center; }

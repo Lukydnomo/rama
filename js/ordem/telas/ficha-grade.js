@@ -238,6 +238,7 @@
       } else {
         var i = itens.indexOf(item);
         if (i >= 0) itens.splice(i, 1);
+        if (item.imagemRef && global.RAMASecaoInventario && global.RAMASecaoInventario.apagarIconeSeOrfao) global.RAMASecaoInventario.apagarIconeSeOrfao(ctx, item.imagemRef);
       }
       sel = null;
       mensagem = { texto: q > 1 ? "1 unidade de " + nome + " saiu do inventário (restam " + (q - 1) + ")." : nome + " saiu do inventário.", erro: false };
@@ -246,6 +247,14 @@
   }
 
   /* ---------------- desenho ---------------- */
+
+  /* v9.24.0: o ícone do item (quando tem), pelo mesmo caminho do cartão. */
+  var ctxAtual = null;
+  function iconeDe(ref, classe) {
+    var S = global.RAMASecaoInventario;
+    if (!ctxAtual || !ref || !ref.item.imagemRef || !S || !S.iconeDoItem) return null;
+    return S.iconeDoItem(ctxAtual, ref.item, classe || "item-icone--celula");
+  }
 
   function corDe(id) {
     var h = 0;
@@ -280,7 +289,7 @@
           style: "--inv-matiz: " + corDe(ref ? ref.item.id : dono),
           title: (ref ? ref.item.nome : "Item") + " — clique ou toque para pegar; arraste para mover",
           "aria-label": (ref ? ref.item.nome : "Item") + ", linha " + (y + 1) + ", coluna " + (x + 1) + (sel && sel.uid === dono ? ", selecionado" : ""),
-        }, comum), [primeira ? el("span.inv-cel__sigla", { "aria-hidden": "true", texto: sigla(ref && ref.item.nome) }) : null]));
+        }, comum), [primeira ? (iconeDe(ref) || el("span.inv-cel__sigla", { "aria-hidden": "true", texto: sigla(ref && ref.item.nome) })) : null]));
         continue;
       }
       if (fr.length) {
@@ -322,7 +331,7 @@
       style: "--inv-matiz: " + corDe(ref.item.id),
       title: motivo || ref.item.nome,
       "aria-label": ref.item.nome + (ref.espacos.total ? ", " + I().rotuloEspacos(ref.espacos.total) + " espaço(s)" : "") + (sel && sel.uid === ref.uid ? ", selecionado" : ""),
-    }, [el("span", { texto: ref.item.nome || "Item" }), ref.espacos.total ? el("span.t-mini", { texto: " " + I().rotuloEspacos(ref.espacos.total) }) : null]);
+    }, [iconeDe(ref, "item-icone--mini"), el("span", { texto: ref.item.nome || "Item" }), ref.espacos.total ? el("span.t-mini", { texto: " " + I().rotuloEspacos(ref.espacos.total) }) : null]);
   }
 
   function desenharCorpo(est, o) {
@@ -341,7 +350,7 @@
             style: ref ? "--inv-matiz: " + corDe(ref.item.id) : null,
             title: G().nomeDoSlot(o.inventarioGrade, s.id) + (ref ? ": " + ref.item.nome : ": vazio") + " — clique direito ou toque prolongado: slots extras",
             "aria-label": G().nomeDoSlot(o.inventarioGrade, s.id) + (ref ? ", " + ref.item.nome + (ref.lugar.slot === G().DUAS_MAOS ? " (duas mãos)" : "") : ", vazio") + ". Menu de contexto: slots extras.",
-          }, [el("span", { texto: ref ? ref.item.nome : (s.base ? "—" : "extra") })]);
+          }, [ref ? iconeDe(ref, "item-icone--mini") : null, el("span", { texto: ref ? ref.item.nome : (s.base ? "—" : "extra") })]);
         })));
       })),
     ]);
@@ -727,6 +736,7 @@
     var o = api.o;
     var inv = ctx.ficha.inventario;
     if (!G() || !R()) return null;
+    ctxAtual = ctx;
     var est = montar(o, inv);
     if (reconciliar(ctx, api, o, est)) est = montar(o, inv);
     nomesDeRecipiente = {};

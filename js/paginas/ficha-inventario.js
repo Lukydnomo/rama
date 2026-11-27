@@ -251,6 +251,7 @@
     var perfil = perfilDe(ctx);
     var caixa = UI.recolhivel({
       titulo: item.nome || "Sem nome",
+      antes: iconeDoItem(ctx, item),
       subtitulo: resumoDoCartao(ctx, item, perfil, efetivos),
       classe: [item.tipo === "arma" ? "recolhivel--arma" : "", perfil && perfil.classeDoItem ? perfil.classeDoItem(ctx, item) : ""].join(" ").trim(),
       conteudo: [
@@ -551,7 +552,35 @@
     var etiqueta = U.normalizarEtiqueta(atual.etiqueta);
     var campoEtiqueta = UI.campoEtiqueta({ valor: etiqueta, aoMudar: function (v) { etiqueta = v; } });
 
-    var campos = [nome, campoEtiqueta, categoria];
+    /* v9.24.0: ícone do item — escolhido e recortado no editor de imagem;
+       sobe ao salvar (PERSONAGENS_IMAGENS) e o item guarda só a ref. */
+    var icone = { nova: "", remover: false };
+    var previaIcone = el("span.item-icone.item-icone--grande", { "aria-hidden": "true" });
+    function pintarPrevia() {
+      U.limpar(previaIcone);
+      var src = icone.nova || (!icone.remover && atual.imagemRef ? (global.RAMAImagensFicha ? global.RAMAImagensFicha.ja(ctx.personagemId, atual.imagemRef) : "") : "");
+      if (src) previaIcone.appendChild(el("img", { src: src, alt: "" }));
+      else previaIcone.appendChild(el("span.t-mini", { texto: "sem ícone" }));
+      botaoTirar.hidden = !(icone.nova || (atual.imagemRef && !icone.remover));
+    }
+    var botaoTirar = el("button.r-botao.r-botao--mini.r-botao--fantasma", { type: "button", texto: "Tirar ícone", onclick: function () { icone.nova = ""; icone.remover = true; pintarPrevia(); } });
+    var campoIcone = el("div.campo-icone-item", {}, [
+      el("span.r-rotulo", { texto: "Ícone" }),
+      el("div.faixa", {}, [
+        previaIcone,
+        el("button.r-botao.r-botao--mini", { type: "button", texto: "Escolher imagem", onclick: async function () {
+          if (!global.RAMAEditorImagem) { UI.avisoErro("O editor de imagem não carregou nesta página."); return; }
+          var r = await global.RAMAEditorImagem.escolher("item");
+          if (r && r.ok) { icone.nova = r.imagem; icone.remover = false; pintarPrevia(); }
+        } }),
+        botaoTirar,
+      ]),
+    ]);
+    if (atual.imagemRef && global.RAMAImagensFicha && !global.RAMAImagensFicha.ja(ctx.personagemId, atual.imagemRef)) {
+      global.RAMAImagensFicha.obter(ctx.personagemId, [atual.imagemRef]).then(pintarPrevia);
+    }
+
+    var campos = [nome, campoIcone, campoEtiqueta, categoria];
     var extras = { categoria: categoria, etiqueta: function () { return etiqueta; } };
     var perfil = perfilDe(ctx);
 
@@ -608,6 +637,7 @@
     if (extras.ordem) campos = campos.concat(extras.ordem.elementos);
 
     campos.push(descricao);
+    pintarPrevia();
 
     var naBiblioteca = criando;
     if (criando) {
@@ -631,11 +661,22 @@
           aoClicar: async function (fechar) {
             var montado = coletar(tipo, atual, nome, descricao, extras);
             if (!montado) return;
+            if (icone.remover && !icone.nova) delete montado.imagemRef;
 
             /* Inventário em grade (Ordem): só entra o que tem lugar. Num
                item que já existe, só as unidades a mais precisam caber. */
             var recusa = perfilDoEditor && perfilDoEditor.motivoParaRecusar ? perfilDoEditor.motivoParaRecusar(ctx, criando ? montado : unidadesAMais(item, montado)) : null;
             if (recusa) { UI.avisoAtencao(recusa); return; }
+            /* O ícone novo sobe antes de mexer na ficha: falhou, o editor
+               continua aberto e nada muda. */
+            if (icone.nova) {
+              var ref = (!criando && item.imagemRef && !usadaPorOutro(ctx, item.imagemRef, item)) ? item.imagemRef : (global.RAMAImagensFicha ? global.RAMAImagensFicha.novaRef() : U.uuid());
+              var sub = await global.RAMAApi.salvarImagemPersonagem(ctx.personagemId, { ref: ref, tipo: "item", nome: montado.nome, alvo: criando ? montado.id : item.id, imagem: icone.nova });
+              if (!sub || !sub.ok) { UI.avisoDeFalha(sub, "envio do ícone"); return; }
+              if (global.RAMAImagensFicha) global.RAMAImagensFicha.guardar(ctx.personagemId, ref, icone.nova);
+              montado.imagemRef = ref;
+            }
+            var refAntiga = !criando && item.imagemRef && item.imagemRef !== montado.imagemRef ? item.imagemRef : "";
             if (criando) {
               montado.adicionadoEm = U.agoraISO();
               ctx.ficha.inventario.itens.push(montado);
@@ -643,8 +684,11 @@
               /* Tirar a etiqueta precisa apagar o campo: o item montado
                  simplesmente não o tem, e Object.assign não apaga nada. */
               delete item.etiqueta;
+              delete item.imagemRef;
               Object.assign(item, montado, { id: item.id });
+              if (!montado.imagemRef) delete item.imagemRef;
             }
+            if (refAntiga) apagarIconeSeOrfao(ctx, refAntiga);
 
             ctx.alterou();
             fechar();
@@ -680,6 +724,7 @@
       categoria: extras.categoria ? extras.categoria.entrada.value.trim() : (base.categoria || ""),
       descricao: descricao.entrada.value,
       origemHomebrewId: base.origemHomebrewId || null,
+      imagemRef: base.imagemRef || null,
       origemCatalogoId: base.origemCatalogoId || null,
       etiqueta: extras.etiqueta ? extras.etiqueta() : base.etiqueta,
     };
@@ -755,8 +800,33 @@
     if (!certeza) return;
 
     ctx.ficha.inventario.itens = ctx.ficha.inventario.itens.filter(function (x) { return x.id !== item.id; });
+    if (item.imagemRef) apagarIconeSeOrfao(ctx, item.imagemRef);
     ctx.alterou();
     ctx.redesenhar();
+  }
+
+  /* Ícones: uma cópia (duplicar) divide a ref com o original; a imagem só
+     sai do servidor quando nenhum item da ficha a usa mais. */
+  function usadaPorOutro(ctx, ref, exceto) {
+    return (ctx.ficha.inventario.itens || []).some(function (x) { return x !== exceto && x.imagemRef === ref; });
+  }
+  function apagarIconeSeOrfao(ctx, ref) {
+    if (!ref || usadaPorOutro(ctx, ref, null) || !global.RAMAApi || !global.RAMAApi.excluirImagemPersonagem) return;
+    global.RAMAApi.excluirImagemPersonagem(ctx.personagemId, [ref]).then(function (r) {
+      if (r && r.ok && global.RAMAImagensFicha) global.RAMAImagensFicha.esquecer(ctx.personagemId, ref);
+    }, function () { /* fica órfã; não atrapalha nada */ });
+  }
+
+  /* O ícone de um item (span com a imagem, que chega quando chegar). */
+  function iconeDoItem(ctx, item, classe) {
+    if (!item || !item.imagemRef || !global.RAMAImagensFicha) return null;
+    var IF = global.RAMAImagensFicha;
+    var caixa = el("span.item-icone" + (classe ? "." + classe : ""), { "aria-hidden": "true" });
+    function por(src) { if (src) { U.limpar(caixa); caixa.appendChild(el("img", { src: src, alt: "" })); } }
+    var ja = IF.ja(ctx.personagemId, item.imagemRef);
+    if (ja) por(ja);
+    else IF.obter(ctx.personagemId, [item.imagemRef]).then(function (a) { por(a[item.imagemRef]); });
+    return caixa;
   }
 
   /* =================================================================
@@ -803,6 +873,8 @@
 
   global.RAMASecaoInventario = {
     aba: aba,
+    iconeDoItem: iconeDoItem,
+    apagarIconeSeOrfao: apagarIconeSeOrfao,
     atacar: atacar,
     rolarDano: rolarDano,
     /* Para a biblioteca vazia oferecer "Criar item". */
