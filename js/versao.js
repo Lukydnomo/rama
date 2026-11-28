@@ -39,73 +39,68 @@
    personalizado.
 
    ---------------------------------------------------------------------
-   A POLÍTICA DE VERSÃO (desde a v2.49.2) — ESTE É O ÚNICO LUGAR DELA
+   A POLÍTICA DE VERSÃO PÚBLICA (desde a v9.26.0) — ESTE É O ÚNICO LUGAR
    ---------------------------------------------------------------------
-   O README só resume e aponta para cá. Vale para os próximos registros;
-   os já publicados ficam com o número que receberam.
+   O README e o CLAUDE.md só resumem e apontam para cá. Vale para os
+   próximos registros; os já publicados ficam com o número e as notas
+   que receberam (nada é renumerado, e a troca de formato não cria uma
+   major artificial).
 
-     MAJOR  (X+1).0.0  um MARCO do R.A.M.A.: uma transformação da
-                       plataforma ou da experiência de quem usa. Por
-                       exemplo: um sistema de RPG completo, com fichas e
-                       regras próprias; a experiência central reformulada
-                       de verdade; uma expansão que muda bastante o que dá
-                       para fazer aqui; uma mudança de arquitetura com
-                       impacto real nas funções ou na compatibilidade; uma
-                       geração nova do produto, com evolução concreta.
-                       Não precisa quebrar nada para ser major — e muita
-                       coisa nova de uma vez não basta para ser.
-     MINOR  X.(Y+1).0  funcionalidades, módulos, expansões e melhorias
-                       importantes que não são uma geração nova: suplemento
-                       e conteúdo oficial, biblioteca, ferramenta, expansão
-                       de um sistema que existe, personalização, interface
-                       e usabilidade bem melhores, recurso novo de
-                       campanha, combate ou ficha. Uma minor pode ser
-                       grande.
-     PATCH  X.Y.(Z+1)  manutenção: correção, ajuste visual, desempenho,
-                       compatibilidade, refino do que existe, pequena
-                       melhoria de uso, texto e organização. Uma correção
-                       complexa continua patch se não traz função nova nem
-                       muda algo significativo para quem usa.
+   FORMATO: dois blocos numéricos e uma revisão opcional em letras
+   minúsculas coladas ao segundo bloco.
 
-   COMO DECIDIR, nesta ordem de peso:
-     1. o impacto que a pessoa que usa percebe;
-     2. a importância da mudança na evolução do produto;
-     3. a abrangência — quantas partes do R.A.M.A. ela toca;
-     4. se abre capacidades ou possibilidades novas;
-     5. se exige migração relevante ou quebra compatibilidade.
-   NÃO decidem: quantidade de arquivos, linhas, funções ou tempo de
-   trabalho. Não existe cota (nenhum "a cada N minors vem uma major"), e
-   ninguém precisa forçar uma justificativa: na dúvida entre dois níveis,
-   fica o de baixo. O conjunto entregue é classificado pela mudança mais
-   relevante que contém.
+     MAJOR    (X+1).0   uma transformação importante na experiência
+                        central do R.A.M.A.
+     MINOR    X.(Y+1)   funcionalidades novas ou uma evolução relevante
+                        dos fluxos existentes. Sai a letra.
+     REVISÃO  X.Y + a   correções, refinamentos e ajustes localizados:
+                        10.2 → 10.2a → 10.2b … 10.2z → 10.2aa → 10.2ab.
 
-   Ao subir MINOR, Z volta a 0. Ao subir MAJOR, Y e Z voltam a 0.
-   Nunca carregue os números de baixo (v1.4.7 → v1.5.0, jamais v1.5.7).
-   Nada de quarto número, letra ou sufixo.
+   Nenhum bloco avança ou reinicia por quantidade de entregas (não há
+   cota). Os registros antigos X.Y.Z continuam válidos: o terceiro número
+   é a posição da revisão (0 sem letra, 1 = "a", 2 = "b"…), só para
+   comparar, ordenar e continuar a sequência — 9.26.0 → revisão 9.26a,
+   minor 9.27, major 10.0; de X.Y.2, a próxima revisão é X.Yc.
+   proxima(numero, classe), no fim deste arquivo, calcula o número.
+
+   A CLASSIFICAÇÃO É AUTOMÁTICA E OLHA O CONJUNTO. No fechamento de uma
+   entrega, avalia-se o efeito COLETIVO das mudanças efetivas entre a
+   versão pública anterior e o resultado final (o que foi revertido no
+   meio não conta). Não se classifica item por item para pegar o maior:
+     · alterações pequenas que, juntas, permitem uma tarefa completa antes
+       impossível podem fazer uma minor;
+     · mudanças coordenadas em fichas, campanhas e navegação que
+       reorganizam a experiência principal podem fazer uma major, mesmo
+       sem uma mudança isolada desse tamanho;
+     · dezenas de correções localizadas, que preservam fluxos e
+       capacidades, continuam revisão — volume não promove.
+   Pesa: a diferença percebida por quem usa antes e depois; a abrangência
+   sobre áreas e jornadas; a profundidade nos fluxos existentes; as
+   capacidades novas que as partes formam juntas; as consequências para
+   compatibilidade, dados e hábitos. NÃO pesam: arquivos, linhas,
+   commits, itens no changelog nem a quantidade de sistemas adicionados.
+   Quem fecha escolhe a classe sozinho e justifica em poucas linhas, no
+   resumo do fechamento, pelo resultado coletivo — sem pedir à pessoa
+   para decidir entre major, minor e revisão.
+
+   Só a versão PÚBLICA é daqui. Identificadores de desenvolvimento
+   (nomes, números, sufixos, referências a commits) são da pessoa e não
+   se criam, atualizam nem padronizam aqui.
 
    O DESTAQUE (opcional, independente do número)
      `destaque: true` num registro MINOR marca uma expansão importante,
-     sem promovê-la a major. É o único nível extra: não existe grau de
-     importância. Major já é marco por definição e patch é manutenção,
-     então nenhum dos dois leva o campo (os testes recusam). Registro
-     sem o campo é minor comum — todos os anteriores à v2.49.2 são assim
-     e não são reclassificados. O histórico mostra "Marco" nas majors,
-     "Destaque" nas minors marcadas e "manutenção" nas patches; tipo(),
-     destaque() e comparar(), no fim deste arquivo, derivam isso do
-     número, sem outro campo.
+     sem promovê-la a major. Major já é marco por definição e revisão é
+     ajuste, então nenhuma das duas leva o campo (os testes recusam). O
+     histórico mostra "Marco" nas majors, "Destaque" nas minors marcadas
+     e "revisão" nas revisões; tipo(), destaque() e comparar(), no fim
+     deste arquivo, derivam isso do número, nos dois formatos.
 
    A versão pública NÃO move schemaVersion, versaoFormato nem o formato
-   de armazenamento, e vice-versa (ver o quadro acima): uma major não
-   obriga mudar dado nenhum, e um schema novo não obriga major.
+   de armazenamento, e vice-versa (ver o quadro acima).
 
-   UMA ENTREGA = UM REGISTRO NOVO NO TOPO. Não se cria uma versão por
-   microalteração.
-
-   A ENTREGA EM DESENVOLVIMENTO (docs/ENTREGA.md): os pedidos se
-   acumulam sem commit e sem registro aqui até a pessoa mandar fechar a
-   versão; o fechamento escreve UM registro para o conjunto inteiro,
-   classificado pela mudança mais relevante dele. O passo a passo está no
-   CLAUDE.md, na raiz.
+   UMA ENTREGA = UM REGISTRO NOVO NO TOPO, só no fechamento autorizado.
+   Durante a entrega aberta (docs/ENTREGA.md) a versão pública não muda;
+   o passo a passo está no CLAUDE.md, na raiz.
 
    O codinome é uma palavra, em maiúsculas, sem número e sem espaço, e
    não se repete. Os temas são os do R.A.M.A.: arquivo, registro,
@@ -123,6 +118,24 @@
   ];
 
   var CHANGELOG = [
+    {
+      versao: "9.27",
+      codinome: "MOLDE",
+      data: "28/11/2026",
+      mudancas: {
+        "Adicionado": [
+          "Classes Homebrew de Ordem: habilidades características. A etapa nova Habilidades do editor cria habilidades que a classe concede sozinha nos marcos, sem ocupar vaga de poder, com escolha de perícias, melhorias em marcos seguintes (cada uma substitui a anterior), marcos e custos próprios em Patentes e efeitos que a ficha aplica: passivos entram na conta (com a habilidade como origem); os de uso aparecem no resultado do teste, do ataque ou do dano, com confirmação do custo em PE ou PD.",
+          "Predefinições adaptáveis de Ataque Especial, Eclético, Perito, Engenhosidade (ligada ao Eclético) e Escolhido pelo Outro Lado (usa a tabela de círculos da classe). “Começar de” uma classe oficial já traz as dela; a oficial nunca muda.",
+        ],
+        "Alterado": [
+          "O antigo campo “Habilidades iniciais” (texto) virou parte da etapa Habilidades: ao abrir uma classe antiga no editor, cada linha vira uma habilidade sem efeito no 1º marco, que agora aparece como cartão na ficha. Classes e fichas existentes só mudam ao salvar e com a atualização explícita da versão.",
+          "Versão pública no formato X.Y, com a revisão em letras (9.27, 9.27a, 9.27b…). O histórico mostra “revisão” nas correções; as versões antigas ficam como foram publicadas e continuam na ordem certa, e quem já viu uma versão antiga não a recebe de novo como novidade.",
+        ],
+        "Técnico": [
+          "Backend muda: atualize Feedback.gs (aceita a versão no formato novo) e crie uma nova versão da implantação. js/ordem/habilidades-classe.js e js/ordem/telas/ficha-habilidades-classe.js (novos); a escolha usa a vaga opcoesBeneficio b.hbh-<chave>; a habilidade guarda `chave` (não `id`, que a importação apaga). RAMAVersion ganhou valida, partes e proxima. Testes em testes/executar-habilidades-classe.js.",
+        ],
+      },
+    },
     {
       versao: "9.26.0",
       codinome: "TRANSCRITO",
@@ -3183,23 +3196,60 @@
   /* A versão atual é o primeiro registro. Não existe outra definição. */
   var atual = CHANGELOG[0];
 
-  /* ---- a classe de cada registro, derivada do número ---- */
-  function partes(v) { return String(v).split(".").map(Number); }
+  /* ---- o número público, nos dois formatos ----
+     Desde a v9.26.0 o formato é X.Y, com a revisão em letras minúsculas
+     coladas ao segundo bloco (10.2, 10.2a, 10.2b … 10.2z, 10.2aa). Os
+     registros antigos ficam como foram publicados (X.Y.Z): o terceiro
+     número é a POSIÇÃO da revisão — 0 é sem letra, 1 é "a", 2 é "b" —,
+     então 9.25.2 e 9.25b são o mesmo ponto da sequência para comparar e
+     ordenar. Nada no histórico é reescrito. */
+  var FORMATO = /^(\d+)\.(\d+)(?:\.(\d+)|([a-z]+))?$/;
 
-  /* < 0 se a vem antes de b; segmento a segmento, nunca como texto
-     (2.10.0 vem depois de 2.9.0). */
+  function valida(v) { return FORMATO.test(String(v || "")); }
+
+  /* "a" → 1, "z" → 26, "aa" → 27, "ab" → 28 (base 26 sem zero). */
+  function posicaoDaLetra(s) {
+    var n = 0;
+    for (var i = 0; i < s.length; i++) n = n * 26 + (s.charCodeAt(i) - 96);
+    return n;
+  }
+  function letraDaPosicao(n) {
+    var s = "";
+    while (n > 0) { var r = (n - 1) % 26; s = String.fromCharCode(97 + r) + s; n = Math.floor((n - 1) / 26); }
+    return s;
+  }
+
+  /* [X, Y, revisão]; a revisão é 0 sem letra (ou terceiro número 0). */
+  function partes(v) {
+    var m = FORMATO.exec(String(v || ""));
+    if (!m) return [0, 0, 0];
+    var r = m[3] !== undefined ? Number(m[3]) : (m[4] ? posicaoDaLetra(m[4]) : 0);
+    return [Number(m[1]), Number(m[2]), r];
+  }
+
+  /* < 0 se a vem antes de b; bloco a bloco, nunca como texto (9.10 vem
+     depois de 9.9; 10.2z antes de 10.2aa; 9.25.2 = 9.25b). */
   function comparar(a, b) {
     var x = partes(a), y = partes(b);
     for (var i = 0; i < 3; i++) if (x[i] !== y[i]) return x[i] - y[i];
     return 0;
   }
 
-  /* "major" (X.0.0), "minor" (X.Y.0) ou "patch" (X.Y.Z): com os números
-     de baixo zerando a cada subida, o próprio número diz a classe. */
+  /* A próxima versão pública a partir de `atualNumero`, no formato novo:
+     "major" → (X+1).0; "minor" → X.(Y+1); "revisao" → X.Y + próxima letra. */
+  function proxima(atualNumero, classe) {
+    var p = partes(atualNumero);
+    if (classe === "major") return (p[0] + 1) + ".0";
+    if (classe === "minor") return p[0] + "." + (p[1] + 1);
+    return p[0] + "." + p[1] + letraDaPosicao(p[2] + 1);
+  }
+
+  /* "major" (X.0), "minor" (X.Y) ou "revisao" (X.Ya; nos antigos, X.Y.Z
+     com Z > 0): o próprio número diz a classe. */
   function tipo(registro) {
     var p = partes(registro.versao);
-    if (p[1] === 0 && p[2] === 0) return "major";
-    return p[2] === 0 ? "minor" : "patch";
+    if (p[2] > 0) return "revisao";
+    return p[1] === 0 ? "major" : "minor";
   }
 
   /* "marco" para toda major, "destaque" para a minor marcada, null para
@@ -3217,6 +3267,9 @@
     tipo: tipo,
     destaque: destaque,
     comparar: comparar,
+    valida: valida,
+    partes: partes,
+    proxima: proxima,
     atual: atual,
     rotulo: "v" + atual.versao + " — " + atual.codinome,
     numero: atual.versao,

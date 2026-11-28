@@ -41,6 +41,7 @@
 
   function C() { return global.RAMAOrdemCatalogo; }
   function P() { return global.RAMAOrdemPoderes; }
+  function HC() { return global.RAMAOrdemHabilidadesClasse; }
   function EL() { return global.RAMAOrdemElementos; }
   function obj(v) { return v && typeof v === "object" && !Array.isArray(v) ? v : {}; }
   function lista(v) { return Array.isArray(v) ? v : []; }
@@ -332,6 +333,16 @@
        pelo Outro Lado): o círculo máximo por NEX. Só existe quando a
        mesa marcou — sem ela, a definição (e a chave) fica como antes. */
     var circulos = circulosPorNex(b.circuloPorNex);
+    /* Habilidades características (concedidas nos marcos, com custos e
+       efeitos estruturados — js/ordem/habilidades-classe.js). Só existem
+       quando a mesa criou alguma: uma classe antiga fica igual, com a
+       mesma chave. A que conjura rituais usa a tabela de círculos da
+       classe (uma concessão só); sem tabela, entra a do Ocultista. */
+    var habs = HC() ? HC().normalizarLista(b.habilidadesCaracteristicas) : lista(b.habilidadesCaracteristicas).slice(0, 8);
+    if (habs.length) {
+      d.habilidadesCaracteristicas = habs;
+      if (HC() && HC().usaConjuracao(habs) && !circulos) circulos = JSON.parse(JSON.stringify(CIRCULOS_DO_OCULTISTA));
+    }
     if (circulos) d.circuloPorNex = circulos;
     if (!d.chave) d.chave = chaveDaClasse(d);
     return d;
@@ -478,6 +489,7 @@
       linhas.push("Até NEX 99%: " + Object.keys(esc).map(function (k) { return esc[k] + "× " + ESCOLHAS.filter(function (e) { return e.chave === k; })[0].rotulo.toLowerCase(); }).join(", ") + ".");
     }
     if (d.patentes) linhas.push("Patentes: " + (d.patentes.pv.base + (d.patentes.pv.atributo ? a.vig : 0)) + " PV em Recruta, +" + d.patentes.pv.porPatente + " por patente.");
+    if (d.habilidadesCaracteristicas && d.habilidadesCaracteristicas.length) linhas.push("Habilidades características: " + d.habilidadesCaracteristicas.map(function (x) { return x.nome; }).join(", ") + " (sem ocupar vaga de poder).");
     if (d.circuloPorNex) linhas.push("Conjura rituais (como o Ocultista): 3 de 1º círculo no 1º marco e um a cada marco; " + d.circuloPorNex.map(function (f) { return f.circulo + "º círculo em NEX " + f.nex + "%"; }).join(", ") + ".");
     return linhas;
   }
@@ -511,6 +523,11 @@
     var ep = C().EVOLUCAO_PATENTES && C().EVOLUCAO_PATENTES.classes[chave];
     if (ep) d.patentes = JSON.parse(JSON.stringify(ep));
     d.poderesDe = chave; d.trilhasDe = chave;
+    /* As habilidades características da classe oficial, como cópias
+       adaptáveis (com as escolhas e a ligação Eclético ↔ Engenhosidade).
+       Independentes dos poderes e trilhas: trocar estes não as tira. */
+    var habs = HC() ? HC().presetsDaClasse(chave) : [];
+    if (habs.length) d.habilidadesCaracteristicas = habs; else delete d.habilidadesCaracteristicas;
     /* v9.24: a tabela de círculos vem junto (partir do Ocultista dá uma
        classe que conjura; a mesa pode desmarcar). */
     delete d.chave; delete d.pagina;

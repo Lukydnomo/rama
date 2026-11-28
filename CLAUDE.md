@@ -29,8 +29,13 @@ conversa nova continua o trabalho, sem depender do histórico do chat.
      crie versão vazia;
    - resolva o que for recuperável (testes quebrados, sobras de depuração,
      documentação desatualizada); o que não der, explique antes de fechar;
-   - escolha o nível pela política do comentário de `js/versao.js` — o conjunto
-     é classificado pela mudança mais relevante;
+   - classifique sozinho, pela política do comentário de `js/versao.js`, o
+     **efeito coletivo** das mudanças efetivas desde a versão pública anterior
+     (major, minor ou revisão — nunca a maior mudança isolada, nunca pelo
+     volume) e calcule o número com `RAMAVersion.proxima(numero, classe)`:
+     formato `X.Y`, revisão em letras (`10.2a`); antigos `X.Y.Z` valem como
+     posição da revisão (9.26.0 → 9.26a / 9.27 / 10.0). Não pergunte o nível
+     à pessoa; justifique a classe em poucas linhas no resumo do fechamento;
    - escreva **um único** registro em `js/versao.js` para a entrega inteira:
      codinome inédito (`grep -c '"NOME"' js/versao.js` tem de dar 0 antes de
      gravar) e a **data real do dia**;
@@ -38,12 +43,16 @@ conversa nova continua o trabalho, sem depender do histórico do chat.
      site muda ou quais `.gs` atualizar) e a linha “o que a pessoa vê: vX” na
      seção Versionamento;
    - commit local só com os arquivos e trechos da entrega, mensagem
-     `vX.Y.Z CODINOME: resumo` terminando em
+     `vNÚMERO CODINOME: resumo` (o número público, ex.: `v9.27`) terminando em
      `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`;
    - marque a entrega como fechada em `docs/ENTREGA.md` (versão, commit, data)
      — esse arquivo entra no próprio commit.
 5. **O pedido seguinte** abre uma entrega nova: zere `docs/ENTREGA.md` a partir
    do modelo que está nele.
+
+**Só a versão pública é nossa**: identificadores de desenvolvimento (nomes,
+números, sufixos, referências a commits de dev) são da pessoa — não criar,
+atualizar, automatizar nem padronizar.
 
 **Durante uma entrega aberta**: nada de commit, nenhum registro em
 `js/versao.js`, nenhum codinome — terminar uma tarefa não fecha a entrega. Só
@@ -74,7 +83,8 @@ versões já publicadas nunca mudam.
 - Testes do terminal: `deno run --allow-read testes/executar.js` (e os
   `testes/executar-*.js` da área tocada; Ajuda e tutoriais:
   `deno run --allow-read testes/executar-ajuda.js`; exportação em PDF/PNG:
-  `deno run --allow-read testes/executar-exportar.js`); módulo compartilhado
+  `deno run --allow-read testes/executar-exportar.js`; habilidades de classe
+  Homebrew de Ordem: `deno run --allow-read testes/executar-habilidades-classe.js`); módulo compartilhado
   com o backend (perigos, hacking, viagens) mudou → `deno run --allow-read
   --allow-write testes/copiar-modulo-gs.js js/ordem/viagens.js backend/Ordem.gs`;
   o ambiente de testes em si:

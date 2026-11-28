@@ -1677,6 +1677,9 @@
     Object.keys(TRANSICOES).forEach(function (de) { TRANSICOES[de].classes[def.chave] = ganhosDeTransicao(def, de); });
     var P = global.RAMAOrdemPoderes;
     if (P && P.registrarTreinamentos) P.registrarTreinamentos(def.chave);
+    /* As habilidades características: as entradas dos cartões e das
+       vagas de escolha (js/ordem/habilidades-classe.js). */
+    if (global.RAMAOrdemHabilidadesClasse) global.RAMAOrdemHabilidadesClasse.registrarDaClasse(def);
     return def;
   }
 
@@ -1714,7 +1717,11 @@
         livres: Math.max(0, livres - ((mundano.periciasLivres && mundano.periciasLivres.base) || 0)),
       },
       proficiencias: (def.proficiencias || []).filter(function (p) { return jaTem.indexOf(String(p).toLowerCase()) < 0; }),
-      habilidades: (def.habilidadesIniciais || []).slice(),
+      /* As só de texto (classes antigas) e as características que chegam
+         no 1º marco. */
+      habilidades: (def.habilidadesIniciais || []).concat((def.habilidadesCaracteristicas || []).filter(function (h) {
+        return h.estagios && h.estagios[0] && h.estagios[0].nex <= 5;
+      }).map(function (h) { return h.nome; })),
       homebrew: true,
     };
   }

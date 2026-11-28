@@ -834,6 +834,10 @@
     });
 
     est.adquiridos.forEach(function (a) {
+      /* A habilidade característica de classe Homebrew com escolha chega
+         também pela vaga da escolha; o cartão é o das automáticas (com o
+         estágio e a pendência), um só. */
+      if (a.entrada && a.entrada.habilidadeClasse) return;
       if (a.tipo === "escolhaPerito") {
         aquisicoes.push({
           id: a.id, chave: a.chave, nome: a.nome, resumo: "As perícias escolhidas para usar com Perito.",
@@ -3466,7 +3470,9 @@
         global.RAMAFichaArquivo6 ? global.RAMAFichaArquivo6.acoesNoTeste(ctx, o, p, r, dado, bonus, atributo) : [],
         global.RAMAFichaArquivo7 ? global.RAMAFichaArquivo7.acoesNoTeste(ctx, o, p, r, dado, bonus, atributo) : [],
         global.RAMAFichaArquivo9 ? global.RAMAFichaArquivo9.acoesNoTeste(ctx, o, p, r, dado, bonus, atributo) : [],
-        acoesDoAs11(ctx, o, p, r)).filter(Boolean),
+        acoesDoAs11(ctx, o, p, r),
+        /* Habilidades características da classe Homebrew (Perito, Eclético…). */
+        global.RAMAFichaHabilidadesClasse ? global.RAMAFichaHabilidadesClasse.acoesNoTeste(ctx, o, p, r) : []).filter(Boolean),
     });
   }
 
@@ -5316,6 +5322,8 @@
       /* Origem Gaudério Abutre (v9.15): o +2 contra o agressor, por clique. */
       var orgAtk = global.RAMASecaoOrigens && global.RAMASecaoOrigens.acoesNoAtaque ? global.RAMASecaoOrigens.acoesNoAtaque(ctx, arma, r) : { acoes: [], notas: [] };
       as9 = { acoes: as9.acoes.concat(orgAtk.acoes), notas: as9.notas.concat(orgAtk.notas) };
+      /* Habilidades características da classe Homebrew (Ataque Especial…). */
+      if (global.RAMAFichaHabilidadesClasse) as9.acoes = as9.acoes.concat(global.RAMAFichaHabilidadesClasse.acoesNoAtaque(ctx, arma, r, critico));
       global.RAMARolagens.mostrar(r, {
         nome: arma.nome + " · Ataque (" + ef.periciaNome + ")" + (m.modo === "rajada" ? " · rajada" : m.modo === "doisCanos" ? " · dois canos" : ""),
         critico: critico,
@@ -5409,7 +5417,8 @@
         notas: (nota ? [nota] : []).concat(notasAS2),
         acoes: (global.RAMAFichaArquivo3 ? global.RAMAFichaArquivo3.acoesNoDano(ctx, arma, r) : [])
           .concat(global.RAMAFichaArquivo4 ? global.RAMAFichaArquivo4.acoesNoDano(ctx, arma, r) : [])
-          .concat(global.RAMAFichaArquivo9 ? global.RAMAFichaArquivo9.acoesNoDano(ctx, arma, r) : []),
+          .concat(global.RAMAFichaArquivo9 ? global.RAMAFichaArquivo9.acoesNoDano(ctx, arma, r) : [])
+          .concat(global.RAMAFichaHabilidadesClasse ? global.RAMAFichaHabilidadesClasse.acoesNoDano(ctx, arma, r) : []),
       });
     },
 

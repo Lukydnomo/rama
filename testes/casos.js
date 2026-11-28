@@ -4938,12 +4938,13 @@
       t.igual("o número deriva do topo", Ver.numero, Ver.changelog[0].versao);
       t.igual("o codinome deriva do topo", Ver.codinome, Ver.changelog[0].codinome);
 
-      t.grupo("Versionamento — formato SemVer");
+      t.grupo("Versionamento — formato público (X.Y + revisão em letras; antigos X.Y.Z)");
 
       Ver.changelog.forEach(function (r) {
-        t.ok("v" + r.versao + " tem três segmentos numéricos",
-          /^\d+\.\d+\.\d+$/.test(r.versao));
-        t.ok("  sem letra e sem sufixo", !/[a-zA-Z]/.test(r.versao));
+        var antigo = Ver.comparar(r.versao, "9.26.0") <= 0;
+        t.ok("v" + r.versao + (antigo ? " (antigo) tem três segmentos numéricos" : " é X.Y ou X.Y + letras minúsculas"),
+          antigo ? /^\d+\.\d+\.\d+$/.test(r.versao) : /^\d+\.\d+[a-z]*$/.test(r.versao));
+        t.ok("  é um número válido", Ver.valida(r.versao));
         t.ok("  data em DD/MM/AAAA", /^\d{2}\/\d{2}\/\d{4}$/.test(r.data));
         t.ok("  codinome numa palavra, em maiúsculas: " + r.codinome,
           /^[A-ZÀ-Ú]+$/.test(r.codinome));
@@ -4968,6 +4969,30 @@
       t.ok("2.10.0 vem depois de 2.9.0 (não é comparação de texto)", Ver.comparar("2.10.0", "2.9.0") > 0);
       t.ok("3.0.0 vem depois de 2.49.2", Ver.comparar("3.0.0", "2.49.2") > 0);
       t.ok("2.49.10 vem depois de 2.49.9", Ver.comparar("2.49.10", "2.49.9") > 0);
+      t.ok("9.26a vem depois de 9.26.0", Ver.comparar("9.26a", "9.26.0") > 0);
+      t.igual("9.25.2 e 9.25b são o mesmo ponto da sequência", Ver.comparar("9.25.2", "9.25b"), 0);
+      t.igual("9.26 e 9.26.0 também", Ver.comparar("9.26", "9.26.0"), 0);
+      t.ok("10.2z vem antes de 10.2aa", Ver.comparar("10.2z", "10.2aa") < 0);
+      t.ok("10.2aa vem antes de 10.2ab", Ver.comparar("10.2aa", "10.2ab") < 0);
+      t.ok("10.10 vem depois de 10.9z (blocos numéricos em ordem numérica)", Ver.comparar("10.10", "10.9z") > 0);
+      t.ok("10.0 vem depois de 9.99zz", Ver.comparar("10.0", "9.99zz") > 0);
+      t.ok("antigos e novos ordenam juntos",
+        ["9.25.2", "10.0", "9.26a", "9.26.0", "9.26", "9.27", "9.25.1", "9.26b"].sort(Ver.comparar).join() === "9.25.1,9.25.2,9.26.0,9.26,9.26a,9.26b,9.27,10.0"
+        || ["9.25.2", "10.0", "9.26a", "9.26.0", "9.26", "9.27", "9.25.1", "9.26b"].sort(Ver.comparar).join() === "9.25.1,9.25.2,9.26,9.26.0,9.26a,9.26b,9.27,10.0");
+      t.ok("valida: recusa maiúscula, quarto bloco e sufixo", !Ver.valida("10.2A") && !Ver.valida("10.2.1.1") && !Ver.valida("10.2-beta") && !Ver.valida("10") && Ver.valida("10.2aa"));
+
+      t.grupo("Versionamento — a próxima versão pública");
+
+      t.igual("10.2b + revisão → 10.2c", Ver.proxima("10.2b", "revisao"), "10.2c");
+      t.igual("10.2b + minor → 10.3", Ver.proxima("10.2b", "minor"), "10.3");
+      t.igual("10.2b + major → 11.0", Ver.proxima("10.2b", "major"), "11.0");
+      t.igual("9.26.0 + revisão → 9.26a", Ver.proxima("9.26.0", "revisao"), "9.26a");
+      t.igual("9.26.0 + minor → 9.27", Ver.proxima("9.26.0", "minor"), "9.27");
+      t.igual("9.26.0 + major → 10.0", Ver.proxima("9.26.0", "major"), "10.0");
+      t.igual("X.Y.2 + revisão → X.Yc", Ver.proxima("4.7.2", "revisao"), "4.7c");
+      t.igual("10.2z + revisão → 10.2aa", Ver.proxima("10.2z", "revisao"), "10.2aa");
+      t.igual("10.2az + revisão → 10.2ba", Ver.proxima("10.2az", "revisao"), "10.2ba");
+      t.igual("10.2 + revisão → 10.2a", Ver.proxima("10.2", "revisao"), "10.2a");
       t.igual("iguais dão 0", Ver.comparar("2.49.2", "2.49.2"), 0);
       t.ok("ordenar com comparar devolve a ordem do histórico",
         Ver.changelog.map(function (r) { return r.versao; }).slice().sort(Ver.comparar).reverse().join() ===
@@ -4977,12 +5002,16 @@
 
       t.igual("X.0.0 é major", Ver.tipo({ versao: "3.0.0" }), "major");
       t.igual("X.Y.0 é minor", Ver.tipo({ versao: "2.50.0" }), "minor");
-      t.igual("X.Y.Z é patch", Ver.tipo({ versao: "2.49.2" }), "patch");
+      t.igual("X.Y.Z (antigo) é revisão", Ver.tipo({ versao: "2.49.2" }), "revisao");
+      t.igual("X.0 é major", Ver.tipo({ versao: "10.0" }), "major");
+      t.igual("X.Y é minor", Ver.tipo({ versao: "10.2" }), "minor");
+      t.igual("X.Ya é revisão", Ver.tipo({ versao: "10.2a" }), "revisao");
+      t.igual("revisão nova nunca tem selo", Ver.destaque({ versao: "10.2a", destaque: true }), null);
       t.igual("major é marco, com ou sem o campo", Ver.destaque({ versao: "3.0.0" }), "marco");
       t.igual("minor marcada é destaque", Ver.destaque({ versao: "2.50.0", destaque: true }), "destaque");
       t.igual("minor sem o campo não tem selo (todo registro antigo)", Ver.destaque({ versao: "2.48.0" }), null);
       t.igual("só true conta (\"sim\" não)", Ver.destaque({ versao: "2.50.0", destaque: "sim" }), null);
-      t.igual("patch nunca tem selo", Ver.destaque({ versao: "2.49.3", destaque: true }), null);
+      t.igual("revisão antiga nunca tem selo", Ver.destaque({ versao: "2.49.3", destaque: true }), null);
       t.igual("1.0.0, o primeiro registro, é marco", Ver.destaque(Ver.changelog[Ver.changelog.length - 1]), "marco");
 
       Ver.changelog.forEach(function (r) {
@@ -5004,8 +5033,8 @@
       t.grupo("Versionamento — os números de baixo zeram");
 
       for (var j = 1; j < Ver.changelog.length; j++) {
-        var nova = Ver.changelog[j - 1].versao.split(".").map(Number);
-        var velha = Ver.changelog[j].versao.split(".").map(Number);
+        var nova = Ver.partes(Ver.changelog[j - 1].versao);
+        var velha = Ver.partes(Ver.changelog[j].versao);
 
         if (nova[0] > velha[0]) {
           t.igual("MAJOR " + Ver.changelog[j - 1].versao + ": minor zerou", nova[1], 0);

@@ -294,6 +294,14 @@
 .hbc-pericias { display: flex; flex-wrap: wrap; gap: var(--e1) var(--e3); border: 0; margin: 0; padding: 0; }
 .hbc-pericias legend { flex-basis: 100%; }
 .hbc-par { align-items: flex-end; }
+/* Habilidades características de classe Homebrew */
+.hbc-hab { display: flex; flex-direction: column; gap: var(--e2); border: var(--borda) solid var(--cor-traco-fraca); border-radius: var(--raio, 4px); padding: var(--e2) var(--e3); }
+.hbc-hab__topo { align-items: center; flex-wrap: wrap; gap: var(--e1) var(--e2); }
+.hbc-hab__topo .t-secao { margin: 0; flex: 1 1 auto; }
+.hbc-hab__selo { font-size: .78rem; border: var(--borda) solid var(--cor-traco); padding: 0 var(--e1); text-transform: uppercase; letter-spacing: .04em; }
+.hbc-estagio { display: flex; flex-direction: column; gap: var(--e1); border: var(--borda) dashed var(--cor-traco-fraca); margin: 0; padding: var(--e1) var(--e2); }
+.hbc-efeito { display: flex; flex-direction: column; gap: var(--e1); border-left: 2px solid var(--cor-traco-fraca); padding-left: var(--e2); }
+.hbc-hab__previa .hbe-mini { margin: 0; }
 .hbe-elementos { display: flex; flex-wrap: wrap; gap: var(--e1) var(--e3); border: 0; margin: 0; padding: 0; }
 .hbe-elementos legend, .hbe-elementos .r-ajuda { flex-basis: 100%; }
 .hbe-cor { width: 4rem; min-height: var(--alvo-toque); padding: 2px; }

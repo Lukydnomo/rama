@@ -7,10 +7,15 @@
      2 Recursos     PV / PE / SAN / PD: inicial e por marco, com a
                     parcela de atributo (ex.: Vigor) opcional
      3 Perícias     fixas, escolhas obrigatórias, livres, grau de
-                    treinamento, proficiências, habilidades iniciais
-     4 NEX e nível  os 20 marcos: o que cada um concede e o que pede
-     5 Patentes     a tabela de Evolução por Patentes (opcional)
-     6 Revisão      a prévia do 1º marco e dos ganhos, e o que falta
+                    treinamento, proficiências, rituais
+     4 Habilidades  as habilidades características: concedidas nos
+                    marcos, sem vaga de poder, com escolha, estágios,
+                    custos e efeitos que a ficha aplica
+                    (js/ordem/habilidades-classe.js). Próprias ou a partir
+                    das oficiais (cópias adaptáveis)
+     5 NEX e nível  os 20 marcos: o que cada um concede e o que pede
+     6 Patentes     a tabela de Evolução por Patentes (opcional)
+     7 Revisão      a prévia do 1º marco e dos ganhos, e o que falta
 
    Pode começar da tabela de uma classe oficial (uma CÓPIA, editável).
    Sem a tabela de um trilho, a classe não é oferecida nele — a revisão
@@ -27,6 +32,7 @@
   function H() { return global.RAMAOrdemHomebrew; }
   function C() { return global.RAMAOrdemCatalogo; }
   function A() { return global.RAMAHomebrewAdaptadores; }
+  function HC() { return global.RAMAOrdemHabilidadesClasse; }
 
   var ATRIBUTOS = [["", "—"], ["vig", "Vigor"], ["for", "Força"], ["agi", "Agilidade"], ["int", "Intelecto"], ["pre", "Presença"]];
   var PATENTES = ["Recruta", "Operador", "Agente especial", "Oficial de operações", "Agente de elite"];
@@ -47,7 +53,18 @@
     var o = opcoes || {};
     var reg = o.registro || null;
     var d = reg && reg.modelo && reg.modelo.def ? JSON.parse(JSON.stringify(reg.modelo.def)) : vazia();
-    var r = { nome: reg ? reg.nome : "", descricao: reg ? reg.descricao || "" : "", visibilidade: reg ? reg.visibilidade || "privado" : "privado", passo: 1, sujo: false };
+    var r = { nome: reg ? reg.nome : "", descricao: reg ? reg.descricao || "" : "", visibilidade: reg ? reg.visibilidade || "privado" : "privado", passo: 1, sujo: false, convertidas: 0 };
+    /* As "habilidades iniciais" só de texto (antes da etapa Habilidades)
+       viram cartões SEM efeito, no 1º marco: o mesmo que eram, agora no
+       lugar de todas as habilidades. A biblioteca só muda ao salvar (e a
+       ficha só com a atualização explícita da versão). */
+    if (HC() && Array.isArray(d.habilidadesIniciais) && d.habilidadesIniciais.length) {
+      d.habilidadesCaracteristicas = (Array.isArray(d.habilidadesCaracteristicas) ? d.habilidadesCaracteristicas : []).concat(d.habilidadesIniciais.map(function (nome) {
+        return { chave: HC().novoId(), nome: String(nome).slice(0, 60), descricao: "", escolha: null, estagios: [{ nex: 5, patente: 0, custo: 0, custoPatente: null, efeitos: [] }] };
+      })).slice(0, HC().MAX_HABILIDADES);
+      r.convertidas = d.habilidadesIniciais.length;
+      d.habilidadesIniciais = [];
+    }
     /* v9.14: a ilustração opcional da classe (js/homebrew-imagem.js). */
     var imagem = global.RAMAHomebrewImagem ? global.RAMAHomebrewImagem.campo({ registro: reg, sistema: "ordem", grupo: "estrutural", subtipo: "classe", aoMudar: function () { r.sujo = true; } }) : null;
     var form = el("div.hbe-form"), lado = el("aside.hbe-lado", { "aria-label": "Revisão" });
@@ -98,14 +115,14 @@
         .concat([el("p.r-ajuda", { texto: (proprias.length || livres.length ? "" : "Você ainda não tem trilhas Homebrew. ") + "Uma trilha criada \u201csó para esta classe\u201d (no editor de Trilha) entra sempre, em qualquer versão da classe" + (reg ? "." : " — salve a classe primeiro para ela aparecer lá.") })]));
     }
 
-    var PASSOS = ["Identidade", "Recursos", "Perícias", "NEX e nível", "Patentes", "Revisão"];
+    var PASSOS = ["Identidade", "Recursos", "Perícias", "Habilidades", "NEX e nível", "Patentes", "Revisão"];
     function pintar() {
       var foco = document.activeElement && form.contains(document.activeElement) ? document.activeElement.id : "";
       U.trocar(form, [
         el("ol.pc-passos", { "aria-label": "Etapas" }, PASSOS.map(function (p, i) {
           return el("li", {}, [el("button.pc-passo", { type: "button", id: "hbc-passo-" + (i + 1), "aria-current": r.passo === i + 1 ? "step" : null, onclick: function () { r.passo = i + 1; pintar(); } }, [el("span.pc-passo__n", { texto: String(i + 1) }), el("span", { texto: p })])]);
         })),
-        [passo1, passo2, passo3, passo4, passo5, passo6][r.passo - 1](),
+        [passo1, passo2, passo3, passoHabilidades, passo4, passo5, passo6][r.passo - 1](),
         el("div.faixa.pc-editor__rodape", {}, [
           r.passo > 1 ? el("button.r-botao.r-botao--fantasma", { type: "button", id: "hbc-voltar", texto: "Voltar", onclick: function () { r.passo--; pintar(); } }) : null,
           r.passo < PASSOS.length ? el("button.r-botao", { type: "button", id: "hbc-continuar", texto: "Continuar", onclick: function () { r.passo++; pintar(); } }) : null,
@@ -186,21 +203,23 @@
           num("hbc-grau", "Grau de treinamento (base)", d.grauTreinamentoBase, function (v) { d.grauTreinamentoBase = v; }, "Perícias que sobem no Grau de treinamento: base + Intelecto."),
         ]),
         linhas("hbc-prof", "Proficiências (uma por linha)", d.proficiencias, function (v) { d.proficiencias = v; }, "Ex.: Armas simples, Proteções leves."),
-        linhas("hbc-hab", "Habilidades iniciais (uma por linha)", d.habilidadesIniciais, function (v) { d.habilidadesIniciais = v; }, "Aparecem como benefício do 1º marco (o efeito mecânico de cada uma é decidido pela mesa)."),
         blocoRituais(),
       ]);
     }
     /* v9.24: conjura rituais como o Ocultista? O círculo máximo por NEX. */
     function blocoRituais() {
+      var porHab = !!(HC() && HC().usaConjuracao(d.habilidadesCaracteristicas));
+      if (porHab && !(d.circuloPorNex && d.circuloPorNex.length)) d.circuloPorNex = JSON.parse(JSON.stringify(H().CIRCULOS_DO_OCULTISTA));
       var conj = !!(d.circuloPorNex && d.circuloPorNex.length);
       var nexes = H().NEX.map(function (n) { return [String(n), n + "%"]; });
       return el("fieldset.r-campo.hbc-rituais", {}, [
         el("legend.r-rotulo", { texto: "Rituais" }),
-        el("label.r-marca", {}, [el("input", { type: "checkbox", id: "hbc-conjura", checked: conj, onchange: function (ev) {
+        el("label.r-marca", {}, [el("input", { type: "checkbox", id: "hbc-conjura", checked: conj, disabled: porHab, onchange: function (ev) {
           d.circuloPorNex = ev.target.checked ? JSON.parse(JSON.stringify(H().CIRCULOS_DO_OCULTISTA)) : undefined;
           if (!ev.target.checked) delete d.circuloPorNex;
           mudou(true);
         } }), el("span", { texto: "Conjura rituais como o Ocultista (Escolhido pelo Outro Lado)" })]),
+        porHab ? el("p.t-mini", { texto: "Uma habilidade característica (etapa Habilidades) concede a conjuração: é esta tabela que ela usa. Para desligar, tire o efeito da habilidade." }) : null,
         conj ? el("p.t-mini", { texto: "3 rituais de 1º círculo no 1º marco e um a cada marco depois, de qualquer círculo que já alcance; não contam no limite por Intelecto. Diga em que NEX cada círculo abre (deixe \u201c—\u201d para parar antes)." })
           : el("p.t-mini", { texto: "Sem isso, a classe aprende rituais só por poderes (Aprender Ritual), como Combatente e Especialista." }),
         conj ? el("div.editar-grade", {}, [1, 2, 3, 4].map(function (c) {
@@ -216,7 +235,132 @@
         })) : null,
       ]);
     }
-    /* ---------- 4. NEX e nível ---------- */
+    /* ---------- 4. habilidades características ---------- */
+    function habs() { if (!Array.isArray(d.habilidadesCaracteristicas)) d.habilidadesCaracteristicas = []; return d.habilidadesCaracteristicas; }
+    function comTreino(excluir) {
+      return habs().filter(function (h) { return h !== excluir && (h.estagios || []).some(function (s) { return (s.efeitos || []).some(function (e) { return e.tipo === "treinoTemporario"; }); }); });
+    }
+    function adicionarPreset(chave) {
+      if (habs().length >= HC().MAX_HABILIDADES) { UI.avisoAtencao("Até " + HC().MAX_HABILIDADES + " habilidades por classe."); return; }
+      var alvo = chave === "engenhosidade" ? (comTreino()[0] || {}).chave : undefined;
+      if (chave === "engenhosidade" && !alvo) { UI.avisoAtencao("Engenhosidade melhora uma habilidade de benefícios de grau (como o Eclético). Adicione essa antes."); return; }
+      var h = chave ? HC().dePreset(chave, alvo) : { chave: HC().novoId(), nome: "", descricao: "", escolha: null, estagios: [{ nex: 5, patente: 0, custo: 0, custoPatente: null, efeitos: [] }] };
+      habs().push(h);
+      if (chave === "escolhidoPeloOutroLado" && !(d.circuloPorNex && d.circuloPorNex.length)) d.circuloPorNex = JSON.parse(JSON.stringify(H().CIRCULOS_DO_OCULTISTA));
+      mudou(true);
+      setTimeout(function () { var n = document.getElementById("hbh-" + h.chave + "-nome"); if (n) n.focus(); }, 0);
+    }
+    function chipsDePericias(rotulo, valores, ao) {
+      return el("fieldset.r-campo.hbc-pericias", {}, [el("legend.r-rotulo", { texto: rotulo })].concat(C().PERICIAS.map(function (p) {
+        return el("label.r-marca.hbc-chip", {}, [el("input", { type: "checkbox", checked: (valores || []).indexOf(p.chave) >= 0, onchange: function (ev) {
+          var l = (valores || []).filter(function (k) { return k !== p.chave; }); if (ev.target.checked) l.push(p.chave); ao(l); mudou(true);
+        } }), el("span", { texto: p.nome })]);
+      })));
+    }
+    function editorDeEfeito(h, s, e, i, j) {
+      var pref = "hbh-" + h.chave + "-" + i + "-" + j;
+      var tipo = HC().POR_TIPO[e.tipo] || {};
+      var tipos = HC().TIPOS.filter(function (t) { return !t.precisaEscolha || h.escolha; }).map(function (t) { return [t.chave, (t.grupo === "passivo" ? "Passivo · " : t.grupo === "uso" ? "Ao usar · " : "Especial · ") + t.rotulo]; });
+      var campos = [sel(pref + "-tipo", "Efeito", tipos, e.tipo, function (v) {
+        Object.keys(e).forEach(function (k) { delete e[k]; });
+        e.tipo = v;
+        var t2 = HC().POR_TIPO[v];
+        if (t2.valor) e.valor = Math.max(1, t2.valor[0]);
+        if (t2.dado) e.dado = "1d6";
+        if (t2.grau) e.grau = "treinado";
+        if (t2.pericias) e.pericias = [C().PERICIAS[0].chave];
+        if (t2.alvo) e.alvo = h.escolha ? "escolha" : "todas";
+        if (v === "melhoraTreino") { e.alvo = (comTreino(h)[0] || {}).chave || ""; e.grau = "veterano"; e.custoExtra = 2; }
+      })];
+      if (tipo.valor) campos.push(num(pref + "-v", "Valor", e.valor, function (v) { e.valor = v; }));
+      if (tipo.dado) campos.push(sel(pref + "-d", "Dado", HC().DADOS.map(function (x) { return [x, x]; }), e.dado, function (v) { e.dado = v; }));
+      if (tipo.grau) campos.push(sel(pref + "-g", "Grau", HC().GRAUS.map(function (x) { return [x, x.charAt(0).toUpperCase() + x.slice(1)]; }), e.grau, function (v) { e.grau = v; }));
+      if (tipo.pericias) campos.push(sel(pref + "-p", "Perícia", C().PERICIAS.map(function (p) { return [p.chave, p.nome]; }), (e.pericias || [])[0], function (v) { e.pericias = [v]; }));
+      if (tipo.alvo) campos.push(sel(pref + "-a", "Em quais testes", [["todas", "Qualquer perícia"], ["lista", "Perícias da lista"]].concat(h.escolha ? [["escolha", "As perícias da escolha"]] : []), e.alvo, function (v) { e.alvo = v; }));
+      if (e.tipo === "melhoraTreino") {
+        var alvos = comTreino(h).map(function (x) { return [x.chave, x.nome || "Sem nome"]; });
+        campos.push(sel(pref + "-alvo", "Melhora", alvos.length ? alvos : [["", "— nenhuma habilidade de grau —"]], e.alvo, function (v) { e.alvo = v; }));
+        campos.push(num(pref + "-ce", "PE a mais", e.custoExtra, function (v) { e.custoExtra = v; }));
+      }
+      return el("div.hbc-efeito", {}, [
+        el("div.editar-grade", {}, campos),
+        tipo.alvo ? el("label.r-marca", {}, [el("input", { type: "checkbox", checked: !!e.exigeTreinada, onchange: function (ev) { if (ev.target.checked) e.exigeTreinada = true; else delete e.exigeTreinada; mudou(true); } }), el("span", { texto: "Só em perícias treinadas" })]) : null,
+        tipo.alvo && e.alvo === "lista" ? chipsDePericias("Perícias da lista", e.pericias, function (l) { e.pericias = l; }) : null,
+        e.tipo === "conjuracao" ? el("p.t-mini", { texto: "Usa a tabela de círculos da etapa Perícias (Rituais): 3 rituais de 1º círculo no 1º marco e um a cada marco. Uma concessão só." }) : null,
+        el("button.r-botao.r-botao--mini.r-botao--fantasma", { type: "button", texto: "Remover efeito", onclick: function () { s.efeitos.splice(j, 1); mudou(true); } }),
+      ]);
+    }
+    function editorDeEstagio(h, s, i) {
+      var pref = "hbh-" + h.chave + "-e" + i;
+      s.efeitos = Array.isArray(s.efeitos) ? s.efeitos : [];
+      return el("fieldset.hbc-estagio", {}, [
+        el("legend.r-rotulo", { texto: i ? "Melhoria " + i + " (substitui a anterior)" : "Aquisição" }),
+        el("div.editar-grade", {}, [
+          sel(pref + "-nex", "NEX / nível", H().NEX.map(function (n) { return [String(n), "NEX " + n + "% · nível " + HC().degrauDoNex(n)]; }), String(s.nex), function (v) { s.nex = Number(v); }),
+          sel(pref + "-pat", "Em Patentes", [["", "— não existe"]].concat(HC().PATENTES.map(function (p, k) { return [String(k), p]; })), s.patente === null || s.patente === undefined ? "" : String(s.patente), function (v) { s.patente = v === "" ? null : Number(v); }),
+          num(pref + "-c", "Custo ao usar (PE)", s.custo, function (v) { s.custo = v; }, "Com “Jogando sem Sanidade”, em PD."),
+          el("div.r-campo", {}, [el("label", { for: pref + "-cp", texto: "Custo em Patentes (PD)" }), el("input.r-entrada.r-entrada--numero", { id: pref + "-cp", inputmode: "numeric", maxlength: 2, placeholder: "o mesmo", value: s.custoPatente === null || s.custoPatente === undefined ? "" : String(s.custoPatente), oninput: function (ev) { s.custoPatente = ev.target.value === "" ? null : Number(ev.target.value) || 0; mudou(); } })]),
+        ]),
+        el("div.pilha--curta", { class: "pilha" }, s.efeitos.map(function (e, j) { return editorDeEfeito(h, s, e, i, j); })),
+        el("div.faixa", {}, [
+          s.efeitos.length < HC().MAX_EFEITOS ? el("button.r-botao.r-botao--mini", { type: "button", texto: "+ Efeito", onclick: function () { s.efeitos.push({ tipo: "bonusTeste", valor: 2, alvo: h.escolha ? "escolha" : "todas" }); mudou(true); } }) : null,
+          i ? el("button.r-botao.r-botao--mini.r-botao--fantasma", { type: "button", texto: "Remover melhoria", onclick: function () { h.estagios.splice(i, 1); mudou(true); } }) : null,
+        ]),
+      ]);
+    }
+    function cartaoDeHabilidade(h, k) {
+      var pref = "hbh-" + h.chave;
+      var nome = el("input.r-entrada", { id: pref + "-nome", value: h.nome || "", maxlength: 60, oninput: function (ev) { h.nome = ev.target.value; mudou(); } });
+      var desc = el("textarea.r-area", { id: pref + "-desc", rows: 2, maxlength: 1200, oninput: function (ev) { h.descricao = ev.target.value; mudou(); } }); desc.value = h.descricao || "";
+      h.estagios = Array.isArray(h.estagios) && h.estagios.length ? h.estagios : [{ nex: 5, patente: 0, custo: 0, custoPatente: null, efeitos: [] }];
+      var todas = HC().normalizarLista(habs().map(function (x) { return Object.assign({}, x, { nome: x.nome || "Sem nome" }); }));
+      var norm = todas.filter(function (x) { return x.chave === h.chave; })[0];
+      var semAuto = !h.estagios.some(function (s) { return (s.efeitos || []).length; });
+      var temUso = h.estagios.some(function (s) { return (s.efeitos || []).some(function (e) { return (HC().POR_TIPO[e.tipo] || {}).grupo === "uso"; }); });
+      return el("article.hbc-hab", { "aria-labelledby": pref + "-titulo" }, [
+        el("div.faixa.hbc-hab__topo", {}, [
+          el("p.t-secao", { id: pref + "-titulo", texto: (h.nome || "Sem nome") }),
+          el("span.hbc-hab__selo", { texto: semAuto ? "Só texto" : (temUso ? "Com uso" : "Passiva") }),
+          h.escolha ? el("span.hbc-hab__selo", { texto: "Pede escolha" }) : null,
+          h.base ? el("span.t-mini", { texto: "Partiu de: " + HC().ROTULOS_PRESET[h.base] + " (cópia; a oficial não muda)" }) : null,
+          el("button.r-botao.r-botao--mini.r-botao--fantasma", { type: "button", texto: "Remover", "aria-label": "Remover " + (h.nome || "a habilidade"), onclick: function () { habs().splice(k, 1); mudou(true); } }),
+        ]),
+        el("div.r-campo", {}, [el("label", { for: pref + "-nome", texto: "Nome" }), nome]),
+        el("div.r-campo", {}, [el("label", { for: pref + "-desc", texto: "Descrição (aparece no cartão; não é interpretada)" }), desc]),
+        el("div.editar-grade", {}, [
+          sel(pref + "-esc", "Escolha do jogador", [["", "Nenhuma"], ["pericias", "Perícias"]], h.escolha ? "pericias" : "", function (v) { h.escolha = v ? { tipo: "pericias", quantidade: 2, modo: "treinada" } : null; }),
+          h.escolha ? num(pref + "-q", "Quantas", h.escolha.quantidade, function (v) { h.escolha.quantidade = v; }) : null,
+          h.escolha ? sel(pref + "-m", "Quais", [["treinada", "Só treinadas"], ["qualquer", "Qualquer perícia"]], h.escolha.modo, function (v) { h.escolha.modo = v; }) : null,
+        ]),
+        h.escolha ? chipsDePericias("Não podem ser escolhidas", h.escolha.exceto, function (l) { h.escolha.exceto = l; }) : null,
+        el("div.pilha--curta", { class: "pilha" }, h.estagios.map(function (s, i) { return editorDeEstagio(h, s, i); })),
+        h.estagios.length < HC().MAX_ESTAGIOS ? el("button.r-botao.r-botao--mini", { type: "button", texto: "+ Melhoria em outro marco", onclick: function () {
+          var ult = h.estagios[h.estagios.length - 1];
+          var prox = H().NEX.filter(function (n) { return n > ult.nex; })[0];
+          if (!prox) { UI.avisoAtencao("O último estágio já está em NEX 99%."); return; }
+          h.estagios.push({ nex: prox, patente: ult.patente === null || ult.patente === undefined ? null : Math.min(4, ult.patente + 1), custo: ult.custo, custoPatente: ult.custoPatente, efeitos: JSON.parse(JSON.stringify(ult.efeitos || [])) });
+          mudou(true);
+        } }) : null,
+        el("div.hbc-hab__previa", {}, [el("p.t-rotulo", { texto: "Na ficha" }), el("ul.hbe-mini", {}, (norm ? HC().previa(norm, todas) : ["Ajuste os campos acima."]).map(function (t) { return el("li", { texto: t }); }))]),
+        semAuto ? el("p.t-mini.t-aviso", { texto: "Sem efeito configurado: a ficha mostra o cartão com o texto, e a mesa aplica." }) : null,
+      ]);
+    }
+    function passoHabilidades() {
+      if (!HC()) return el("div.pc-editor__passo", {}, [el("p.t-aviso", { texto: "As habilidades características não carregaram nesta página." })]);
+      var podeEngenho = comTreino().length > 0;
+      return el("div.pc-editor__passo", {}, [
+        r.convertidas ? el("p.t-mini.t-aviso", { texto: r.convertidas + " habilidade(s) só de texto desta classe viraram cartões sem efeito (no 1º marco). Dá para dar efeito a elas aqui; salve a classe para guardar." }) : null,
+        el("p.t-mini", { texto: "Habilidades que a classe concede sozinha nos marcos — sem ocupar vaga de poder. Sem efeito configurado, a habilidade é só texto: aparece como cartão, e a mesa aplica. Cada uma pode pedir uma escolha (feita na criação e na Progressão), ter melhorias em marcos seguintes (cada uma substitui a anterior) e efeitos que a ficha aplica: os passivos entram na conta; os de uso aparecem nas rolagens, com o custo do estágio. Independem dos poderes e trilhas da etapa 1." }),
+        el("div.faixa", {}, [
+          el("button.r-botao.r-botao--mini", { type: "button", id: "hbh-nova", texto: "+ Habilidade própria", onclick: function () { adicionarPreset(""); } }),
+        ].concat(["ataqueEspecial", "ecletico", "perito", "engenhosidade", "escolhidoPeloOutroLado"].map(function (k) {
+          return el("button.r-botao.r-botao--mini.r-botao--fantasma", { type: "button", texto: "+ " + HC().ROTULOS_PRESET[k], disabled: k === "engenhosidade" && !podeEngenho, title: k === "engenhosidade" && !podeEngenho ? "Precisa antes de uma habilidade de benefícios de grau (como o Eclético)." : "Uma cópia adaptável da oficial", onclick: function () { adicionarPreset(k); } });
+        }))),
+        habs().length ? el("div.pilha", {}, habs().map(cartaoDeHabilidade)) : el("p.t-mini", { texto: "Nenhuma habilidade característica ainda." }),
+      ]);
+    }
+
+    /* ---------- 5. NEX e nível ---------- */
     function tabela(entradas, rotuloLinha, escolhasValidas, prefixo) {
       return el("div.hbc-tabela", { role: "table", "aria-label": "Progressão" }, entradas.map(function (e, i) {
         var rot = el("input.r-entrada", { id: prefixo + i, value: (e.rotulos || []).join("; "), maxlength: 240, "aria-label": rotuloLinha(e, i) + ": o que concede", placeholder: "ex.: Fúria (2 PE); Habilidade de trilha", oninput: function (ev) { e.rotulos = ev.target.value.split(";").map(function (s) { return s.trim(); }).filter(Boolean).slice(0, 4); mudou(); } });
@@ -252,7 +396,7 @@
       ]);
     }
     /* ---------- 6. revisão ---------- */
-    function definicao() { var x = JSON.parse(JSON.stringify(d)); x.nome = r.nome || "Classe Homebrew"; x.resumo = r.descricao; x.homebrewId = reg ? reg.id : "rascunho"; return H().normalizarClasse(x); }
+    function definicao() { var x = JSON.parse(JSON.stringify(d)); if (Array.isArray(x.habilidadesCaracteristicas) && !x.habilidadesCaracteristicas.length) delete x.habilidadesCaracteristicas; x.nome = r.nome || "Classe Homebrew"; x.resumo = r.descricao; x.homebrewId = reg ? reg.id : "rascunho"; return H().normalizarClasse(x); }
     function passo6() {
       var def = definicao();
       var f = H().faltas(def);
@@ -261,8 +405,12 @@
         el("ul.hbe-mini", {}, H().previa(def, { agi: 2, for: 2, int: 2, pre: 2, vig: 2 }).map(function (t) { return el("li", { texto: t }); })),
         el("p.t-rotulo", { texto: "Automático" }),
         el("ul.hbe-mini", {}, ["PV, PE, SAN e PD pela tabela, em cada marco.", "As vagas de cada marco aparecem na Progressão da ficha e na Ramificação.", (def.poderesDe ? "Poderes de classe: os do " + C().classe(def.poderesDe).nome + " e os gerais" : "Poderes de classe: os gerais") + (def.poderesHomebrew.length ? ", mais " + def.poderesHomebrew.length + " Homebrew escolhido(s)" : "") + "; os feitos só para esta classe entram sempre.", (def.trilhasDe ? "Trilhas: as do " + C().classe(def.trilhasDe).nome : "Trilhas: nenhuma oficial") + (def.trilhasHomebrew.length ? ", mais " + def.trilhasHomebrew.length + " Homebrew escolhida(s)" : "") + "; as trilhas feitas só para esta classe entram sempre."].map(function (t) { return el("li", { texto: t }); })),
+        def.habilidadesCaracteristicas ? el("p.t-rotulo", { texto: "Habilidades características" }) : null,
+        def.habilidadesCaracteristicas ? el("div.pilha--curta", { class: "pilha" }, def.habilidadesCaracteristicas.map(function (h) {
+          return el("div", {}, [el("p.t-secao", { texto: h.nome }), el("ul.hbe-mini", {}, HC().previa(h, def.habilidadesCaracteristicas).map(function (t) { return el("li", { texto: t }); }))]);
+        })) : null,
         el("p.t-rotulo", { texto: "Decisão da mesa / manual" }),
-        el("ul.hbe-mini", {}, ["O efeito mecânico das habilidades escritas nos marcos (o texto aparece; a automação de cada uma é da Etapa 3)."].concat(f.map(function (x) { return "Falta a " + x + ": a classe não será oferecida nesse trilho."; })).map(function (t) { return el("li", { texto: t }); })),
+        el("ul.hbe-mini", {}, ["O efeito mecânico do que está só em texto (os rótulos dos marcos e as habilidades sem efeito configurado). As habilidades com efeito são aplicadas pela ficha."].concat(f.map(function (x) { return "Falta a " + x + ": a classe não será oferecida nesse trilho."; })).map(function (t) { return el("li", { texto: t }); })),
         imagem ? imagem.el : null,
         el("div.r-campo", {}, [el("span.r-rotulo", { texto: "Visibilidade" }), el("div.filtros__grupo", { role: "group", "aria-label": "Visibilidade" }, [["privado", "Privada"], ["publico", "Pública"]].map(function (x) {
           return el("button.filtro", { type: "button", "aria-pressed": String(r.visibilidade === x[0]), texto: x[1], onclick: function () { r.visibilidade = x[0]; mudou(true); } });
@@ -283,7 +431,7 @@
 
     async function salvar(fechar) {
       if (!U.aparar(r.nome)) { r.passo = 1; pintar(); UI.avisoErro("Dê um nome à classe."); var n = document.getElementById("hbc-nome"); if (n) n.focus(); return; }
-      if (!d.progressao && !d.patentes) { r.passo = 4; pintar(); UI.avisoErro("A classe precisa de ao menos uma tabela (NEX/nível ou Patentes) para ser usada."); return; }
+      if (!d.progressao && !d.patentes) { r.passo = 5; pintar(); UI.avisoErro("A classe precisa de ao menos uma tabela (NEX/nível ou Patentes) para ser usada."); return; }
       var def = definicao(); delete def.chave; delete def.homebrewId;
       var g = A().guardar("ordem", "estrutural", "classe", { id: reg ? reg.id : undefined, nome: r.nome, descricao: r.descricao, valores: {}, classe: def, visibilidade: r.visibilidade, modeloAnterior: reg ? reg.modelo : null });
       if (!g.ok) { UI.avisoErro(g.erro); return; }

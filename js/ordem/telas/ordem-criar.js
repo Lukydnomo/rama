@@ -915,6 +915,7 @@
             el("span.criacao-opcao__meta", { texto: H.previa(def, d.atributos)[0] }),
             def.resumo ? el("span.criacao-opcao__texto", { texto: def.resumo }) : null,
             el("span.criacao-opcao__texto", { texto: (def.poderesDe ? "Poderes do " + C.classe(def.poderesDe).nome : "Só poderes gerais") + " · " + (def.trilhasDe ? "trilhas do " + C.classe(def.trilhasDe).nome : "sem trilhas de classe") + "." }),
+            def.habilidadesCaracteristicas && def.habilidadesCaracteristicas.length ? el("span.criacao-opcao__texto", { texto: "Habilidades características: " + def.habilidadesCaracteristicas.map(function (h) { return h.nome; }).join(", ") + "." }) : null,
             !disp.ok ? el("span.criacao-opcao__texto.t-aviso", { texto: disp.motivo }) : null,
           ]);
         })),

@@ -3221,3 +3221,44 @@ de regressão (`testes/executar-homebrew-matriz.js --gerar`).
 ### Publicar a v9.37.0
 
 **Servidor:** nada muda. **Site:** `js/versao.js`.
+
+## Ordem I: habilidades características da Classe Homebrew (entrega aberta)
+
+O editor da classe ganhou a etapa **4. Habilidades** (as seguintes viram 5 a
+7). Uma habilidade característica é concedida nos marcos **sem ocupar vaga de
+poder**, independente dos poderes e trilhas da etapa 1.
+
+- **Definição** (`habilidadesCaracteristicas`, só presente quando há alguma —
+  a chave das classes antigas não muda): `chave` estável (não `id`: a
+  importação apaga todo `id`), nome, descrição (nunca interpretada), `base`
+  (a predefinição oficial de que partiu), `escolha` de perícias (quantidade,
+  só treinadas, exceções) e `estagios` `{ nex, patente, custo, custoPatente,
+  efeitos }`. O 1º estágio é a aquisição; cada estágio substitui o anterior.
+  `nex` vale para NEX e nível; `patente` (0–4 ou nenhuma) é o marco na
+  Evolução por Patentes.
+- **Efeitos estruturados** (`js/ordem/habilidades-classe.js`): passivos
+  (Defesa, PV/PE fixos, PV/SAN por marco, bônus fixo numa perícia ou nas
+  escolhidas); de uso (bônus ou dado extra no teste, benefícios de grau no
+  teste, bônus no ataque, bônus no dano); especiais (`melhoraTreino`, a
+  ligação de Engenhosidade com o Eclético pela chave; `conjuracao`, que usa a
+  tabela de círculos da própria classe — uma concessão só).
+- **Predefinições**: Ataque Especial, Eclético, Perito, Engenhosidade e
+  Escolhido pelo Outro Lado, como cópias com chave nova. "Começar de" uma
+  classe oficial traz as dela.
+- **Na ficha**: a escolha é a vaga `opcoesBeneficio` `b.hbh-<chave>`
+  (validada pelo motor; aparece em "Falta decidir" na criação e na
+  Progressão); os passivos entram em `est.efeitos` com a habilidade como
+  origem (montados do zero: recarregar não soma); o cartão vem das
+  automáticas, com o estágio e a escolha. O uso aparece no resultado do teste,
+  do ataque e do dano (`js/ordem/telas/ficha-habilidades-classe.js`):
+  confirmação com custo e efeito, gasto pelo motor de recursos (PE, ou PD com
+  Jogando sem Sanidade e em Patentes; temporários primeiro), sem saldo nada se
+  aplica, acima do limite de PE por rodada só o custo mínimo da habilidade,
+  uma vez por resultado, e o efeito vale só naquele resultado.
+- **Versões**: a chave da entrada no catálogo leva o hash da classe (versões
+  não colidem); a vaga mantém a chave da habilidade, então atualizar a versão
+  preserva a escolha.
+- O antigo campo de texto "Habilidades iniciais" saiu do editor: ao abrir
+  uma classe antiga, cada linha vira uma habilidade sem efeito no 1º marco
+  (salvar grava a versão nova; a definição antiga continua válida).
+- Testes: `testes/executar-habilidades-classe.js`.

@@ -543,6 +543,28 @@
       }
     }
 
+    /* Habilidades características de uma classe Homebrew com escolha
+       (js/ordem/habilidades-classe.js): a decisão vem numa vaga própria,
+       com id estável (b.hbh-<id>) — nunca uma vaga de poder. Trocar a
+       versão da classe mantém o id e, com ele, a escolha registrada. */
+    var HC = global.RAMAOrdemHabilidadesClasse;
+    var classeHb = HC ? HC.classeHbDe(ordem) : null;
+    if (classeHb) {
+      classeHb.habilidadesCaracteristicas.forEach(function (h) {
+        if (!h.escolha) return;
+        var d = HC.degrauDeAquisicao(h, t);
+        if (!(d <= t.passos)) return;
+        lista.push(vaga(HC.vagaId(h), "opcoesBeneficio", {
+          degrau: d,
+          ordem: d * 100 + POSICAO.opcoesBeneficio,
+          rotulo: h.nome,
+          explicacao: h.descricao || h.nome,
+          beneficio: HC.chaveDaEntrada(h, classeHb),
+          rotuloEtapa: t.porPatente ? patenteDoDegrau(d).nome : rotuloDoDegrau(d, t.separado),
+        }));
+      });
+    }
+
     var origem = C.origem(ordem.origem);
     if (origem && (origem.escolha || (Array.isArray(origem.escolhas) && origem.escolhas.length))) {
       lista.push(vaga("b.origem." + origem.chave, "poderOrigem", {
@@ -3567,6 +3589,12 @@
       });
     }
 
+    /* Habilidades características de classe Homebrew: os efeitos
+       passivos do estágio que vale agora (um estágio substitui o
+       anterior). Montados do zero a cada leitura. */
+    var HCe = global.RAMAOrdemHabilidadesClasse;
+    if (HCe) HCe.efeitosPassivos(ordem, t).forEach(function (ef) { efeitos.push(ef); });
+
     /* Toda pendência de ritual diz quantos a concessão permite, quantos
        já foram escolhidos e quantos faltam — é o que o cartão mostra. */
     pendencias.forEach(function (p) {
@@ -4809,7 +4837,28 @@
         texto += (texto ? " · " : "") + "custo " + (ef.valor > 0 ? "+" : "") + ef.valor + " PE (" + ef.fonte + ", Treinamento Especial)";
       });
       return { id: "auto|" + a.chave, entrada: a, estagio: texto, preservada: a.classes.indexOf(classe.chave) < 0 };
-    });
+    }).concat(automaticasHomebrew(ordem, t, est));
+  }
+
+  /* As habilidades características da classe Homebrew que já chegaram,
+     com o texto do estágio que vale. O id (hbh|<id>) é estável: a
+     personalização e a exclusão da carta sobrevivem a uma versão nova. */
+  function automaticasHomebrew(ordem, t, est) {
+    var HC = global.RAMAOrdemHabilidadesClasse;
+    if (!HC) return [];
+    var nomes = HC.classeHbDe(ordem) ? HC.nomesPorId(HC.classeHbDe(ordem).habilidadesCaracteristicas) : {};
+    var pend = {};
+    ((est && est.pendencias) || []).forEach(function (p) { pend[p.id] = true; });
+    return HC.ativas(ordem, t).map(function (a) {
+      var e = P.poder(a.chave);
+      if (!e) return null;
+      var texto = HC.rotuloDoEstagio(a.estagio, t.porPatente) + ": " + HC.textoDoEstagio(a.hab, a.estagio, t.porPatente, nomes);
+      if (a.hab.escolha) {
+        var esc = HC.escolhidas(ordem, a.hab);
+        texto += pend[HC.vagaId(a.hab)] || !esc.length ? " · escolha pendente na Progressão" : " · " + esc.map(nomeDaPericia).join(", ");
+      }
+      return { id: "hbh|" + a.hab.chave, entrada: e, estagio: texto, preservada: false, habilidadeClasse: a.hab.chave };
+    }).filter(Boolean);
   }
 
   /* =================================================================

@@ -972,6 +972,20 @@ segredo nenhum — ele os lê das Script Properties. Publicá-lo não expõe nad
 
 ### Atualizar o backend
 
+**v9.27 — MOLDE:** habilidades características nas classes Homebrew de Ordem
+(etapa Habilidades no editor: concedidas nos marcos sem vaga de poder, com
+escolha, melhorias, custos e efeitos que a ficha aplica; predefinições das
+oficiais) e a versão pública no formato X.Y com revisão em letras. **Backend
+muda:** atualize `Feedback.gs` (a versão no formato novo) e crie uma nova
+versão da implantação. Site: `js/ordem/habilidades-classe.js` e
+`js/ordem/telas/ficha-habilidades-classe.js` (novos), `js/ordem/homebrew-ordem.js`,
+`js/ordem/catalogo.js`, `js/ordem/poderes.js`, `js/ordem/progressao.js`,
+`js/ordem/telas/ficha-ordem.js`, `js/ordem/telas/ordem-criar.js`,
+`js/paginas/homebrew-classe.js`, `css/homebrew.css`, `css/modern20/homebrew.css`,
+as páginas que carregam `homebrew-ordem.js`, `js/app.js` e `js/versao.js`.
+
+**Habilidades de classe** — `deno run --allow-read testes/executar-habilidades-classe.js`.
+
 **v9.26.0 — TRANSCRITO:** exportação da ficha em PDF e PNG no modelo de cada
 sistema; Arquivos Secretos 11 (viagens nas estradas, Carcaças Vermelhas,
 regalias, aliados e Limite de Dados); aba Ajuda e tutorial inicial; forma de
@@ -2357,21 +2371,26 @@ Três números diferentes, que não se misturam:
 
 | | Onde | O que é |
 |---|---|---|
-| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v9.26.0 |
+| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v9.27 |
 | `schemaVersion` | `js/ficha.js` | o formato da FICHA |
 | `versaoFormato` | `js/config.js` | o formato dos arquivos de importação |
 
 A cada versão fechada: um registro novo no topo, com codinome inédito e a data
-real, e os números de baixo zeram ao subir. Os pedidos se acumulam numa entrega
+real. Desde a v9.26.0 o número público é **X.Y**, com a revisão em letras
+minúsculas coladas ao segundo bloco (`10.2`, `10.2a`, `10.2b` … `10.2z`,
+`10.2aa`); os registros antigos `X.Y.Z` ficam como foram publicados e o
+terceiro número vale como a posição da revisão (`9.25.2` = `9.25b`), para
+comparar e ordenar. Os pedidos se acumulam numa entrega
 em desenvolvimento ([docs/ENTREGA.md](docs/ENTREGA.md)) sem commit nem registro
 até a ordem de fechar a versão, que gera um registro só para o conjunto — o
-passo a passo está no [CLAUDE.md](CLAUDE.md). Em resumo (desde a v2.49.2): **MAJOR** é um
-marco do R.A.M.A. — uma transformação da plataforma ou da experiência, quebrando
-compatibilidade ou não; **MINOR** é funcionalidade, módulo ou expansão, mesmo
-grande; **PATCH** é manutenção e refino. Uma minor importante pode levar o
-campo opcional `destaque: true`, que só muda o selo no histórico, nunca o
-número. A política inteira — critérios, o que não conta, o destaque — mora só no
-comentário de `js/versao.js`; a versão pública não se mistura com
+passo a passo está no [CLAUDE.md](CLAUDE.md). Em resumo: **major** (`X+1.0`) é
+uma transformação importante na experiência central; **minor** (`X.Y+1`) são
+funcionalidades novas ou uma evolução relevante dos fluxos; **revisão**
+(`X.Ya`) são correções, refinos e ajustes localizados. A classe sai do **efeito
+conjunto** da entrega — não da maior mudança isolada nem do volume — e é
+escolhida no fechamento, com uma justificativa curta. Uma minor importante pode
+levar o campo opcional `destaque: true`, que só muda o selo no histórico, nunca
+o número. A política inteira mora só no comentário de `js/versao.js`; a versão pública não se mistura com
 `schemaVersion` nem com `versaoFormato`.
 
 ---

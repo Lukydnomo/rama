@@ -1029,7 +1029,10 @@ t.grupo("Depois de uma atualização, o histórico primeiro (v2.49.2; apresenta�
   const ler = (c) => Deno.readTextFile(new URL("../" + c, import.meta.url)).then((x) => x.replace(/\r\n/g, "\n"));
   const fonte = await ler("js/app.js");
   const corpo = fonte.slice(fonte.indexOf("function versaoJaVista"), fonte.indexOf("/* =================================================================\n     CABEÇALHO DE PÁGINA"));
-  const comparar = (a, b) => { const x = a.split(".").map(Number), y = b.split(".").map(Number); for (let i = 0; i < 3; i++) if (x[i] !== y[i]) return x[i] - y[i]; return 0; };
+  /* O comparar de verdade (js/versao.js), que entende os dois formatos. */
+  const modVersao = {};
+  new Function("window", await ler("js/versao.js"))(modVersao);
+  const comparar = modVersao.RAMAVersion.comparar;
   /* Um navegador: armazenamento, aba, janelas abertas. */
   function aparelho(guardada, op = {}) {
     const mapa = new Map(guardada ? [["rama.versao.vista", guardada]] : []);
@@ -1052,7 +1055,7 @@ t.grupo("Depois de uma atualização, o histórico primeiro (v2.49.2; apresenta�
       abertos.push(o);
       return op.semJanela ? undefined : { janela: { isConnected: true } };
     };
-    const global = { RAMAVersion: { numero: "9.9.9", comparar }, RAMAUI: { quandoSemModais: (f) => fila.push(f) } };
+    const global = { RAMAVersion: { numero: op.numero || "9.9.9", comparar }, RAMAUI: { quandoSemModais: (f) => fila.push(f) } };
     const silencioso = { warn() {} };
     const fn = new Function("global", "localStorage", "CHAVE_VERSAO_VISTA", "CHAVE_VERSAO_SONDA", "abrirChangelog", "document", "console", corpo + "; return novidadesDaVersao;")(
       global, ls, "rama.versao.vista", "rama.versao.sonda", abrir, doc, silencioso);
@@ -1080,6 +1083,21 @@ t.grupo("Depois de uma atualização, o histórico primeiro (v2.49.2; apresenta�
   a = aparelho("9.10.0");
   a.fn(); a.liberar();
   t.igual("  compara por número, não como texto (9.10.0 é mais nova que 9.9.9)", a.abertos.length, 0);
+  a = aparelho("9.26.0", { numero: "9.26.0" });
+  a.fn(); a.liberar();
+  t.igual("transição: 9.26.0 vista, ainda 9.26.0 — não reaparece", a.abertos.length, 0);
+  a = aparelho("9.26.0", { numero: "9.26a" });
+  a.fn(); a.liberar();
+  t.ok("transição: 9.26.0 vista, agora 9.26a — é novidade e grava 9.26a", a.abertos.length === 1 && a.mapa.get("rama.versao.vista") === "9.26a");
+  a = aparelho("9.26b", { numero: "9.26a" });
+  a.fn(); a.liberar();
+  t.ok("formato novo: 9.26b vista numa página com 9.26a — não abre nem rebaixa", a.abertos.length === 0 && a.mapa.get("rama.versao.vista") === "9.26b");
+  a = aparelho("9.25.2", { numero: "9.25b" });
+  a.fn(); a.liberar();
+  t.igual("9.25.2 vista equivale a 9.25b: versões antigas não voltam como novidade", a.abertos.length, 0);
+  a = aparelho("10.2z", { numero: "10.2aa" });
+  a.fn(); a.liberar();
+  t.igual("10.2z vista, agora 10.2aa: é novidade (z vem antes de aa)", a.abertos.length, 1);
   a = aparelho("lixo");
   a.fn(); a.liberar();
   t.ok("registro que não é versão conta como nenhum", a.abertos.length === 1 && a.mapa.get("rama.versao.vista") === "9.9.9");

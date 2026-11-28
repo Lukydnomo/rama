@@ -2202,6 +2202,19 @@
     return e;
   }
 
+  /* HABILIDADE CARACTERÍSTICA de uma classe Homebrew (a entrada vem
+     pronta de js/ordem/habilidades-classe.js): o cartão e a vaga da
+     escolha. Chave versionada pela classe — nunca colide entre versões. */
+  function registrarHabilidadeClasseHomebrew(d) {
+    if (!d || !/^hbh-[a-z0-9-]{3,70}$/.test(String(d.chave || ""))) return null;
+    var e = entrada(d);
+    e.homebrew = true;
+    e.habilidadeClasse = d.habilidadeClasse || "";
+    e.classeHomebrew = d.classeHomebrew || "";
+    POR_CHAVE[e.chave] = e;
+    return e;
+  }
+
   /* Se o poder pertence à classe. Um poder geral pertence a todas; um
      de classe que o SAH tornou geral também — mas marcado, para a tela
      dizer de onde veio a permissão. */
@@ -2344,6 +2357,7 @@
     registrarHabilidadesDeTrilha: registrarHabilidadesDeTrilha,
     registrarParanormalHomebrew: registrarParanormalHomebrew,
     registrarPoderClasseHomebrew: registrarPoderClasseHomebrew,
+    registrarHabilidadeClasseHomebrew: registrarHabilidadeClasseHomebrew,
     poderesClasseHomebrew: poderesClasseHomebrew,
     poderHomebrewServe: poderHomebrewServe,
     paranormaisDisponiveis: paranormaisDisponiveis,

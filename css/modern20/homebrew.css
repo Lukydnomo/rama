@@ -47,4 +47,7 @@
   & .hbe-avancado { border-radius: var(--m20-raio-controle); border-style: solid; border-color: var(--m20-borda); }
   & .hbe-tipo.r-botao--bloco { border-radius: var(--m20-raio-controle); font-weight: 550; }
   & .hbe-previa { border-radius: var(--m20-raio-controle); }
+  & .hbc-hab { border-radius: var(--m20-raio-cartao); border-color: var(--m20-borda); }
+  & .hbc-estagio { border-radius: var(--m20-raio-controle); border-color: var(--m20-borda); }
+  & .hbc-hab__selo { border-radius: 999px; border-color: var(--m20-borda); text-transform: none; letter-spacing: 0; font-weight: 550; }
 }

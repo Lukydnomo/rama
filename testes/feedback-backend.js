@@ -173,6 +173,12 @@ export async function testarFeedbackBackend({ t, preparar, novaConta, comoFn, ch
     enviar(C, ok({ versao: "2.50.0<script>", pagina: "x".repeat(300) }));
     e = ultimo().corpo.embeds[0];
     t.igual("versão fora do formato: não informada", e.fields[2].value, "não informada");
+    soltar(); enviar(C, ok({ versao: "9.26a" }));
+    t.igual("versão no formato novo (X.Y + revisão em letras) é aceita", ultimo().corpo.embeds[0].fields[2].value, "9.26a");
+    soltar(); enviar(C, ok({ versao: "10.2" }));
+    t.igual("versão X.Y é aceita", ultimo().corpo.embeds[0].fields[2].value, "10.2");
+    soltar(); enviar(C, ok({ versao: "10.2A" }));
+    t.igual("letra maiúscula não é versão", ultimo().corpo.embeds[0].fields[2].value, "não informada");
     t.igual("página longa é cortada em 80 (é rótulo da interface)", e.fields[3].value.length, 80);
 
     /* Campos inesperados no pedido não controlam o webhook. */

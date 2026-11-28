@@ -133,7 +133,9 @@ var RamaFeedbackCore = (function () {
     }
 
     var versao = typeof dados.versao === 'string' ? dados.versao.trim() : '';
-    saida.versao = /^\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(versao) ? versao : 'não informada';
+    /* A versão pública: X.Y.Z (registros até a v9.26.0) ou X.Y com a
+       revisão em letras (9.26a, 10.2aa). */
+    saida.versao = /^\d{1,3}\.\d{1,3}(?:\.\d{1,3}|[a-z]{1,3})?$/.test(versao) ? versao : 'não informada';
     var pagina = typeof dados.pagina === 'string' ? linha(dados.pagina).slice(0, LIMITE_PAGINA) : '';
     saida.pagina = pagina || 'não informada';
     /* Só true identifica: "sim", 1 ou qualquer outra coisa é anônimo. */

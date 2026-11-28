@@ -297,8 +297,8 @@
 
       var cartao = global.RAMAUI.recolhivel({
         titulo: "v" + r.versao + " — " + r.codinome,
-        /* Patch se diz manutenção; marco e destaque ganham um selo. */
-        extra: (V.tipo && V.tipo(r) === "patch" ? "manutenção · " : "") + r.data,
+        /* Revisão se diz revisão; marco e destaque ganham um selo. */
+        extra: (V.tipo && V.tipo(r) === "revisao" ? "revisão · " : "") + r.data,
         /* A mais recente abre; as anteriores ficam recolhidas. */
         aberto: i === 0,
         conteudo: secoes.length ? secoes : [el("p.t-mini", { texto: "Sem mudanças registradas." })],
@@ -329,7 +329,7 @@
         novidade
           ? el("p", { texto: "O que mudou está logo abaixo; as versões anteriores ficam recolhidas. O histórico continua no número da versão, no rodapé." })
           : null,
-        el("p.t-mini", { texto: "A versão que aparece no rodapé é sempre a do topo desta lista. Marco: uma virada do R.A.M.A. (X.0.0). Destaque: uma expansão importante. Manutenção: correções e refinos (X.Y.Z)." }),
+        el("p.t-mini", { texto: "A versão que aparece no rodapé é sempre a do topo desta lista. Marco: uma virada do R.A.M.A. (X.0). Destaque: uma expansão importante. Revisão: correções e refinos (a letra depois do número, como 10.2a; nas versões antigas, o terceiro número)." }),
         el("div.pilha--curta", { class: "pilha" }, registros),
       ],
       botoes: [{ rotulo: "Fechar", classe: "r-botao--principal" }],
@@ -341,11 +341,13 @@
   }
 
   /* A versão guardada já cobre esta? Igual ou mais nova: uma página
-     antiga ainda aberta não avisa nem rebaixa o registro. Valor que não
+     antiga ainda aberta não avisa nem rebaixa o registro. Vale nos dois
+     formatos (9.26.0 guardada antes, 9.26a ou 10.0 agora). Valor que não
      é versão conta como nenhum. Pode lançar (armazenamento bloqueado). */
   function versaoJaVista(V) {
     var vista = localStorage.getItem(CHAVE_VERSAO_VISTA);
-    return /^\d+\.\d+\.\d+$/.test(vista || "") && V.comparar(vista, V.numero) >= 0;
+    var formato = /^\d+\.\d+(?:\.\d+|[a-z]+)?$/;
+    return formato.test(vista || "") && V.comparar(vista, V.numero) >= 0;
   }
 
   /* Sem poder gravar, não abre: o aviso se repetiria em toda página. A
