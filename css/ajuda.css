@@ -3,11 +3,8 @@
    css/modern20/ajuda.css)
    ---------------------------------------------------------------------
    O cartão do tutorial (js/tutorial.js), o destaque do controle da
-   etapa, o botão "Ajuda desta tela" da casca e a página Ajuda.
+   etapa e a página Ajuda.
    ===================================================================== */
-
-/* ---------------- "Ajuda desta tela" (casca) ---------------- */
-.app-ajuda { flex-shrink: 0; }
 
 /* ---------------- o cartão do tutorial ---------------- */
 .tut {

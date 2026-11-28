@@ -274,7 +274,7 @@
         return { id: "ajuda", titulo: revisao ? "Ajuda e fim da revisão" : "Ajuda e conclusão", final: true,
           texto: [
             "A Ajuda (no menu de navegação) tem busca por tarefa, guias por área, tutoriais com ficha de exemplo para cada sistema e perguntas frequentes. Cada regra citada diz o livro e a página para você conferir no seu material.",
-            "Se algo não funcionar, o Feedback fica no menu do agente (⋯), no canto do cabeçalho — o envio só acontece quando você confirmar.",
+            "No menu do agente (⋯), no canto do cabeçalho, ficam a Ajuda desta tela (o guia da página em que você está) e o Feedback, se algo não funcionar — o envio só acontece quando você confirmar.",
           ],
           alvo: function () { return estado === "concluido" ? null : $('[aria-label="Opções do agente"]'); },
           conteudo: function (api) {

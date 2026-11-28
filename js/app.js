@@ -40,7 +40,7 @@
     home: "primeiros-passos", personagens: "criar-personagem", campanhas: "campanhas-comecar",
     catalogo: "catalogo-consultar", homebrew: "homebrew-criar", perfil: "personalizar-aparencia",
   };
-  var ajudaDaTela = { secao: "", guia: "", link: null };
+  var ajudaDaTela = { secao: "", guia: "" };
 
   var CHAVE_EFEITOS = "rama.pref.efeitos";
   var CHAVE_ESCALA = "rama.pref.escala";
@@ -156,7 +156,12 @@
 
     /* Feedback mora aqui: o menu do agente existe em toda página, no
        desktop e no celular, e não cobre nada da tela até ser aberto. */
+    /* "Ajuda desta tela" fica no menu do agente, ao lado do Feedback: o
+       guia é lido na hora do clique (a página pode tê-lo trocado). */
     var menuAgente = global.RAMAUI.menu([
+      o.secao !== "ajuda" ? { rotulo: "Ajuda desta tela", icone: "ajuda", aoClicar: function () {
+        location.href = enderecoDaAjuda(ajudaDaTela.guia || AJUDA_DA_SECAO[o.secao] || "");
+      } } : null,
       { rotulo: "Perfil", icone: "perfil", aoClicar: function () { location.href = U.url("perfil/"); } },
       { rotulo: preferencias().efeitos ? "Desligar efeitos" : "Ligar efeitos", icone: "tela",
         aoClicar: function () { definirEfeitos(!preferencias().efeitos); location.reload(); } },
@@ -176,10 +181,6 @@
           ]),
         ]),
         el("div.app-topo__espaco"),
-        ajudaDaTela.link = o.secao !== "ajuda" ? el("a.r-icone.app-ajuda", {
-          href: enderecoDaAjuda(ajudaDaTela.guia || AJUDA_DA_SECAO[o.secao] || ""),
-          "aria-label": "Ajuda desta tela", title: "Ajuda desta tela",
-        }, [global.RAMAUI.simbolo("ajuda")]) : null,
         el("div.agente", {}, [
           avatarDoAgente(agente),
           el("span.agente__nome", { texto: agente.nome || "Agente" }),
@@ -218,7 +219,6 @@
   /* A página diz qual guia é o dela (antes ou depois de a casca existir). */
   function definirAjuda(guia) {
     ajudaDaTela.guia = String(guia || "");
-    if (ajudaDaTela.link) ajudaDaTela.link.href = enderecoDaAjuda(ajudaDaTela.guia);
   }
 
   /* O endereço desta página, a partir da raiz do site — para voltar a ele
