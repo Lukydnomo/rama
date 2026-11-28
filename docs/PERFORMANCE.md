@@ -271,7 +271,7 @@ deno run --allow-read testes/medir.js [--servico-avancado] [--backend pasta] [--
 deno run --allow-read testes/medir-salvamento.js [--anterior caminho/do/salvar.js]
 deno run --allow-read testes/executar-coordenacao.js
 deno run --allow-read --allow-env testes/executar-backend.js [--servico-avancado]
-deno run --allow-read --allow-net --allow-env testes/servidor-local.js [--porta 8124] [--backend pasta] [--site pasta]
+deno run --allow-read --allow-net --allow-env testes/servidor-local.js [--porta 8124] [--backend pasta] [--site pasta] [--dados arquivo]
 ```
 
 `testes/servidor-local.js` serve o site com o backend no simulador, contas e fichas

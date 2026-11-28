@@ -4821,6 +4821,8 @@ await (() => {
    FIM
    ===================================================================== */
 
+const { testarTutorialBackend } = await import("./tutorial-backend.js");
+testarTutorialBackend({ t, preparar, novaConta, comoFn, chamar });
 const { testarAliadosBackend } = await import("./aliados-backend.js");
 testarAliadosBackend({ t, preparar, novaConta, comoFn });
 const { testarGifBackend } = await import("./imagens-backend.js");
@@ -4873,6 +4875,8 @@ const { testarImagensDoHomebrewBackend } = await import("./homebrew-imagens-back
 testarImagensDoHomebrewBackend({ t, preparar, novaConta, comoFn });
 const { testarAs5Backend } = await import("./as5-backend.js");
 await testarAs5Backend({ t, preparar, novaConta, comoFn });
+const { testarViagensBackend } = await import("./viagens-backend.js");
+await testarViagensBackend({ t, preparar, novaConta, comoFn });
 const { testarLoteBackend } = await import("./lote-backend.js");
 testarLoteBackend({ t, preparar, novaConta, comoFn, ambiente });
 

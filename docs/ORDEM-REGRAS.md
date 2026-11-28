@@ -15,6 +15,33 @@ leitura que o R.A.M.A. adotou escrita por extenso.
 
 ---
 
+## Arquivos Secretos 11 (entrega em desenvolvimento)
+
+Viagens nas estradas (p. 36–55), regalias (p. 56–57), Carcaças Vermelhas
+(p. 60–91), aliados (p. 92–97), Inquérito Mensal (p. 102) e Limite de Dados
+(p. 103–104, conteúdo da comunidade). Regras e dados em `js/ordem/viagens.js`
+(cópia em `Ordem.gs`), regalias em `js/ordem/arquivo3.js`, Limite de Dados em
+`js/ordem/regras.js` (fichas) e `js/criatura-painel.js` (ameaças). Leituras
+próprias do RAMA:
+
+- Confronto final: Pilotagem com DT 25 (p. 86); o exemplo 35 → 20 da mesma
+  página usou a base dos passageiros. Três sucessos → DT 10.
+- Ignorar a fumaça (Cena 4): Cena 5 (padrão) ou 7 (imprudente); a volta à
+  Cena 3 da p. 79 contradiz o itinerário e a p. 82.
+- Estepe e extintor: até 3 de cada, a primeira aquisição já conta.
+- Airbag e outros benefícios sem número: texto e decisão da mesa.
+- Equipamento de série dos veículos de viagem: estepe em todo motorizado que
+  não é moto; extintor nesses menos o carro velho (p. 48–49).
+- Tabela do acidente: total ≤ 0 também é colisão frontal (a impressa começa
+  em 1).
+- Granizo: o texto repetido na p. 52 é uma resolução só.
+- Freio: carro elétrico imune, como a fonte diz (p. 49).
+- Pessoa querida: com várias vivas, a do 1 no d4 é sorteada entre elas.
+- Expiração do Sonnenblume: o menor entre o concedido e o que resta.
+- Limite de Dados: os dados acrescentados depois da composição (+1d20 de um
+  poder, –1 da Rajada) seguem a mesma ordem — positivo limitado a 5, reduções
+  depois.
+
 ## Estado de implementação
 
 | símbolo | significado |

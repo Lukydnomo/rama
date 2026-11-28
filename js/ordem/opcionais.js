@@ -632,6 +632,27 @@
     ],
   });
 
+  /* Arquivos Secretos 11: Limite de Dados (p. 103–104), conteúdo da
+     comunidade do Mural dos Agentes, por Luna Moth — o pacote diz: não
+     oficial e não canônica. Muda só quantos d20 um teste rola; o valor do
+     atributo continua inteiro em PV, PE, Defesa e no resto. As ameaças
+     seguem a chave da campanha (Configurações → Mecânicas opcionais). */
+  REGRAS.push({
+    chave: "limiteDeDados",
+    nome: "Limite de Dados",
+    resumo: "Um teste rola no máximo cinco dados: atributo e dados a mais somam até 5, e só depois entram as reduções; com dados negativos, no máximo cinco, ficando com o menor.",
+    fonte: "AS11", pagina: 103,
+    fa: { autor: "Luna Moth", aviso: "Conteúdo da comunidade publicado no Arquivos Secretos 11: regra não oficial e não canônica." },
+    afetaFicha: true,
+    automacao: "calculo",
+    efeito: "Testes de atributo e de perícia (ataques incluídos): o atributo e os acréscimos positivos de dados somam no máximo 5; depois entram as reduções. Positivo: rola essa quantidade de d20 e fica com o maior. Zero: dois, com o menor; −1, três; −2, quatro; −3 ou menos, cinco — sempre com o menor. Bônus numéricos e dados de outros tamanhos entram depois do d20, como sempre. Atributo acima de 5 continua valendo para PV, PE, Defesa, perícias e as outras estatísticas.",
+    parametros: [], depende: [], incompativel: [],
+    consequencias: [
+      "Nenhum atributo muda: só a quantidade de d20 dos testes. A composição de cada teste mostra o corte (“Limite de Dados: 7 → 5”).",
+      "As ameaças da campanha seguem a chave da mesa (Configurações → Mecânicas opcionais); aliados criatura desta ficha seguem esta regra, com a Fonte do Medo para quem tem Enigma de Medo ainda não resolvido.",
+    ],
+  });
+
   var POR_CHAVE = {};
   REGRAS.forEach(function (r) { POR_CHAVE[r.chave] = r; });
 
@@ -658,7 +679,7 @@
       regras: ["limitesCompreensao", "aprendizadoEmCampo", "conjuracaoComplexa", "controleComponentes", "reterRitual",
         "transcenderComItens", "rituaisDesconhecidos", "desastresParanormais"] },
     { chave: "combate", nome: "Combate e sobrevivência",
-      regras: ["ferimentosDebilitantes", "contagemMunicao", "combateNarrativo", "regrasSubaquaticas"] },
+      regras: ["ferimentosDebilitantes", "contagemMunicao", "combateNarrativo", "regrasSubaquaticas", "limiteDeDados"] },
     { chave: "poderes", nome: "Poderes e trilhas",
       regras: ["evolucaoModular", "poderesDeIntencao", "formasSupremas", "poderesDeSacrificio", "trilhaGeral", "poderesDeTransmissao"] },
     { chave: "aliados", nome: "Aliados e vínculos",

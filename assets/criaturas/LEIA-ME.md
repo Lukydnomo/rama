@@ -25,7 +25,8 @@ as1.criatura.apostolo-do-sangue     → assets/criaturas/as1/apostolo-do-sangue/
 `as5`, Arquivos Secretos 5 (as variações do hospedeiro têm pasta própria; a forma monstruosa
 dos doppelgangers, não)
 `as6`, Arquivos Secretos 6; `as7`, Arquivos Secretos 7 (O Verdadeiro Raziel tem pasta própria;
-os patamares da Apóstata, não — são formas da mesma criatura)
+os patamares da Apóstata, não — são formas da mesma criatura); `as9`, Arquivos Secretos 9;
+`as11`, Arquivos Secretos 11 (só os três perfis “como aliado”: Bruna, Nicole e Rômulo)
 (os perfis "como aliado" têm pasta própria, com `-aliado` no fim, e os animais
 treinados do AS3, com `-animal`; as formas transformadas e a Hora do Show, não —
 são a mesma criatura).

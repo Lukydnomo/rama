@@ -1,0 +1,584 @@
+{
+ "gerado": "testes/gerar-demos-ajuda.js",
+ "ficha": {
+  "schemaVersion": 38,
+  "tipoFicha": "ordem2",
+  "nome": "Rhiona Mac Tuirenn",
+  "campanhaId": null,
+  "classe": "",
+  "origem": "",
+  "criadoEm": "2026-11-28T04:02:19.479Z",
+  "atualizadoEm": "2026-11-28T04:02:19.479Z",
+  "atributos": [
+   {
+    "id": "9dd18977-e3bd-47d0-b17e-8aca2aa7b7dc",
+    "natureza": "rolavel",
+    "nome": "Força",
+    "sigla": "FOR",
+    "valor": 0,
+    "dado": "1d20",
+    "formula": "",
+    "contagem": "maior"
+   },
+   {
+    "id": "04765ad5-cae1-4a48-a394-fe1be2dc7a6b",
+    "natureza": "rolavel",
+    "nome": "Agilidade",
+    "sigla": "AGI",
+    "valor": 0,
+    "dado": "1d20",
+    "formula": "",
+    "contagem": "maior"
+   },
+   {
+    "id": "7e80e534-e596-4c18-a47a-7dc6601653b1",
+    "natureza": "rolavel",
+    "nome": "Presença",
+    "sigla": "PRE",
+    "valor": 0,
+    "dado": "1d20",
+    "formula": "",
+    "contagem": "maior"
+   },
+   {
+    "id": "e1486617-53b1-483a-abbf-435ac645573d",
+    "natureza": "rolavel",
+    "nome": "Intelecto",
+    "sigla": "INT",
+    "valor": 0,
+    "dado": "1d20",
+    "formula": "",
+    "contagem": "maior"
+   },
+   {
+    "id": "56d4b0dd-9f53-4911-a794-667d1701f623",
+    "natureza": "rolavel",
+    "nome": "Vigor",
+    "sigla": "VIG",
+    "valor": 0,
+    "dado": "1d20",
+    "formula": "",
+    "contagem": "maior"
+   }
+  ],
+  "status": [
+   {
+    "id": "34758e1b-5cf5-477a-b2fd-a11aeb3f453e",
+    "nome": "PV",
+    "atual": 0,
+    "maximo": 0
+   },
+   {
+    "id": "ccec810f-0c26-4a22-b9bb-40dffdf594b1",
+    "nome": "PE",
+    "atual": 0,
+    "maximo": 0
+   },
+   {
+    "id": "40a06a38-a229-4b82-abd7-c1fb99bafaa5",
+    "nome": "Sanidade",
+    "atual": 0,
+    "maximo": 0
+   }
+  ],
+  "defesa": {
+   "dt": 0,
+   "esquiva": 0,
+   "bloqueio": 0,
+   "resistencia": 0,
+   "campos": [],
+   "ocultos": []
+  },
+  "pericias": [],
+  "organizacao": {
+   "pericias": {
+    "modo": "az"
+   }
+  },
+  "inventario": {
+   "limite": 0,
+   "itens": []
+  },
+  "anotacoes": {
+   "pastas": [],
+   "soltas": []
+  },
+  "retratos": null,
+  "ordem2": {
+   "versao": 1,
+   "regras": "ordem2-unificada",
+   "versaoRegras": 1,
+   "ambientacao": "vigilia",
+   "migracao": null,
+   "modoCriacao": "pronta",
+   "procedencia": {
+    "preset": "rhiona",
+    "nome": "Rhiona Mac Tuirenn",
+    "fonte": "beta",
+    "pagina": 7,
+    "versaoDados": 1,
+    "copiadoEm": "2026-01-01T00:00:00.000Z",
+    "atributosImpressos": {},
+    "origem": "beta",
+    "habilidadesOriginais": [
+     {
+      "ref": "analise_beta",
+      "nome": "Análise",
+      "texto": "Uma ação dá 2 marcadores (máximo 4). Depois de rolar, cada marcador muda um dado em +1 ou −1, dentro das faces dele. Os não usados somem no fim da cena.",
+      "fonte": "beta"
+     }
+    ]
+   },
+   "escolhas": null,
+   "perfil": "analista",
+   "ocupacao": {
+    "id": "ferreira",
+    "nome": "Ferreira",
+    "personalizada": false
+   },
+   "nivel": 3,
+   "patamar": "",
+   "idade": "23",
+   "resumo": "Filha do ferreiro de Ballynyr, versada no ferro e no fogo.",
+   "historia": "",
+   "aparencia": "",
+   "base": {
+    "atributos": {
+     "fisico": 10,
+     "mente": 6,
+     "emocao": 6
+    },
+    "pericias": [
+     {
+      "id": "4b9652fc-ef98-45f2-907d-ba0e4084a868",
+      "chave": "acrobacia",
+      "especializacao": "",
+      "dado": 4,
+      "rotuloImpresso": "",
+      "atributoImpresso": "",
+      "origens": []
+     },
+     {
+      "id": "87d7d4c5-91c7-40a3-affb-107f59a2d267",
+      "chave": "animais",
+      "especializacao": "",
+      "dado": 4,
+      "rotuloImpresso": "",
+      "atributoImpresso": "",
+      "origens": []
+     },
+     {
+      "id": "ffa6b844-e6b0-4c10-ab2f-796b9ce03773",
+      "chave": "aptidao",
+      "especializacao": "",
+      "dado": 4,
+      "rotuloImpresso": "",
+      "atributoImpresso": "",
+      "origens": []
+     },
+     {
+      "id": "2751464c-d414-4b9c-8f2e-3740c6bf7ec5",
+      "chave": "atletismo",
+      "especializacao": "",
+      "dado": 8,
+      "rotuloImpresso": "",
+      "atributoImpresso": "",
+      "origens": []
+     },
+     {
+      "id": "1fbaaf7a-31ba-4eb3-856d-01e79e1ab47e",
+      "chave": "crime",
+      "especializacao": "",
+      "dado": 4,
+      "rotuloImpresso": "",
+      "atributoImpresso": "",
+      "origens": []
+     },
+     {
+      "id": "d0d5bd04-b0fa-4442-ac1d-0c06b9bd6edb",
+      "chave": "disciplina",
+      "especializacao": "",
+      "dado": 6,
+      "rotuloImpresso": "",
+      "atributoImpresso": "",
+      "origens": []
+     },
+     {
+      "id": "5afa0a94-22ca-4277-98a2-bafd6037878f",
+      "chave": "enganacao",
+      "especializacao": "",
+      "dado": 4,
+      "rotuloImpresso": "",
+      "atributoImpresso": "",
+      "origens": []
+     },
+     {
+      "id": "256f5bcf-3878-4e92-844f-362b38fe26ed",
+      "chave": "furtividade",
+      "especializacao": "",
+      "dado": 4,
+      "rotuloImpresso": "",
+      "atributoImpresso": "",
+      "origens": []
+     },
+     {
+      "id": "05b302bb-5361-4356-9c5b-0278bd2a2224",
+      "chave": "pesquisar",
+      "especializacao": "",
+      "dado": 4,
+      "rotuloImpresso": "Inspecionar",
+      "atributoImpresso": "",
+      "origens": []
+     },
+     {
+      "id": "58ce420d-3f02-434e-bf73-8e6e6f3e3ea9",
+      "chave": "intimidar",
+      "especializacao": "",
+      "dado": 4,
+      "rotuloImpresso": "",
+      "atributoImpresso": "",
+      "origens": []
+     },
+     {
+      "id": "1e3dc816-e95d-4c4a-8fa8-6671d7bc6c37",
+      "chave": "intuicao",
+      "especializacao": "",
+      "dado": 4,
+      "rotuloImpresso": "",
+      "atributoImpresso": "",
+      "origens": []
+     },
+     {
+      "id": "918ce8e0-09c2-41c1-95dc-c6b2cfeca466",
+      "chave": "luta",
+      "especializacao": "",
+      "dado": 10,
+      "rotuloImpresso": "",
+      "atributoImpresso": "",
+      "origens": []
+     },
+     {
+      "id": "58ecd9b7-b9e4-4037-8c69-889e491f5408",
+      "chave": "medicina",
+      "especializacao": "",
+      "dado": 4,
+      "rotuloImpresso": "",
+      "atributoImpresso": "",
+      "origens": []
+     },
+     {
+      "id": "3cfca0c1-3287-4ec8-91dd-4747b1e1cb90",
+      "chave": "ocultismo",
+      "especializacao": "",
+      "dado": 4,
+      "rotuloImpresso": "Ocultismo",
+      "atributoImpresso": "",
+      "origens": []
+     },
+     {
+      "id": "dc15905d-46ec-458b-9cde-3c596dd83ee6",
+      "chave": "metalurgia",
+      "especializacao": "Metalurgia",
+      "dado": 8,
+      "rotuloImpresso": "Ofício (Metalurgia)",
+      "atributoImpresso": "",
+      "origens": []
+     },
+     {
+      "id": "dec20768-1533-4ddf-bc02-3814532b9015",
+      "chave": "percepcao",
+      "especializacao": "",
+      "dado": 6,
+      "rotuloImpresso": "",
+      "atributoImpresso": "",
+      "origens": []
+     },
+     {
+      "id": "dbcbf5c8-04b0-4c25-b441-e33eb7ef68bd",
+      "chave": "persuasao",
+      "especializacao": "",
+      "dado": 6,
+      "rotuloImpresso": "",
+      "atributoImpresso": "",
+      "origens": []
+     },
+     {
+      "id": "dec3ded8-cc19-4f03-aaa2-6726dcda34a2",
+      "chave": "pontaria",
+      "especializacao": "",
+      "dado": 4,
+      "rotuloImpresso": "",
+      "atributoImpresso": "",
+      "origens": []
+     },
+     {
+      "id": "b954d24f-57e7-4528-9649-bd9d99838c63",
+      "chave": "sobrevivencia",
+      "especializacao": "",
+      "dado": 4,
+      "rotuloImpresso": "",
+      "atributoImpresso": "",
+      "origens": []
+     },
+     {
+      "id": "9f3a7897-cab9-4827-a972-57a097930c1a",
+      "chave": "vigor",
+      "especializacao": "",
+      "dado": 8,
+      "rotuloImpresso": "",
+      "atributoImpresso": "",
+      "origens": []
+     },
+     {
+      "id": "o2p-maquinas",
+      "chave": "maquinas",
+      "especializacao": "",
+      "dado": 4,
+      "rotuloImpresso": "",
+      "atributoImpresso": "",
+      "origens": []
+     },
+     {
+      "id": "o2p-tecnologia",
+      "chave": "tecnologia",
+      "especializacao": "",
+      "dado": 4,
+      "rotuloImpresso": "",
+      "atributoImpresso": "",
+      "origens": []
+     }
+    ]
+   },
+   "recursos": {
+    "pv": {
+     "max": 22,
+     "atual": 22
+    },
+    "pd": {
+     "max": 12,
+     "atual": 12
+    },
+    "naoLetal": 0,
+    "armaduraGasta": 0
+   },
+   "habilidades": [
+    {
+     "id": "5d1e9e00-7e11-4369-ab20-d2d8bf263e4d",
+     "ref": "avaliacao",
+     "nome": "Avaliação",
+     "texto": "Uma ação dá 2 marcadores (máximo 4). Depois de rolar, cada marcador muda um dado em +1 ou −1, dentro das faces dele. Os não usados somem no fim da cena. (No Beta, chamada Análise.)",
+     "param": {},
+     "personalizada": false,
+     "origemEvolucao": "",
+     "estado": {
+      "espacos": 0,
+      "marcadores": 0,
+      "reserva": [],
+      "indisponivel": false
+     }
+    },
+    {
+     "id": "d4c75472-92a4-41a8-a542-9ffdcb5f13c1",
+     "ref": "leitura_combate",
+     "nome": "Leitura de Combate",
+     "texto": "Em combate, gastar uma ação para se defender dá 1 marcador de Avaliação.",
+     "param": {},
+     "personalizada": false,
+     "origemEvolucao": "",
+     "estado": {
+      "espacos": 0,
+      "marcadores": 0,
+      "reserva": [],
+      "indisponivel": false
+     }
+    },
+    {
+     "id": "0bc1fbfc-01da-4ad9-8b8a-f1f7c8e8a571",
+     "ref": "segredo_do_aco",
+     "nome": "Segredo do Aço",
+     "texto": "Sabe usar equipamento marcial; um item vestido que dá pontos de armadura dá 1 ponto a mais.",
+     "param": {},
+     "personalizada": false,
+     "origemEvolucao": "",
+     "estado": {
+      "espacos": 0,
+      "marcadores": 0,
+      "reserva": [],
+      "indisponivel": false
+     }
+    }
+   ],
+   "itens": [
+    {
+     "id": "13493d7d-b8d8-48e3-9dbe-c22b503645b8",
+     "nome": "Martelo de forja",
+     "tipo": "arma",
+     "alcance": "corpo",
+     "dano": 3,
+     "categoria": "",
+     "armadura": 0,
+     "passos": {},
+     "vestido": false,
+     "quantidade": null,
+     "consumivel": "",
+     "efeitos": [],
+     "especial": "",
+     "descricao": ""
+    },
+    {
+     "id": "e66ba5db-be7f-47c8-aa69-968ec0997bd1",
+     "nome": "Tenaz de ferreiro",
+     "tipo": "item",
+     "alcance": "corpo",
+     "dano": 0,
+     "categoria": "",
+     "armadura": 0,
+     "passos": {},
+     "vestido": false,
+     "quantidade": null,
+     "consumivel": "",
+     "efeitos": [],
+     "especial": "",
+     "descricao": ""
+    }
+   ],
+   "relacoes": [
+    {
+     "id": "efef9007-e845-4be8-a445-29426f6c03ea",
+     "nome": "Rowan",
+     "alvoPersonagemId": "",
+     "rotulo": "Confiança",
+     "descricao": "Traz o minério de ferro do pântano.",
+     "grau": 0,
+     "usadaEm": ""
+    },
+    {
+     "id": "562949ca-038e-4967-84c9-af2a43fe8f19",
+     "nome": "Muirenn",
+     "alvoPersonagemId": "",
+     "rotulo": "Neutro",
+     "descricao": "Ouviu falar dos enfermos tratados pela curandeira.",
+     "grau": 0,
+     "usadaEm": ""
+    },
+    {
+     "id": "f9472ec5-ca5f-44db-bec7-b49d2d5bafa0",
+     "nome": "Cavan",
+     "alvoPersonagemId": "",
+     "rotulo": "Amizade",
+     "descricao": "Debatem contabilidade.",
+     "grau": 0,
+     "usadaEm": ""
+    },
+    {
+     "id": "d90f799c-1888-4c3f-b44e-a85c21034549",
+     "nome": "Malik",
+     "alvoPersonagemId": "",
+     "rotulo": "Admiração",
+     "descricao": "Gosta das histórias de terras distantes.",
+     "grau": 0,
+     "usadaEm": ""
+    },
+    {
+     "id": "becd2fc3-17fb-4918-9704-fd4d6d21ce3b",
+     "nome": "Sira",
+     "alvoPersonagemId": "",
+     "rotulo": "Neutro",
+     "descricao": "Quer perguntar sobre o naufrágio.",
+     "grau": 0,
+     "usadaEm": ""
+    },
+    {
+     "id": "f826c67b-81c4-4800-b59c-6130f7a56a14",
+     "nome": "Sorcha",
+     "alvoPersonagemId": "",
+     "rotulo": "Respeito",
+     "descricao": "Reconhece a vigilância dela.",
+     "grau": 0,
+     "usadaEm": ""
+    },
+    {
+     "id": "dac27a15-af84-4baa-ba64-578297a68472",
+     "nome": "Cormac",
+     "alvoPersonagemId": "",
+     "rotulo": "Curiosidade",
+     "descricao": "De onde vem a espada dele?",
+     "grau": 0,
+     "usadaEm": ""
+    }
+   ],
+   "efeitos": [],
+   "estado": {
+    "inconsciente": false,
+    "moribundo": false,
+    "caido": false,
+    "morto": false,
+    "colapso": false,
+    "morteLenta": false,
+    "morteLentaRodada": null,
+    "lesoes": [],
+    "traumas": [],
+    "pavor": 0,
+    "testesLesao": 0,
+    "testesTrauma": 0,
+    "pendentes": [],
+    "reservas": [],
+    "acaoExtra": 0,
+    "perdeAcao": 0,
+    "usos": {},
+    "missaoLocal": 1
+   },
+   "historico": [],
+   "local": null,
+   "operacoes": [],
+   "evolucao": {
+    "nex": "",
+    "pendente": null,
+    "registros": []
+   },
+   "paranormal": {
+    "rituais": [],
+    "emAndamento": null,
+    "ativos": [],
+    "historico": []
+   }
+  },
+  "camposCustomizados": [],
+  "habilidades": {
+   "filhos": []
+  },
+  "rituais": {
+   "rotuloSecao": "Rituais",
+   "rotulos": {
+    "circulo": "Círculo",
+    "elemento": "Elemento",
+    "execucao": "Execução",
+    "alcance": "Alcance",
+    "alvo": "Alvo",
+    "area": "Área",
+    "efeito": "Efeito",
+    "duracao": "Duração",
+    "resistencia": "Resistência",
+    "descricao": "Descrição"
+   },
+   "itens": []
+  },
+  "modulos": {
+   "atributos": true,
+   "status": true,
+   "defesa": true,
+   "pericias": true,
+   "habilidades": true,
+   "rituais": true,
+   "inventario": true,
+   "anotacoes": true,
+   "aliados": true
+  },
+  "aliados": [],
+  "aparencia": {
+   "v": 1,
+   "modo": "conta"
+  }
+ },
+ "foto": ""
+}

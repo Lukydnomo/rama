@@ -101,6 +101,12 @@
    UMA ENTREGA = UM REGISTRO NOVO NO TOPO. Não se cria uma versão por
    microalteração.
 
+   A ENTREGA EM DESENVOLVIMENTO (docs/ENTREGA.md): os pedidos se
+   acumulam sem commit e sem registro aqui até a pessoa mandar fechar a
+   versão; o fechamento escreve UM registro para o conjunto inteiro,
+   classificado pela mudança mais relevante dele. O passo a passo está no
+   CLAUDE.md, na raiz.
+
    O codinome é uma palavra, em maiúsculas, sem número e sem espaço, e
    não se repete. Os temas são os do R.A.M.A.: arquivo, registro,
    ramificação, nó, linha, rede, multiverso, anomalia — nunca os do
@@ -117,6 +123,33 @@
   ];
 
   var CHANGELOG = [
+    {
+      versao: "9.26.0",
+      codinome: "TRANSCRITO",
+      data: "28/11/2026",
+      destaque: true,
+      mudancas: {
+        "Adicionado": [
+          "Exportar a ficha em PDF e PNG: Opções da ficha (⋯) → Exportar ficha agora tem Baixar PDF (um arquivo com todas as páginas) e Baixar PNG (uma imagem por página). Cada sistema tem o seu modelo, inspirado na ficha que ele distribui: Ordem Paranormal, Ordem II (Experimental), Oblívio, Vampiro V5, Malditos Goblins, BRUTAL, Tormenta20 e um modelo neutro para a Universal. Sai o que está na tela, mesmo antes de salvar, com os números das regras da ficha; o que não cabe vai para páginas de continuação no mesmo estilo. O nome do arquivo leva o personagem, o sistema, a data e os códigos de Agente e Registro. O JSON continua igual.",
+          "Arquivos Secretos 11: Gaudérios e as Estradas, com capa. Viagens nas estradas como mecânica opcional da campanha de Ordem: itinerários, 17 veículos, navegação, condução, encontros e acidentes pelas tabelas, com o mestre aplicando as consequências; dentro dela, os controles da missão Carcaças Vermelhas (perseguição, dados de caçada, cenas, confronto final e reféns). Cada jogador vê só o que foi liberado, e tudo pode ser desfeito com o histórico.",
+          "Arquivos Secretos 11 na ficha: dados de caçada no resultado dos testes, Troca Tiro e Dá Porrada, Ajuda Como Dá, o cardápio do Sonnenblume, as 11 regalias novas dos Veículos Operacionais (as menores ocupam um terço de vaga), os aliados Bruna, Nicole e Rômulo e a regra opcional Limite de Dados (fichas e ameaças).",
+          "Aba Ajuda: guias por área com busca, tutoriais por sistema com ficha de exemplo, perguntas frequentes e o botão “Ajuda desta tela” no cabeçalho de todas as páginas.",
+          "Tutorial inicial, uma vez por conta: oito etapas curtas numa ficha de exemplo (modos, rolagens, habilidades e itens, campanhas e permissões, personalização). Dá para refazer pela Ajuda.",
+        ],
+        "Alterado": [
+          "Criação guiada de Ordem: a forma de progressão (Somente NEX, Nível + NEX ou Evolução por Patentes) é escolhida na primeira etapa, Conceito, e os campos mudam na hora. A forma que não está disponível não aparece. A Revisão mostra a forma escolhida, com um atalho para trocar.",
+          "A origem Gaudério Abutre saiu dos Extras e passou ao Arquivos Secretos 11 (p. 63). Fichas que já a têm continuam iguais.",
+          "O suplemento Arquivos Secretos 7 passa a se chamar “Arquivos Secretos 7: Vampiros”.",
+        ],
+        "Corrigido": [
+          "Seis símbolos de ritual que não eram quadrados (AS1, AS2 e AS7) foram encaixados em 1000 × 1000 sem cortar a arte.",
+        ],
+        "Técnico": [
+          "Backend muda: atualize Ordem.gs, Dados.gs, Sistemas.gs, Campanhas.gs e Codigo.gs, rode setupRama() (cria CAMPANHA_VIAGENS) e crie uma nova versão da implantação. Schema da ficha 38 (bloco ordem.arquivo11 e reservas dos veículos). Módulo compartilhado js/ordem/viagens.js copiado em Ordem.gs (testes/copiar-modulo-gs.js).",
+          "js/exportar/ (motor de páginas em canvas, PDF sem perdas e um modelo por sistema), testada por testes/executar-exportar.js. Ambiente de testes de um clique (Abrir testes.cmd) e o fluxo de entrega em docs/ENTREGA.md.",
+        ],
+      },
+    },
     {
       versao: "9.25.2",
       codinome: "SOBREPOSTO",

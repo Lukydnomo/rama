@@ -59,6 +59,7 @@
     "sincronizar_campanha",
     "ler_hexatombe",
     "ler_hacking",
+    "ler_viagens",
     "ler_oblivio",
     "ler_vampiro",
     "ler_goblins",
@@ -82,6 +83,8 @@
     "salvar_imagem_personagem",
     "excluir_imagem_personagem",
     "salvar_perfil",
+    /* Tutorial inicial: o servidor devolve a mesma data na repetição. */
+    "concluir_tutorial",
     "salvar_imagem_criatura",
     "salvar_imagem_documento",
     "salvar_capa_campanha",
@@ -128,6 +131,10 @@
     /* E para a mesa de Ordem II (v9.0): opId na mesa e em cada ficha
        que a operação muda; rev nas configurações. */
     "ordem2_operar",
+    /* E para as viagens de Ordem (Arquivos Secretos 11): cada operação
+       leva opId, e o servidor devolve o resultado gravado na repetição
+       (as rolagens são do servidor: repetir não rola de novo). */
+    "viagem_operar",
 
     /* registrar_rolagem repete com segurança porque carrega um id
        próprio: o servidor reconhece a segunda chegada e não cria a
@@ -214,6 +221,7 @@
      um instante depois do anterior terminar vai à rede de novo. */
 
   var GRAVACOES_REPETIVEIS = {
+    concluir_tutorial: true,
     registrar_rolagem: true,
     atualizar_resumo_personagem: true,
     atualizar_combate: true,
@@ -232,6 +240,7 @@
     salvar_tormenta20: true,
     tormenta20_operar: true,
     ordem2_operar: true,
+    viagem_operar: true,
   };
 
   var LEITURAS = {};
@@ -353,7 +362,30 @@
     }
   }
 
+  /* =================================================================
+     DEMONSTRAÇÃO (tutorial e Ajuda)
+     -----------------------------------------------------------------
+     Enquanto uma ficha de demonstração está aberta, nada do que se
+     pratica nela pode chegar à planilha, à biblioteca, ao histórico da
+     mesa nem às integrações. A trava fica AQUI, no único caminho até a
+     rede: passam leituras, o logout e a conclusão do tutorial; qualquer
+     outra ação volta na hora com o erro "demonstracao", sem viajar. */
+  var demonstracao = false;
+
+  function permitidaNaDemonstracao(dados) {
+    var acao = dados && dados.acao;
+    if (acao === "logout" || acao === "concluir_tutorial") return true;
+    if (acao === "lote") return (dados.pedidos || []).every(function (p) { return p && LEITURAS[p.acao]; });
+    return !!LEITURAS[acao];
+  }
+
+  function modoDemonstracao(ligado) {
+    if (ligado !== undefined) demonstracao = !!ligado;
+    return demonstracao;
+  }
+
   async function enviar(dados) {
+    if (demonstracao && !permitidaNaDemonstracao(dados)) return { ok: false, erro: "demonstracao" };
     var r = await global.RAMARede.postar(dados, { repetir: podeRepetirPedido(dados) });
 
     /* Sessão morta é assunto de autenticação, não de tela: quem
@@ -674,6 +706,9 @@
 
   function salvarPerfil(dados) { return post({ acao: "salvar_perfil", dados: dados }); }
 
+  /* Tutorial inicial (conta da sessão; idempotente no servidor). */
+  function concluirTutorial() { return post({ acao: "concluir_tutorial" }); }
+
   /* Temas de dados (v2.40). `operacaoId` é o da intenção: quem tenta de
      novo depois de uma falha manda o MESMO, e o servidor reconhece a
      concessão já feita. */
@@ -895,6 +930,16 @@
   function excluirPacote(pacoteId) { return post({ acao: "excluir_pacote", pacoteId: pacoteId }); }
   function codigoPacote(pacoteId, tipo) { return post({ acao: "codigo_pacote", pacoteId: pacoteId, tipo: tipo }); }
   function importarPacote(corpo) { return post(Object.assign({ acao: "importar_pacote" }, corpo)); }
+  /* Viagens nas estradas (Arquivos Secretos 11): leitura (o mestre pode
+     pedir os veículos operacionais das fichas) e uma operação por vez. */
+  function lerViagens(campanhaId, opcoes) {
+    var o = opcoes || {};
+    return post({ acao: "ler_viagens", campanhaId: campanhaId, incluirVeiculos: !!o.incluirVeiculos }, o);
+  }
+  function operarViagem(campanhaId, opId, operacao) {
+    return post({ acao: "viagem_operar", campanhaId: campanhaId, opId: opId, operacao: operacao });
+  }
+
   /* Perigos complexos (v2.48, AS5): o mesmo esquema do Hacking. */
   function lerPerigos(campanhaId, opcoes) {
     return post({ acao: "ler_perigos", campanhaId: campanhaId }, opcoes);
@@ -1017,6 +1062,10 @@
      ================================================================= */
 
   var FRASES = {
+    demonstracao: {
+      titulo: "DEMONSTRAÇÃO",
+      texto: "Nesta ficha de exemplo nada é gravado: o que você pratica aqui fica fora das suas fichas, campanhas e Homebrew.",
+    },
     sem_configuracao: {
       titulo: "R.A.M.A. NÃO CONFIGURADO",
       texto: "O endereço do servidor ainda não foi informado. Preencha API_URL em js/config.js.",
@@ -1311,6 +1360,8 @@
     solicitarAcesso: solicitarAcesso,
     listarDesbloqueios: listarDesbloqueios,
     salvarPerfil: salvarPerfil,
+    concluirTutorial: concluirTutorial,
+    modoDemonstracao: modoDemonstracao,
 
     lerHomebrew: lerHomebrew,
     lerImagemCriatura: lerImagemCriatura,
@@ -1358,6 +1409,8 @@
     importarPacote: importarPacote,
     salvarPlanosEvolucao: salvarPlanosEvolucao,
     salvarHacking: salvarHacking,
+    lerViagens: lerViagens,
+    operarViagem: operarViagem,
     lerPerigos: lerPerigos,
     salvarPerigos: salvarPerigos,
     lerOblivio: lerOblivio,

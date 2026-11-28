@@ -76,6 +76,7 @@
   var AS6 = "AS6";
   var AS7 = "AS7";
   var AS9 = "AS9";
+  var AS11 = "AS11";
   var EXTRA = "EXTRA";
 
   /* Os livros, num lugar só (v2.29). Quem precisa do nome de um livro
@@ -114,6 +115,15 @@
        veículos (p. 42) e itens com os aliados drone (p. 42–48). As
        páginas 52–65 (playtest de Ordem Paranormal RPG 2) não mudam regra. */
     { sigla: AS9, nome: "Arquivos Secretos 9", curto: "Arquivos Secretos 9", abreviacao: "AS9", edicao: "v1.0" },
+    /* Gaudérios e as Estradas (nov. 2026): as regras opcionais de viagem
+       (p. 36–55), as regalias para veículos (p. 56–57), a missão
+       Carcaças Vermelhas (p. 60–91) com os aliados (p. 92–97), o
+       Inquérito Mensal (p. 102) e a regra da comunidade Limite de Dados
+       (p. 103–104). Traz a origem Gaudério Abutre (p. 63), que antes só
+       existia no marca-página dos Extras e agora tem o AS11 como fonte, e
+       republica a motocicleta dos Gaudérios (p. 57, do AS3: mesma entrada,
+       com as duas referências). */
+    { sigla: AS11, nome: "Arquivos Secretos 11", curto: "Arquivos Secretos 11", abreviacao: "AS11", edicao: "v1.0" },
     /* v5.1: a fonte das publicações oficiais avulsas. Fica na mesma lista
        para valer nas etiquetas, nas bibliotecas, nos filtros e nas
        validações como qualquer fonte oficial; `avulsa` diz que não há
@@ -149,13 +159,23 @@
     if (typeof x === "string") return x.toUpperCase();
     return String(x.fonte || x.livro || "").toUpperCase();
   }
+  /* Conteúdo republicado (AS11, v9.26): a entrada é UMA só, com a fonte
+     original e as republicações. Para novas escolhas, basta uma das
+     fontes estar liberada. */
+  function fontesDe(x) {
+    var principal = fonteDe(x) || OPRPG;
+    var outras = x && typeof x === "object" && Array.isArray(x.republicacoes) ? x.republicacoes.map(function (r) { return String(r && r.fonte || "").toUpperCase(); }).filter(Boolean) : [];
+    return [principal].concat(outras);
+  }
   function fonteLiberada(x) {
     var S = global.RAMASuplementos;
-    return !S || S.fonteLiberada("ordem", fonteDe(x) || OPRPG);
+    if (!S) return true;
+    return fontesDe(x).some(function (f) { return S.fonteLiberada("ordem", f); });
   }
   function motivoDaFonte(x) {
     var S = global.RAMASuplementos;
-    return S ? S.motivo("ordem", fonteDe(x) || OPRPG) : "";
+    if (!S || fonteLiberada(x)) return "";
+    return S.motivo("ordem", fonteDe(x) || OPRPG);
   }
 
   /* =================================================================
@@ -1249,14 +1269,16 @@
       nota: "Os três bônus entram na conta enquanto o cartão da origem marcar \"Sem aliados em alcance curto\" — a ficha não sabe onde os aliados estão. Desmarque quando um aliado chegar a alcance curto. O +1 é no limite de PE por turno, não no total de PE." },
 
     /* -----------------------------------------------------------------
-       EXTRA · marca-página (v9.15) — Gaudério Abutre, Ginasta e Dublê.
-       Sem livro, edição nem página: o material é "Marca-página".
+       EXTRA · marca-página (v9.15) — Ginasta e Dublê. Sem livro, edição
+       nem página: o material é "Marca-página". Gaudério Abutre (v9.15, do
+       marca-página de Arthur Cervero) passou para o Arquivos Secretos 11,
+       p. 63, com o mesmo texto: mesma chave, fichas antigas iguais.
        `descricao` é o texto de ambientação da origem, transcrito como
        veio (o "sofrem" de Ginasta é do original). `resumo` é o texto
        completo do poder.
        ----------------------------------------------------------------- */
 
-    { chave: "gauderioAbutre", nome: "Gaudério Abutre", fonte: EXTRA, material: "Marca-página",
+    { chave: "gauderioAbutre", nome: "Gaudério Abutre", fonte: AS11, pagina: 63,
       descricao: "Você fez parte dos valorosos Gaudérios Abutres. Mesmo longe do motoclube, ainda segue o lema ‘A gente morre por quem a gente ama’.",
       pericias: ["luta", "pilotagem"],
       poder: "Fraternidade Gaudéria", automacao: "parcial", controles: true,
@@ -1742,18 +1764,20 @@
     if (!entrada) return "";
     if (entrada.homebrew || entrada.fonte === "HOMEBREW") return "Homebrew";
     /* Extra (v5.1): sem livro e sem página — o material, quando houver. */
-    if (ehAvulsa(entrada.fonte)) return nomeDoLivro(entrada.fonte) + (entrada.material ? " · " + entrada.material : "");
-    if (!entrada.pagina) return "";
-    return nomeDoLivro(entrada.fonte) + ", p. " + entrada.pagina;
+    var tambem = Array.isArray(entrada.republicacoes) && entrada.republicacoes.length
+      ? "; também em " + entrada.republicacoes.map(function (r) { return nomeDoLivro(r.fonte) + (r.pagina ? ", p. " + r.pagina : ""); }).join("; ") : "";
+    if (ehAvulsa(entrada.fonte)) return nomeDoLivro(entrada.fonte) + (entrada.material ? " · " + entrada.material : "") + tambem;
+    if (!entrada.pagina) return tambem ? tambem.slice(2) : "";
+    return nomeDoLivro(entrada.fonte) + ", p. " + entrada.pagina + tambem;
   }
 
   global.RAMAOrdemCatalogo = {
     registrarClasseHomebrew: registrarClasseHomebrew, classesHomebrew: classesHomebrew, classeDosPoderes: classeDosPoderes, ganhosDeTransicao: ganhosDeTransicao,
     registrarOrigemHomebrew: registrarOrigemHomebrew, registrarTrilhaHomebrew: registrarTrilhaHomebrew,
     origensHomebrew: origensHomebrew, trilhasHomebrew: trilhasHomebrew, origensDisponiveis: origensDisponiveis,
-    FONTES: { OPRPG: OPRPG, SAH: SAH, AS1: AS1, AS2: AS2, AS3: AS3, AS4: AS4, AS5: AS5, AS6: AS6, AS7: AS7, AS9: AS9, EXTRA: EXTRA },
+    FONTES: { OPRPG: OPRPG, SAH: SAH, AS1: AS1, AS2: AS2, AS3: AS3, AS4: AS4, AS5: AS5, AS6: AS6, AS7: AS7, AS9: AS9, AS11: AS11, EXTRA: EXTRA },
     LIVROS: LIVROS,
-    fonteDe: fonteDe, fonteLiberada: fonteLiberada, motivoDaFonte: motivoDaFonte,
+    fonteDe: fonteDe, fontesDe: fontesDe, fonteLiberada: fonteLiberada, motivoDaFonte: motivoDaFonte,
     ehAvulsa: ehAvulsa,
     mapaDosLivros: mapaDosLivros,
     livro: livro,

@@ -58,14 +58,14 @@ function faces(lista) {
 t.grupo("Catálogo · inventário e integridade");
 const conferencia = OC.conferir(DADOS);
 t.igual("nenhum erro de conferência (ids, campos, expressões, variantes)", conferencia.erros.slice(0, 5), []);
-t.igual("contagem por livro bate com o inventário", conferencia.porLivro, { OPRPG: 67, SAH: 32, AS1: 12, AS2: 28, AS3: 36, AS4: 4, AS5: 10, "AS5 (variantes)": 4, AS6: 15, "OPRPG (variantes)": 5, AS7: 9, AS9: 16 });
+t.igual("contagem por livro bate com o inventário", conferencia.porLivro, { OPRPG: 67, SAH: 32, AS1: 12, AS2: 28, AS3: 36, AS4: 4, AS5: 10, "AS5 (variantes)": 4, AS6: 15, "OPRPG (variantes)": 5, AS7: 9, AS9: 16, AS11: 3 });
 const porNatureza = {};
 DADOS.criaturas.filter((c) => !c.variante).forEach((c) => { const k = c.livro + ":" + c.natureza; porNatureza[k] = (porNatureza[k] || 0) + 1; });
 t.igual("paranormais, pessoas e animais de cada livro", porNatureza,
   { "OPRPG:paranormal": 49, "OPRPG:humana": 11, "OPRPG:animal": 7, "SAH:paranormal": 13, "SAH:humana": 11, "SAH:animal": 8,
     "AS1:paranormal": 1, "AS1:humana": 11, "AS2:animal": 2, "AS2:paranormal": 4, "AS2:humana": 22, "AS3:humana": 33, "AS3:animal": 3, "AS4:humana": 3, "AS4:paranormal": 1,
     "AS5:humana": 1, "AS5:paranormal": 9, "AS6:humana": 11, "AS6:paranormal": 4,
-    "AS7:humana": 6, "AS7:paranormal": 3, "AS9:humana": 16 });
+    "AS7:humana": 6, "AS7:paranormal": 3, "AS9:humana": 16, "AS11:humana": 3 });
 const ids = DADOS.criaturas.map((c) => c.id);
 t.ok("ids únicos", new Set(ids).size === ids.length);
 t.ok("O Terminal (aventura do SAH) está no catálogo, com página", DADOS.criaturas.some((c) => c.id === "sah.criatura.o-terminal" && c.pagina === 218));

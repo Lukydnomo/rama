@@ -2641,3 +2641,11 @@ body.pagina-ficha--painel .ficha-topo__nome { font-size: var(--texto-medio); }
   .comp-pericias { grid-template-columns: minmax(0, 1fr); }
 }
 
+/* Exportar ficha: os botões de PDF e PNG lado a lado. O espaço entre os
+   blocos é o da própria janela; o aviso só ocupa lugar quando tem texto. */
+.exportar-formatos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--e2);
+}
+.exportar-aviso:empty { display: none; }

@@ -100,6 +100,8 @@
             texto: "Cenas de hacking com turnos, pontos de segurança e dados virtuais. Ligada, a aba Hacking aparece para você e para os jogadores." },
           { chave: "perigos", nome: "Perigos complexos", fonte: "Arquivos Secretos 5",
             texto: "Cenas de ação que não são combate — explosão, fuga de horda, naufrágio, prédio tomado, chuva de Sangue — com rodadas, sucessos e falhas guardados entre sessões. Ligada, a aba Perigos aparece para você e para os jogadores (cada um vê os perigos em que está)." },
+          { chave: "viagens", nome: "Viagens nas estradas", fonte: "Arquivos Secretos 11",
+            texto: "Viagens com itinerário, veículos, navegação, encontros aleatórios e acidentes — e, dentro dela, os controles da missão Carcaças Vermelhas (contador de perseguição, dados de caçada, cenas, confronto final e reféns). Ligada, a aba Viagens aparece para você e para os jogadores (cada um vê só o que foi liberado)." },
         ],
       },
     },

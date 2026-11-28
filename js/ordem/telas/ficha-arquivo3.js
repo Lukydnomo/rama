@@ -419,7 +419,7 @@
   /* ---------- aliados do AS3 ---------- */
 
   function secaoAliados(ctx, o, aliados) {
-    var partes = [titulo("Aliados com bônus fixo (Arquivos Secretos 3, 6 e 9)"),
+    var partes = [titulo("Aliados com bônus fixo (Arquivos Secretos 3, 6, 9 e 11)"),
       linha("Ligue “acompanhando” enquanto o aliado estiver com o personagem: os bônus fixos entram nas contas. Os de custo e os condicionais aparecem nos resultados das rolagens.")];
     aliados.forEach(function (a) {
       var cat = catalogoDoAliado(a);
@@ -441,6 +441,11 @@
         }
       }
       especiaisDoAliado(ctx, o, a).forEach(function (x) { linhaA.push(x); });
+      /* Nicole (AS11 p. 96): Ajuda Como Dá, por 1 PE, enquanto acompanha. */
+      if (fixo && fixo.ajudaComoDa && reg && reg.ativo && permitido(ctx) && global.RAMAFichaArquivo11) {
+        linhaA.push(botao("Ajuda Como Dá (1 PE)…", function () { global.RAMAFichaArquivo11.ajudaComoDa(ctx, a.criatura.nome); }));
+      }
+      if (fixo && fixo.trocaTiro && reg && reg.ativo) linhaA.push(linha("Troca Tiro e Dá Porrada: no resultado de cada teste de Luta ou Pontaria, +1d6 por 1 PE."));
       partes.push(el("div.as3-cartao", {}, linhaA));
     });
     return bloco(partes);
@@ -760,10 +765,14 @@
       linha("Leva " + m.seres + " seres médios e " + m.carga + " espaços (" + m.total + " sem passageiros) · combustível " + v.combustivel + "/" + c.combustivelMaximo + "d6" +
         (c.deslocamento ? " · manobra DT " + c.deslocamento.dt + ": " + c.deslocamento.metros + " m (" + c.deslocamento.quadrados + "q)" + (c.deslocamento.inducao ? " (Indução Forçada)" : "") + (c.deslocamento.nitro ? " — óxido nitroso: dobro nesta rodada" : "") : " · sem velocidade de manobra nesta cena") +
         (c.pilotagem ? " · +" + c.pilotagem + " em Pilotagem" : "") + (c.dadosPilotagem ? " · " + c.dadosPilotagem + "d20 em Pilotagem (pneus)" : "")),
-      linha("Regalias (" + c.noLimite + "/" + m.regalias + (c.extras ? " + " + c.extras + " fora do limite" : "") + "): " + (v.regalias.length ? v.regalias.map(function (r) {
+      linha("Regalias (" + c.noLimite + "/" + m.regalias + " vaga(s)" + (c.menores ? "; " + c.menores + " menor(es) — três ocupam uma vaga" : "") + (c.extras ? " + " + c.extras + " fora do limite" : "") + "): " + (v.regalias.length ? v.regalias.map(function (r) {
         var d = A3().POR_REGALIA[r.chave];
-        return d.nome + (r.pericia ? " (" + r.pericia + ")" : "") + (r.tipoDeDano ? " (" + r.tipoDeDano + ")" : "") + (d.fonte === "AS5" ? " [AS5]" : "") + (r.extra ? " — extra de " + r.por + " (Apaixonado por Veículos)" : "");
+        return d.nome + (r.pericia ? " (" + r.pericia + ")" : "") + (r.tipoDeDano ? " (" + r.tipoDeDano + ")" : "") + (d.fonte ? " [" + d.fonte + "]" : "") + (r.extra ? " — extra de " + r.por + " (Apaixonado por Veículos)" : "");
       }).join(", ") : "nenhuma")),
+      (A3().temRegalia(v, "estepe") || A3().temRegalia(v, "extintor")) ? linha("Reservas: " + ["estepe", "extintor"].filter(function (k) { return A3().temRegalia(v, k); }).map(function (k) {
+        return k + " " + v.reservas[k] + "/" + v.regalias.filter(function (r) { return r.chave === k; }).length;
+      }).join(", ") + " (AS11 p. 56).") : null,
+      m.republicacoes ? linha("Também em " + m.republicacoes.map(function (x) { return (C().nomeDoLivro ? C().nomeDoLivro(x.fonte) : x.fonte) + ", p. " + x.pagina; }).join("; ") + " (o mesmo modelo, republicado).") : null,
       c.imunidades.length ? linha("Imunidade a dano: " + c.imunidades.join(", ") + ". Não sofre curtos.") : null,
       c.ocupantes.notas.length ? linha(c.ocupantes.notas.join(" ") + " Cada ocupante liga o benefício na própria ficha (painel do Arquivos Secretos 5, “Recebido de aliados”).") : null,
       pen.length ? linha("Penalidades: " + pen.map(function (p) { return p.nome; }).join(", ") + ".") : null,
@@ -809,13 +818,18 @@
         });
       }],
       ["Regalias…", function () { editarRegalias(ctx, o, v); }],
+    ].concat(["estepe", "extintor"].filter(function (k) { return A3().temRegalia(v, k); }).reduce(function (l, k) {
+      /* AS11 p. 56: usar e repor uma unidade, sempre explícito. */
+      return l.concat([["Usar " + k, function () { var r = A3().mexerReserva(v, k, -1); if (!r.ok) { UI.avisoAtencao(r.motivo); return; } salvar(ctx); }],
+        ["Repor " + k, function () { var r = A3().mexerReserva(v, k, 1); if (!r.ok) { UI.avisoAtencao(r.motivo); return; } salvar(ctx); }]]);
+    }, [])).concat([
       [v.direcaoDefensiva ? "Sem Direção Defensiva" : "Quem dirige tem Direção Defensiva", function () {
         /* AS5 p. 56: com Veículos Operacionais, +2 na Defesa do veículo
            enquanto dirige alguém com o poder. */
         v.direcaoDefensiva = !v.direcaoDefensiva;
         salvar(ctx);
       }],
-    ];
+    ]);
     if (A5() && A3().temRegalia(v, "oxidoNitroso")) {
       acoes.push([nitro ? "Óxido nitroso: ativo nesta rodada" : "Óxido nitroso (ação livre, 1×/cena)", function () {
         var r = A5().usarNitro(o, v.id);
@@ -885,26 +899,31 @@
     var nomeProprio = String(ctx.ficha.nome || "Personagem").slice(0, 80);
     var podeExtra = !!(A5() && A5().temPoder(o, "apaixonadoPorVeiculos"));
     var modoExtra = false;
-    function noLimite() { return escolhidas.filter(function (r) { return !r.extra; }).length; }
+    function noLimite() { return A3().vagasUsadas(escolhidas).vagas; }
     function temExtraProprio() { return escolhidas.some(function (r) { return r.extra && String(r.por).toLowerCase() === nomeProprio.toLowerCase(); }); }
     function pintar() {
-      U.trocar(corpo, [linha("Até " + m.regalias + " regalia(s) no limite (" + noLimite() + " escolhida[s]). Lataria Reforçada pode ser escolhida duas vezes. [AS5] marca as regalias do Arquivos Secretos 5 (p. 59)."),
+      var vu = A3().vagasUsadas(escolhidas);
+      U.trocar(corpo, [linha("Vagas: " + vu.vagas + " de " + m.regalias + " ocupada(s)" + (vu.menores ? " (" + vu.menores + " regalia[s] menor[es]: três ocupam uma vaga" + (vu.sobraMenores ? "; cabem mais " + vu.sobraMenores + " menor[es] na vaga em uso" : "") + ")" : "") + ". Lataria Reforçada pode ser escolhida duas vezes; estepe e extintor, até 3. A fonte de cada regalia de suplemento aparece entre colchetes."),
         podeExtra ? el("label.r-marca", {}, [
           el("input", { type: "checkbox", checked: modoExtra, disabled: temExtraProprio(), onchange: function (ev) { modoExtra = ev.target.checked; } }),
           el("span", { texto: temExtraProprio() ? "A regalia extra de " + nomeProprio + " (Apaixonado por Veículos) já está no veículo." : "A próxima regalia é a extra de " + nomeProprio + " (Apaixonado por Veículos): não conta no limite." }),
         ]) : null,
       ].concat(A3().REGALIAS.filter(function (d) {
-        /* Regalias de suplemento (AS5, AS9) só para novas escolhas com a
-           fonte liberada; as já instaladas continuam no veículo. */
+        /* Regalias de suplemento (AS5, AS9, AS11) só para novas escolhas
+           com a fonte liberada; as já instaladas continuam no veículo. */
         var Cat = global.RAMAOrdemCatalogo;
+        if (d.soMoto && m.tamanho !== "Médio" && !escolhidas.some(function (r) { return r.chave === d.chave; })) return false;
         return !d.fonte || !Cat || !Cat.fonteLiberada || Cat.fonteLiberada(d.fonte) || escolhidas.some(function (r) { return r.chave === d.chave; });
       }).map(function (d) {
         var n = escolhidas.filter(function (r) { return r.chave === d.chave; }).length;
         return el("div.faixa", {}, [
-          el("span", { texto: d.nome + (d.fonte ? " [" + d.fonte + "]" : "") + (n ? " ×" + n : "") + " — " + d.resumo }),
+          el("span", { texto: d.nome + (d.menor ? " (menor)" : "") + (d.fonte ? " [" + d.fonte + "]" : "") + (n ? " ×" + n : "") + " — " + d.resumo }),
           botao("+", function () {
             var comoExtra = modoExtra && podeExtra && !temExtraProprio();
-            if (!comoExtra && noLimite() >= m.regalias) { UI.avisoAtencao("O veículo já tem " + m.regalias + " regalia(s) no limite."); return; }
+            if (!comoExtra) {
+              var cabe = A3().cabeRegalia({ modelo: v.modelo, regalias: escolhidas }, d.chave);
+              if (!cabe.ok) { UI.avisoAtencao(cabe.motivo); return; }
+            }
             if (n >= (d.maximo || 1)) return;
             var nova = { chave: d.chave, pericia: "", tipoDeDano: "" };
             if (comoExtra) { nova.extra = true; nova.por = nomeProprio; modoExtra = false; }
@@ -934,8 +953,9 @@
     UI.modal({ titulo: "Regalias de " + v.nome, largo: true, conteudo: [corpo], botoes: [
       { rotulo: "Cancelar", classe: "r-botao--fantasma" },
       { rotulo: "Salvar", classe: "r-botao--principal", aoClicar: function (fechar) {
-        var novo = A3().normalizarVeiculo(Object.assign({}, v, { regalias: escolhidas }));
-        v.regalias = novo.regalias;
+        /* Combustível, PV e avarias ficam; só as reservas acompanham as
+           regalias de estepe e extintor (AS11 p. 56). */
+        A3().trocarRegalias(v, escolhidas);
         fechar();
         salvar(ctx);
       } },
@@ -1247,7 +1267,7 @@
         var novo = comMaisDados(r, dado, 1, "Entrada Triunfal");
         if (novo) { mostrar(novo, "Entrada Triunfal", [novo.notaExtra]); return; }
         var re = D().dependente({ expressao: R().dadosDoTeste(o, p.chave).expressao, sigla: "", nome: p.nome, bonus: bonus.total, modificadores: [] });
-        var mais = global.RAMAOrdemEfeitos ? global.RAMAOrdemEfeitos.expressaoDeDados(R().dadosDoTeste(o, p.chave).quantos + 1) : "";
+        var mais = R().expressaoComDados(o, R().dadosDoTeste(o, p.chave), 1);
         if (mais) re = D().dependente({ expressao: mais, sigla: "", nome: p.nome, bonus: bonus.total, modificadores: [] });
         mostrar(re, "Entrada Triunfal", ["O teste tinha penalidade de dados: rolado de novo com +1d20 (" + (mais || "") + ")."]);
       });

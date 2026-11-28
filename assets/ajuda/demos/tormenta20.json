@@ -1,0 +1,272 @@
+{
+ "gerado": "testes/gerar-demos-ajuda.js",
+ "ficha": {
+  "schemaVersion": 38,
+  "tipoFicha": "tormenta20",
+  "nome": "Tália de Valkaria",
+  "campanhaId": null,
+  "classe": "",
+  "origem": "",
+  "criadoEm": "2026-11-28T04:02:19.515Z",
+  "atualizadoEm": "2026-11-28T04:02:19.515Z",
+  "atributos": [
+   {
+    "id": "1d6dce40-b380-4911-9e32-955d2e0b66e3",
+    "natureza": "rolavel",
+    "nome": "Força",
+    "sigla": "FOR",
+    "valor": 0,
+    "dado": "1d20",
+    "formula": "",
+    "contagem": "maior"
+   },
+   {
+    "id": "aad54c23-9f3b-4f9c-becb-c8962634bde3",
+    "natureza": "rolavel",
+    "nome": "Agilidade",
+    "sigla": "AGI",
+    "valor": 0,
+    "dado": "1d20",
+    "formula": "",
+    "contagem": "maior"
+   },
+   {
+    "id": "ecf5d08a-a233-4dad-8481-223bcfa595dc",
+    "natureza": "rolavel",
+    "nome": "Presença",
+    "sigla": "PRE",
+    "valor": 0,
+    "dado": "1d20",
+    "formula": "",
+    "contagem": "maior"
+   },
+   {
+    "id": "d5c75330-aa82-49bd-bbd4-d704ef6cc7c6",
+    "natureza": "rolavel",
+    "nome": "Intelecto",
+    "sigla": "INT",
+    "valor": 0,
+    "dado": "1d20",
+    "formula": "",
+    "contagem": "maior"
+   },
+   {
+    "id": "201d6d3b-bcd9-4da0-847d-8ab2805e023a",
+    "natureza": "rolavel",
+    "nome": "Vigor",
+    "sigla": "VIG",
+    "valor": 0,
+    "dado": "1d20",
+    "formula": "",
+    "contagem": "maior"
+   }
+  ],
+  "status": [
+   {
+    "id": "84666cc5-47b9-44ab-a473-fe8ca6fc5a31",
+    "nome": "PV",
+    "atual": 0,
+    "maximo": 0
+   },
+   {
+    "id": "43df5c16-8c5e-4a4a-9185-d3e2fdfc2b39",
+    "nome": "PE",
+    "atual": 0,
+    "maximo": 0
+   },
+   {
+    "id": "9dccd683-1a42-4f38-b9c3-6e68250042d4",
+    "nome": "Sanidade",
+    "atual": 0,
+    "maximo": 0
+   }
+  ],
+  "defesa": {
+   "dt": 0,
+   "esquiva": 0,
+   "bloqueio": 0,
+   "resistencia": 0,
+   "campos": [],
+   "ocultos": []
+  },
+  "pericias": [],
+  "organizacao": {
+   "pericias": {
+    "modo": "az"
+   }
+  },
+  "inventario": {
+   "limite": 0,
+   "itens": []
+  },
+  "anotacoes": {
+   "pastas": [],
+   "soltas": []
+  },
+  "retratos": null,
+  "tormenta20": {
+   "versao": 1,
+   "metodo": "pontos",
+   "rolagens": [],
+   "atributosBase": {
+    "for": 3,
+    "des": 1,
+    "con": 2,
+    "int": 0,
+    "sab": 1,
+    "car": 0
+   },
+   "raca": {
+    "id": "humano",
+    "variante": "",
+    "atributos": [
+     "for",
+     "con",
+     "des"
+    ],
+    "escolhas": {}
+   },
+   "origem": {
+    "id": "soldado",
+    "beneficios": [
+     {
+      "tipo": "pericia",
+      "id": "fortitude",
+      "escolhas": {}
+     },
+     {
+      "tipo": "poder",
+      "id": "influenciaMilitar",
+      "escolhas": {}
+     }
+    ],
+    "escolhas": {},
+    "propria": null
+   },
+   "divindade": null,
+   "niveis": [
+    {
+     "classe": "guerreiro",
+     "escolhas": {
+      "pericias": [
+       "atletismo",
+       "intimidacao"
+      ],
+      "ou": [
+       "luta"
+      ]
+     }
+    }
+   ],
+   "periciasInt": [],
+   "poderes": [],
+   "magias": [],
+   "oficios": [],
+   "inventario": {
+    "itens": [
+     {
+      "id": "91d0ea5e-59f2-4dd2-8e35-ec00dc5a9a96",
+      "ref": "espadaLonga",
+      "nome": "",
+      "quantidade": 1,
+      "estado": "empunhado",
+      "mao": "principal",
+      "melhorias": [],
+      "material": "",
+      "encantos": [],
+      "magico": "",
+      "cargas": null,
+      "municao": null,
+      "escolha": "",
+      "fabricadoPorMim": false,
+      "personalizado": null,
+      "notas": ""
+     },
+     {
+      "id": "d8556368-9598-440c-aa27-e86fe2e330ab",
+      "ref": "cotaDeMalha",
+      "nome": "",
+      "quantidade": 1,
+      "estado": "vestido",
+      "mao": "principal",
+      "melhorias": [],
+      "material": "",
+      "encantos": [],
+      "magico": "",
+      "cargas": null,
+      "municao": null,
+      "escolha": "",
+      "fabricadoPorMim": false,
+      "personalizado": null,
+      "notas": ""
+     }
+    ],
+    "tibar": 0
+   },
+   "recursos": {
+    "pv": null,
+    "pm": null,
+    "pvRef": null,
+    "pmRef": null,
+    "pvTemp": 0,
+    "pmTemp": 0,
+    "naoLetal": 0,
+    "sangrando": false,
+    "estavel": true
+   },
+   "operacoes": [],
+   "condicoes": [],
+   "ativos": [],
+   "usos": {},
+   "situacoes": {},
+   "xp": 0,
+   "idade": null,
+   "alinhamento": "",
+   "parceiros": [],
+   "engenhocas": [],
+   "formulas": [],
+   "opcoes": {
+    "parceirosVulneraveis": false,
+    "envelhecimento": false
+   },
+   "historico": []
+  },
+  "camposCustomizados": [],
+  "habilidades": {
+   "filhos": []
+  },
+  "rituais": {
+   "rotuloSecao": "Rituais",
+   "rotulos": {
+    "circulo": "Círculo",
+    "elemento": "Elemento",
+    "execucao": "Execução",
+    "alcance": "Alcance",
+    "alvo": "Alvo",
+    "area": "Área",
+    "efeito": "Efeito",
+    "duracao": "Duração",
+    "resistencia": "Resistência",
+    "descricao": "Descrição"
+   },
+   "itens": []
+  },
+  "modulos": {
+   "atributos": true,
+   "status": true,
+   "defesa": true,
+   "pericias": true,
+   "habilidades": true,
+   "rituais": true,
+   "inventario": true,
+   "anotacoes": true,
+   "aliados": true
+  },
+  "aliados": [],
+  "aparencia": {
+   "v": 1,
+   "modo": "conta"
+  }
+ },
+ "foto": ""
+}

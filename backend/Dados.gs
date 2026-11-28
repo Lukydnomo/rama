@@ -447,6 +447,20 @@ var ABAS = {
     leves: 4,
     pesadas: ['dadosJson'],
   },
+  CAMPANHA_VIAGENS: {
+    /* As viagens nas estradas da campanha (Arquivos Secretos 11,
+       p. 36–91): mecânica opcional de Ordem, uma linha por campanha, com
+       as viagens e os controles de Carcaças Vermelhas. O mestre prepara e
+       conduz; os jogadores fazem as próprias operações (dados de caçada,
+       Sonnenblume, passageiro, pessoa querida) por viagem_operar, e leem
+       a vista filtrada (Ordem.gs, "VIAGENS NAS ESTRADAS"). `ops` guarda os
+       últimos opIds aplicados: a repetição devolve o resultado gravado. */
+    nome: 'CAMPANHA_VIAGENS',
+    colunas: ['campanhaId', 'ativo', 'atualizadoEm', 'rev', 'opsJson', 'dadosJson'],
+    chave: 'campanhaId',
+    leves: 4,
+    pesadas: ['dadosJson'],
+  },
   CAMPANHA_OBLIVIO: {
     /* A mesa de Oblívio (v3.0): missão, cenas, Ordem de Ação, fileiras,
        Farol, encontro e Buraco — uma linha por campanha. Só a Testemunha

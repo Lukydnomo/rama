@@ -85,7 +85,7 @@
 
     t.grupo("Tema da ficha · schema 16 (v2.36)");
     var TEMA16 = { nome: "Roxo", base: "escuro", valores: { fundo: { tipo: "radial", forma: "circulo", x: 20, y: 30, pontos: [{ cor: "#08080a", pos: 0 }, { cor: "#3a1030", alfa: 0.8, pos: 100 }] } } };
-    t.igual("o schema subiu para 37 (reconstrução da importação e aquisições extras, v9.16; 36: imagens da ficha, v9.13)", S.VERSAO_SCHEMA, 37);
+    t.igual("o schema subiu para 38 (Arquivos Secretos 11; 37: reconstrução da importação e aquisições extras, v9.16)", S.VERSAO_SCHEMA, 38);
     t.iguais("ficha nova usa o tema da conta", S.criarFicha({ nome: "Nova" }).aparencia, { v: 1, modo: "conta" });
     t.iguais("ficha antiga (sem o campo) também", S.normalizarFicha({ schemaVersion: 15, nome: "Legado" }).aparencia, { v: 1, modo: "conta" });
     ["ordem", "universal"].forEach(function (tipo) {
@@ -1548,17 +1548,17 @@
 
       /* v2.20: + contagem de munição (OPRPG p. 174) e controle de
          componentes ritualísticos (da mesa). */
-      t.igual("32 regras opcionais: treze do SAH, duas do AS1, quatro do AS2, oito do AS3, duas do AS5, uma do AS6, uma do AS7 e uma dos Extras", OP.REGRAS.length, 32);
+      t.igual("33 regras opcionais: treze do SAH, duas do AS1, quatro do AS2, oito do AS3, duas do AS5, uma do AS6, uma do AS7, uma dos Extras e uma do AS11", OP.REGRAS.length, 33);
       t.iguais("  as duas do AS1 começam desligadas", ["reterRitual", "transcenderComItens"].map(function (k) { return OP.ligada(R.fichaVazia(), k); }), [false, false]);
 
       /* v2.48.3: as categorias da aba Regras, de um registro só. */
       var naTela = ["patente"].concat(OP.REGRAS.map(function (r) { return r.chave; }));
       var grupos = OP.categorizar(naTela);
       var todasNaTela = grupos.reduce(function (l, g) { return l.concat(g.regras); }, []);
-      t.igual("categorias: as 32 regras e o cartão de patente, cada um uma vez só", todasNaTela.length + "/" + naTela.length + "/" + new Set(todasNaTela).size, "33/33/33");
+      t.igual("categorias: as 33 regras e o cartão de patente, cada um uma vez só", todasNaTela.length + "/" + naTela.length + "/" + new Set(todasNaTela).size, "34/34/34");
       t.ok("  nenhuma regra atual cai em “Outras regras”", grupos.every(function (g) { return g.chave !== "outras"; }));
       t.iguais("  oito categorias, na ordem do registro", grupos.map(function (g) { return g.nome + " " + g.regras.length; }),
-        ["Personagem e progressão 4", "Rituais e paranormal 8", "Combate e sobrevivência 4", "Poderes e trilhas 6", "Aliados e vínculos 4",
+        ["Personagem e progressão 4", "Rituais e paranormal 8", "Combate e sobrevivência 5", "Poderes e trilhas 6", "Aliados e vínculos 4",
           "Exploração e transporte 3", "Equipamento e carga 1", "Hexatombe e desafios 3"]);
       t.iguais("  a patente abre Personagem e progressão; as do AS5 em Poderes e em Aliados",
         [grupos[0].regras[0], OP.categoriaDe("poderesDeTransmissao").chave, OP.categoriaDe("beneficiosDeAliados").chave], ["patente", "poderes", "aliados"]);
@@ -1580,7 +1580,7 @@
       t.ok("as que não mexem na ficha estão marcadas",
         OP.regra("combateNarrativo").afetaFicha === false);
       t.ok("  e as que mexem também", OP.regra("nexExperiencia").afetaFicha === true);
-      t.iguais("as que trocam o trilho de progressão (mostradas na revisão da criação)",
+      t.iguais("as que trocam o trilho de progressão (a forma de progressão, na etapa Conceito da criação)",
         OP.deProgressao().map(function (r) { return r.chave; }), ["nexExperiencia", "evolucaoPatentes"]);
       t.ok("  todas mexem na ficha", OP.deProgressao().every(function (r) { return r.afetaFicha; }));
 
@@ -5259,7 +5259,7 @@
     remoto.pericias[0].bonus = 5;
     var m = S.mesclar(base, local, remoto, S.ESQUEMA_FICHA);
     t.ok("sincronizar: a fórmula daqui e o bônus de lá", m.estado.pericias[0].formula === "@STR d8" && m.estado.pericias[0].bonus === 5 && !m.conflitos.length);
-    t.igual("o schema da ficha é o atual (37)", n.schemaVersion, 37);
+    t.igual("o schema da ficha é o atual (38)", n.schemaVersion, 38);
 
     t.grupo("v7.1 · fórmulas nos atributos da ficha universal");
     var fa = F.criarFicha({ nome: "Atributos com fórmula", tipoFicha: "universal" });
@@ -5335,7 +5335,7 @@
     var m = S.mesclar(base, local, remoto, S.ESQUEMA_FICHA);
     t.ok("sincronizar: o modo daqui e o bônus de lá, sem conflito",
       m.estado.organizacao.pericias.modo === "maior" && m.estado.pericias[1].bonus === 4 && !m.conflitos.length);
-    t.igual("o schema da ficha é o atual (37)", n.schemaVersion, 37);
+    t.igual("o schema da ficha é o atual (38)", n.schemaVersion, 38);
   }
 
   /* =================================================================
@@ -5356,7 +5356,8 @@
 
     t.grupo("v9.15 · Gaudério Abutre, Ginasta e Dublê (Extra · marca-página)");
     var ga = C.origem("gauderioAbutre"), gi = C.origem("ginasta"), du = C.origem("duble");
-    t.ok("as três no catálogo central, fonte Extra, material Marca-página", [ga, gi, du].every(function (o) { return o && o.fonte === "EXTRA" && o.material === "Marca-página" && !o.pagina; }));
+    t.ok("Ginasta e Dublê no catálogo central, fonte Extra, material Marca-página", [gi, du].every(function (o) { return o && o.fonte === "EXTRA" && o.material === "Marca-página" && !o.pagina; }));
+    t.ok("Gaudério Abutre agora no Arquivos Secretos 11, p. 63 (saiu dos Extras)", ga && ga.fonte === "AS11" && ga.pagina === 63 && !ga.material);
     t.igual("  a referência é o material, sem livro nem página", C.referencia(gi), "Extra · Marca-página");
     t.ok("  nada duplicado: uma entrada por chave e por nome", ["gauderioAbutre", "ginasta", "duble"].every(function (k) { return C.ORIGENS.filter(function (o) { return o.chave === k; }).length === 1; }) &&
       ["Gaudério Abutre", "Ginasta", "Dublê"].every(function (n) { return C.ORIGENS.filter(function (o) { return o.nome === n; }).length === 1; }) && !!C.origem("revoltado"));
@@ -5444,7 +5445,7 @@
     if (B) {
       t.grupo("v5.1 · bibliotecas e filtros com Extra");
       var secExtra = B.secoes("origens").filter(function (s) { return s.chave === "origens.EXTRA"; })[0];
-      t.ok("a biblioteca de poderes tem a seção \"Origens · Extra\" com Antes só… (e, desde a v9.15, os três do marca-página)", !!secExtra && secExtra.entradas.length === 4 && secExtra.entradas.some(function (x) { return x.entrada.nome === "Antes só…"; }) && ["Fraternidade Gaudéria", "Mobilidade Acrobática", "Destemido"].every(function (n) { return secExtra.entradas.some(function (x) { return x.entrada.nome === n; }); }));
+      t.ok("a biblioteca de poderes tem a seção \"Origens · Extra\" com Antes só… (e os dois do marca-página que ficaram; Fraternidade Gaudéria foi para o AS11)", !!secExtra && secExtra.entradas.length === 3 && secExtra.entradas.some(function (x) { return x.entrada.nome === "Antes só…"; }) && !secExtra.entradas.some(function (x) { return x.entrada.nome === "Fraternidade Gaudéria"; }) && ["Mobilidade Acrobática", "Destemido"].every(function (n) { return secExtra.entradas.some(function (x) { return x.entrada.nome === n; }); }));
       t.igual("  a referência da cópia diz Extra e o material", global.RAMAOrdemPoderes.referencia(secExtra.entradas[0].entrada), "Extra · Marca-página de HQ");
     }
 
@@ -5527,7 +5528,7 @@
     t.ok("exportar e importar leva pendentes (com o dado já rolado) e resolvidas", volta.ok &&
       volta.dados.ordem.barganhaInsana.pendentes[0].d4 === 2 && volta.dados.ordem.barganhaInsana.resolvidas.length === 1);
     t.ok("  mesmo sem o ritual na lista de conhecidos", volta.dados.rituais.itens.length === 0);
-    t.igual("o schema da ficha é o atual (37)", F.normalizarFicha(ficha).schemaVersion, 37);
+    t.igual("o schema da ficha é o atual (38)", F.normalizarFicha(ficha).schemaVersion, 38);
   }
 
   /* =================================================================
@@ -5568,7 +5569,7 @@
     t.iguais("  um tema de dados que este navegador não conhece também fica (a tela usa a reserva)", MT.normalizarAparencia({ dados: { id: "tema-do-futuro" } }).dados, { id: "tema-do-futuro" });
     var ficha = F.normalizarFicha(F.criarFicha({ nome: "Lia", tipoFicha: "universal", aparencia: { v: 1, modo: "conta", dados: { id: "sigilo-violeta" } } }));
     t.iguais("a ficha normalizada mantém a escolha", ficha.aparencia.dados, { id: "sigilo-violeta" });
-    t.igual("o schema da ficha é o atual (37)", ficha.schemaVersion, 37);
+    t.igual("o schema da ficha é o atual (38)", ficha.schemaVersion, 38);
     var pacote = V.exportar("personagem", ficha);
     t.ok("exportar leva a escolha sem `id` (atravessa como `tema`)", pacote.dados.aparencia.dados.tema === "sigilo-violeta" && JSON.stringify(pacote).indexOf('"id"') < 0);
     var volta = V.importado(JSON.parse(JSON.stringify(pacote)));
@@ -7327,8 +7328,8 @@
       R.resistencias(fbExp, INV).dano.some(function (d) { return d.tipo === "geral"; }) && R.dadosDoTeste(fbExp, "diplomacia").quantos === R.dadosDoTeste(baseFb, "diplomacia").quantos - 1);
     if (B) {
       var todas = B.secoes("origens").reduce(function (l, s) { return l.concat(s.entradas); }, []);
-      t.ok("a aba Origens da biblioteca tem as 63, numa seção por fonte (com AS6, AS7, AS9 e Extra; v9.15: +3 do marca-página)", todas.length === 63 && B.secoes("origens").length === 9 &&
-        B.secoes("origens")[8].titulo === "Origens · Extra" && B.secoes("origens")[7].titulo === "Origens · Arquivos Secretos 9" && B.secoes("origens")[6].titulo === "Origens · Arquivos Secretos 7" && B.secoes("origens")[5].titulo === "Origens · Arquivos Secretos 6");
+      t.ok("a aba Origens da biblioteca tem as 63, numa seção por fonte (com AS6, AS7, AS9, AS11 e Extra; v9.15: +3 do marca-página; Gaudério Abutre no AS11)", todas.length === 63 && B.secoes("origens").length === 10 &&
+        B.secoes("origens")[9].titulo === "Origens · Extra" && B.secoes("origens")[8].titulo === "Origens · Arquivos Secretos 11" && B.secoes("origens")[7].titulo === "Origens · Arquivos Secretos 9" && B.secoes("origens")[6].titulo === "Origens · Arquivos Secretos 7" && B.secoes("origens")[5].titulo === "Origens · Arquivos Secretos 6");
       t.ok("  busca pelo poder e pela origem", B.filtrar(B.secoes("origens"), "luta ou fuga").some(function (s) { return s.entradas.length; }) &&
         B.filtrar(B.secoes("origens"), "profetizado").some(function (s) { return s.entradas.length; }));
       var copia = B.modelo(todas.filter(function (x) { return x.entrada.nome === "Conexões"; })[0].entrada, "");

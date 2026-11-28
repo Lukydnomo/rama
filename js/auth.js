@@ -75,6 +75,15 @@
       nome: (dados && dados.nome) || (dados && dados.usuario) || "Agente",
       avatar: (dados && dados.avatar) || "",
     };
+    /* O tutorial inicial (conclusão por conta, vinda do servidor). Sem o
+       campo, o servidor é anterior ao tutorial e não sabe gravá-lo: aí
+       ele não é exigido. Uma conclusão vista aqui (outra aba) não volta a
+       pendente por causa de uma resposta mais velha. */
+    if (dados && dados.tutorial && typeof dados.tutorial === "object") {
+      var inicial = typeof dados.tutorial.inicial === "string" ? dados.tutorial.inicial : "";
+      if (!inicial && conclusaoLocal(agenteAtual.id)) inicial = conclusaoLocal(agenteAtual.id);
+      agenteAtual.tutorial = { inicial: inicial };
+    }
     guardar(CHAVE_AGENTE, JSON.stringify(agenteAtual));
     /* O tema salvo na conta chega junto com a sessão (tema.js). */
     if (global.RAMATema) {
@@ -102,6 +111,52 @@
   }
 
   function tocarAtividade() { guardar(CHAVE_ATIVIDADE, String(Date.now())); }
+
+  /* =================================================================
+     TUTORIAL INICIAL
+     -----------------------------------------------------------------
+     A palavra final é do servidor (a sessão traz `tutorial.inicial`).
+     O aviso local só serve para as abas abertas da mesma conta saberem
+     na hora que a conclusão foi gravada — e para uma resposta de sessão
+     que saiu antes da gravação não fazer a tela voltar ao tutorial. */
+  var CHAVE_TUTORIAL = "rama.tutorial.concluido";
+
+  function conclusaoLocal(id) {
+    try {
+      var v = JSON.parse(ler(CHAVE_TUTORIAL) || "null");
+      return v && id && v.id === id && typeof v.quando === "string" ? v.quando : "";
+    } catch (e) { return ""; }
+  }
+
+  /* O servidor sabe gravar a conclusão (a sessão trouxe o campo). */
+  function tutorialSuportado() {
+    var a = agente();
+    return !!(a && a.tutorial && typeof a.tutorial === "object");
+  }
+
+  function tutorialPendente() {
+    var a = agente();
+    return tutorialSuportado() && !a.tutorial.inicial && !conclusaoLocal(a.id);
+  }
+
+  function marcarTutorialConcluido(quando) {
+    var a = agente();
+    if (!a) return;
+    var q = typeof quando === "string" && quando ? quando : new Date().toISOString();
+    a.tutorial = { inicial: q };
+    guardar(CHAVE_AGENTE, JSON.stringify(a));
+    guardar(CHAVE_TUTORIAL, JSON.stringify({ id: a.id, quando: q }));
+  }
+
+  /* fn(quando) quando OUTRA aba desta conta gravar a conclusão. */
+  function aoConcluirTutorialEmOutraAba(fn) {
+    global.addEventListener("storage", function (ev) {
+      if (ev.key !== CHAVE_TUTORIAL || !ev.newValue) return;
+      var a = agente();
+      var q = a ? conclusaoLocal(a.id) : "";
+      if (q) { a.tutorial = { inicial: q }; fn(q); }
+    });
+  }
 
   /* O servidor conta o mesmo prazo e tem a palavra final. Isto aqui só
      evita gastar uma requisição mandando um token que já sabemos
@@ -666,5 +721,9 @@
     exigirSessao: exigirSessao,
     aoPerderSessao: aoPerderSessao,
     tocarAtividade: tocarAtividade,
+    tutorialSuportado: tutorialSuportado,
+    tutorialPendente: tutorialPendente,
+    marcarTutorialConcluido: marcarTutorialConcluido,
+    aoConcluirTutorialEmOutraAba: aoConcluirTutorialEmOutraAba,
   };
 })(window);

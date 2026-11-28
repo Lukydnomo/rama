@@ -371,6 +371,26 @@ As fichas de Oblívio continuam em `PERSONAGENS` (o bloco `oblivio` dentro da
 ficha; ver [CHARACTER_SCHEMA.md](CHARACTER_SCHEMA.md)); a projeção (`resumo`)
 ganha `tipo: "oblivio"`.
 
+## Viagens nas estradas (Arquivos Secretos 11) — entrega em desenvolvimento
+
+> **Atualizando:** troque `Ordem.gs`, `Dados.gs`, `Sistemas.gs`, `Campanhas.gs`
+> e `Codigo.gs`, rode **`setupRama()`** (cria a aba `CAMPANHA_VIAGENS`; repetir
+> não muda nada) e crie uma nova versão da implantação.
+
+**CAMPANHA_VIAGENS** — `campanhaId · ativo · atualizadoEm · rev · opsJson ·
+dadosJson`. Uma linha por campanha, criada na primeira operação do mestre.
+`dadosJson` é o estado normalizado por `RAMAViagens` (cópia fiel de
+`js/ordem/viagens.js` dentro de `Ordem.gs`): até 8 viagens (etapas, veículos com
+vínculo opcional a um veículo operacional de ficha, encontros, acidentes,
+registros de perda e dano, testes estendidos, trechos; numa delas, `carcacas`)
+e até 100 linhas de histórico com autor, efeitos e o resultado gravado. Cede o
+histórico e os encontros de viagens antigas quando não cabe na célula.
+`opsJson` guarda os últimos 80 `opId`. A campanha ganha `limiteDeDados` no
+`dadosJson` (Limite de Dados nas ameaças).
+
+Nas fichas: `ordem.arquivo11` (temporários do Sonnenblume com origem e missão,
+o Apfelstrudel) — schema 38.
+
 ## Arquivos Secretos 5 e perigos complexos — v2.48
 
 > **Atualizando para a v2.48:** troque `Codigo.gs`, `Campanhas.gs` e `Dados.gs`,

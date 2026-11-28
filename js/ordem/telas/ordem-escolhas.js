@@ -149,7 +149,7 @@
       var visiveis = candidatos.filter(function (c) {
         var e = c.entrada;
         if (termo && U.chaveDeBusca(e.nome + " " + e.resumo).indexOf(termo) < 0) return false;
-        if (f.fonte && e.fonte !== f.fonte) return false;
+        if (f.fonte && (C.fontesDe ? C.fontesDe(e) : [e.fonte]).indexOf(f.fonte) < 0) return false;
         if (f.elemento && (e.elemento || "sem") !== f.elemento) return false;
         if (f.soDisponiveis && !c.disponivel) return false;
         return true;

@@ -5,6 +5,18 @@ padrão e normaliza o que chega de fora. Onde ela é guardada — inteira em
 `fichaJson` (formato antigo) ou em blocos (v2.15) — é assunto do backend, e não muda
 nada aqui: ver [DATABASE.md](DATABASE.md).
 
+## Arquivos Secretos 11 — schema 38 (entrega em desenvolvimento)
+
+- `ordem.arquivo11`: `{ temporarios: [{ id, recurso: pv|pe|san, valor, origem,
+  missao, expirado, expirou, desfeito }], efeitos: [{ id, chave: "apfelstrudel",
+  origem, missao, expirado, desfeito }], usos: [] }`. Escrito pelo servidor
+  (`viagem_operar`); os pontos em si continuam em `ordem.temporarios`. Na
+  expiração sai o menor entre o concedido e o que resta daquele recurso.
+- Veículo operacional (`ordem.arquivo3.veiculos[]`): aceita as 11 regalias do
+  AS11 e ganha `reservas: { estepe, extintor }` (ausente = cheio).
+- Sem conversão. Uma aba antiga descartaria as regalias novas e o registro; com
+  o schema maior ela recusa.
+
 ## Reconstrução da importação e aquisições extras — v9.16 / schema 37
 
 Dois campos novos no bloco de Ordem, opcionais; uma ficha 36 abre igual. O

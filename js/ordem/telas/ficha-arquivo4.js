@@ -1057,7 +1057,7 @@
         salvar(ctx);
         var novo = comMaisDados(r, 1, "Quem Não Arrisca");
         if (novo) { mostrarT(novo, "+1d20", [novo.notaExtra]); return; }
-        var mais = EF() ? EF().expressaoDeDados(R().dadosDoTeste(o, p.chave).quantos + 1) : "";
+        var mais = R().expressaoComDados(o, R().dadosDoTeste(o, p.chave), 1);
         var re = D().dependente({ expressao: mais || dado, sigla: "", nome: p.nome, bonus: bonus.total, modificadores: [] });
         mostrarT(re, "+1d20", ["O teste tinha penalidade de dados: rolado de novo com +1d20 (" + (mais || "") + ")."]);
       });

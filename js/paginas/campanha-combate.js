@@ -1169,6 +1169,9 @@
   function painelDeCriatura(controlador, participante) {
     var painel = global.RAMACriaturaPainel.criar(participante.snapshot, {
       nome: participante.nome, rotulo: "Criatura deste combate",
+      /* Limite de Dados nas ameaças (AS11 p. 103–104): ligado pelo mestre
+         em Configurações da campanha. */
+      limiteDeDados: !!(controlador.ctx && controlador.ctx.campanha && controlador.ctx.campanha.limiteDeDados),
       aoStatus: function (id, valor) { controlador.fila.definirStatusCriatura(participante.id, id, valor); },
       /* Estado de fase, usos, marcadores, Enigma e anotação: só desta
          ocorrência, pela fila do combate (v2.28). */

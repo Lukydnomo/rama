@@ -589,6 +589,10 @@
       "ordem.arquivo7.usos": "opId",
       "ordem.arquivo9.tatica.planos": "id",
       "ordem.arquivo9.usos": "opId",
+      /* Arquivos Secretos 11: o servidor escreve os temporários do
+         Sonnenblume e o Apfelstrudel; cada um casa pelo id. */
+      "ordem.arquivo11.temporarios": "id",
+      "ordem.arquivo11.efeitos": "id",
       /* Barganha Insana (v2.41): cada conjuração casa pelo id. */
       "ordem.barganhaInsana.pendentes": "id",
       "ordem.barganhaInsana.resolvidas": "id",

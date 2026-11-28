@@ -1,0 +1,305 @@
+{
+ "gerado": "testes/gerar-demos-ajuda.js",
+ "ficha": {
+  "schemaVersion": 38,
+  "tipoFicha": "oblivio",
+  "nome": "Lia Montenegro",
+  "campanhaId": null,
+  "classe": "",
+  "origem": "",
+  "criadoEm": "2026-11-28T04:02:19.486Z",
+  "atualizadoEm": "2026-11-28T04:02:19.486Z",
+  "atributos": [
+   {
+    "id": "c777adca-20f2-4988-9338-462f5165c637",
+    "natureza": "rolavel",
+    "nome": "Força",
+    "sigla": "FOR",
+    "valor": 0,
+    "dado": "1d20",
+    "formula": "",
+    "contagem": "maior"
+   },
+   {
+    "id": "2db7b823-dc0e-4793-ad82-582dca5a416f",
+    "natureza": "rolavel",
+    "nome": "Agilidade",
+    "sigla": "AGI",
+    "valor": 0,
+    "dado": "1d20",
+    "formula": "",
+    "contagem": "maior"
+   },
+   {
+    "id": "a708ec02-dbbe-468f-91dc-09e8c7d3d0f7",
+    "natureza": "rolavel",
+    "nome": "Presença",
+    "sigla": "PRE",
+    "valor": 0,
+    "dado": "1d20",
+    "formula": "",
+    "contagem": "maior"
+   },
+   {
+    "id": "38f025c9-f249-415d-9456-94d0d91ce411",
+    "natureza": "rolavel",
+    "nome": "Intelecto",
+    "sigla": "INT",
+    "valor": 0,
+    "dado": "1d20",
+    "formula": "",
+    "contagem": "maior"
+   },
+   {
+    "id": "094a08f7-4c56-48b7-b22c-9c471030b643",
+    "natureza": "rolavel",
+    "nome": "Vigor",
+    "sigla": "VIG",
+    "valor": 0,
+    "dado": "1d20",
+    "formula": "",
+    "contagem": "maior"
+   }
+  ],
+  "status": [
+   {
+    "id": "39eddea0-49b3-40f9-bf1a-53a350755ba9",
+    "nome": "PV",
+    "atual": 0,
+    "maximo": 0
+   },
+   {
+    "id": "c8b3a273-0367-43de-93e9-d197f093fe89",
+    "nome": "PE",
+    "atual": 0,
+    "maximo": 0
+   },
+   {
+    "id": "abf86e92-0744-4ab5-87d9-301459f5f16b",
+    "nome": "Sanidade",
+    "atual": 0,
+    "maximo": 0
+   }
+  ],
+  "defesa": {
+   "dt": 0,
+   "esquiva": 0,
+   "bloqueio": 0,
+   "resistencia": 0,
+   "campos": [],
+   "ocultos": []
+  },
+  "pericias": [],
+  "organizacao": {
+   "pericias": {
+    "modo": "az"
+   }
+  },
+  "inventario": {
+   "limite": 0,
+   "itens": []
+  },
+  "anotacoes": {
+   "pastas": [],
+   "soltas": []
+  },
+  "retratos": null,
+  "oblivio": {
+   "v": 1,
+   "papel": "sabe",
+   "atributos": {
+    "carne": 2,
+    "forca": 0,
+    "fuga": 2,
+    "determinacao": 2,
+    "mente": 4
+   },
+   "maximos": {},
+   "perdas": {
+    "determinacao": 0
+   },
+   "escolhas": {
+    "dano": "carne",
+    "inventario": "carne",
+    "menosRegioes": "",
+    "protecaoContra": "carne"
+   },
+   "especializacoes": [
+    {
+     "id": "es-4d88ac58-dbd5-4a11-a962-44840487f3cb",
+     "conhecimento": "saber",
+     "origem": "papel",
+     "ref": ""
+    },
+    {
+     "id": "es-23d11987-738c-4b59-8f1f-7e25f1c42d40",
+     "conhecimento": "mistico",
+     "origem": "papel",
+     "ref": ""
+    },
+    {
+     "id": "es-34a8b790-9f8f-490e-a9fe-3f4f2037ad9b",
+     "conhecimento": "mundo",
+     "origem": "papel",
+     "ref": ""
+    },
+    {
+     "id": "es-b1fd6ddc-4d2b-4bf1-8453-688943583ec9",
+     "conhecimento": "bandidagem",
+     "origem": "mente",
+     "ref": ""
+    },
+    {
+     "id": "es-d9126c95-e022-4827-aa97-68c83a802d3e",
+     "conhecimento": "duelo",
+     "origem": "mente",
+     "ref": ""
+    }
+   ],
+   "motivacao": {
+    "chave": "",
+    "texto": "",
+    "abandonada": false
+   },
+   "corpo": {
+    "regioes": [
+     {
+      "chave": "torso",
+      "estado": "organica",
+      "limite": 4,
+      "estresse": 0,
+      "falhasExtremas": 0,
+      "curaTemporaria": 0
+     },
+     {
+      "chave": "bracoE",
+      "estado": "organica",
+      "limite": 2,
+      "estresse": 0,
+      "falhasExtremas": 0,
+      "curaTemporaria": 0
+     },
+     {
+      "chave": "bracoD",
+      "estado": "organica",
+      "limite": 2,
+      "estresse": 0,
+      "falhasExtremas": 0,
+      "curaTemporaria": 0
+     },
+     {
+      "chave": "pernaE",
+      "estado": "organica",
+      "limite": 2,
+      "estresse": 0,
+      "falhasExtremas": 0,
+      "curaTemporaria": 0
+     },
+     {
+      "chave": "pernaD",
+      "estado": "organica",
+      "limite": 2,
+      "estresse": 0,
+      "falhasExtremas": 0,
+      "curaTemporaria": 0
+     }
+    ]
+   },
+   "limiteAjustes": [],
+   "coragem": 3,
+   "coragemIniciada": true,
+   "habilidades": [
+    {
+     "id": "hb-6669200a-657d-4ff7-a2dd-2ee4bb0603fb",
+     "chave": "repertorioDeConhecimento",
+     "origem": "papel",
+     "ref": "",
+     "param": {}
+    }
+   ],
+   "mazelas": [],
+   "foraDeAcao": {
+    "ativo": false,
+    "retorno": null,
+    "historico": []
+   },
+   "morte": null,
+   "fardos": [],
+   "inventario": {
+    "itens": [],
+    "moedas": 0
+   },
+   "usos": [],
+   "efeitos": [],
+   "reservas": {
+    "abrirFeridas": 0,
+    "curadoNaCena": {
+     "cena": "",
+     "valor": 0
+    }
+   },
+   "missao": {
+    "id": "",
+    "concluidas": 0,
+    "aplicadas": []
+   },
+   "descansos": 0,
+   "escolhasPendentes": [],
+   "operacoes": [],
+   "ajustes": {
+    "bonusEspecializacao": 2,
+    "zona": "d20",
+    "testeDeFuga": "reflexos",
+    "desgasteParcial": "cena",
+    "errante": "metade"
+   },
+   "criacao": {
+    "concluida": true
+   },
+   "contexto": {
+    "cena": "",
+    "tipoDeCena": "",
+    "rodada": 0,
+    "partida": "",
+    "n": 0
+   }
+  },
+  "camposCustomizados": [],
+  "habilidades": {
+   "filhos": []
+  },
+  "rituais": {
+   "rotuloSecao": "Rituais",
+   "rotulos": {
+    "circulo": "Círculo",
+    "elemento": "Elemento",
+    "execucao": "Execução",
+    "alcance": "Alcance",
+    "alvo": "Alvo",
+    "area": "Área",
+    "efeito": "Efeito",
+    "duracao": "Duração",
+    "resistencia": "Resistência",
+    "descricao": "Descrição"
+   },
+   "itens": []
+  },
+  "modulos": {
+   "atributos": true,
+   "status": true,
+   "defesa": true,
+   "pericias": true,
+   "habilidades": true,
+   "rituais": true,
+   "inventario": true,
+   "anotacoes": true,
+   "aliados": true
+  },
+  "aliados": [],
+  "aparencia": {
+   "v": 1,
+   "modo": "conta"
+  }
+ },
+ "foto": ""
+}

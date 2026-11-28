@@ -278,8 +278,14 @@
      os campos novos e os descartaria ao gravar — com o schema maior ela
      recusa abrir a ficha e pede para recarregar.
      Ver docs/CHARACTER_SCHEMA.md. */
-  /* 37 (v9.16): ordem.extras e ordem.importacao.reconstrucao. */
-  var VERSAO_SCHEMA = 37;
+  /* 37 (v9.16): ordem.extras e ordem.importacao.reconstrucao.
+     38 (Arquivos Secretos 11): ordem.arquivo11 (os temporários do
+     Sonnenblume com a origem e o Apfelstrudel, escritos pelo servidor) e,
+     no veículo operacional, as regalias do AS11 e as reservas de estepe e
+     extintor. Sem conversão: a ficha 37 abre sem o bloco e com as reservas
+     cheias. Uma aba antiga descartaria as regalias novas e o registro dos
+     temporários ao gravar — com o schema maior ela recusa. */
+  var VERSAO_SCHEMA = 38;
 
   var MODULOS = {
     atributos: "Atributos", status: "Status/recursos", defesa: "Defesa",

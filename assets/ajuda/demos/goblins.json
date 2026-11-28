@@ -1,0 +1,308 @@
+{
+ "gerado": "testes/gerar-demos-ajuda.js",
+ "ficha": {
+  "schemaVersion": 38,
+  "tipoFicha": "goblins",
+  "nome": "Gnarlo Pé-de-Lama",
+  "campanhaId": null,
+  "classe": "",
+  "origem": "",
+  "criadoEm": "2026-11-28T04:02:19.502Z",
+  "atualizadoEm": "2026-11-28T04:02:19.502Z",
+  "atributos": [
+   {
+    "id": "7672a77e-e4ce-4a4d-b4c4-4547370b06c6",
+    "natureza": "rolavel",
+    "nome": "Força",
+    "sigla": "FOR",
+    "valor": 0,
+    "dado": "1d20",
+    "formula": "",
+    "contagem": "maior"
+   },
+   {
+    "id": "c9543942-c2b7-4696-987e-01b267236480",
+    "natureza": "rolavel",
+    "nome": "Agilidade",
+    "sigla": "AGI",
+    "valor": 0,
+    "dado": "1d20",
+    "formula": "",
+    "contagem": "maior"
+   },
+   {
+    "id": "a497bba3-1cb2-4a05-93c0-0974b4541325",
+    "natureza": "rolavel",
+    "nome": "Presença",
+    "sigla": "PRE",
+    "valor": 0,
+    "dado": "1d20",
+    "formula": "",
+    "contagem": "maior"
+   },
+   {
+    "id": "64463b76-1684-472d-877a-c28fe675d21f",
+    "natureza": "rolavel",
+    "nome": "Intelecto",
+    "sigla": "INT",
+    "valor": 0,
+    "dado": "1d20",
+    "formula": "",
+    "contagem": "maior"
+   },
+   {
+    "id": "66fb8818-160e-4c68-8868-901fa809c93b",
+    "natureza": "rolavel",
+    "nome": "Vigor",
+    "sigla": "VIG",
+    "valor": 0,
+    "dado": "1d20",
+    "formula": "",
+    "contagem": "maior"
+   }
+  ],
+  "status": [
+   {
+    "id": "8903a744-b348-4b66-9531-b36ec95155ec",
+    "nome": "PV",
+    "atual": 0,
+    "maximo": 0
+   },
+   {
+    "id": "85500937-45c7-4eb0-92a5-cda8d9879ab5",
+    "nome": "PE",
+    "atual": 0,
+    "maximo": 0
+   },
+   {
+    "id": "5b4eabf1-5be5-43bc-9044-fc2bd845def7",
+    "nome": "Sanidade",
+    "atual": 0,
+    "maximo": 0
+   }
+  ],
+  "defesa": {
+   "dt": 0,
+   "esquiva": 0,
+   "bloqueio": 0,
+   "resistencia": 0,
+   "campos": [],
+   "ocultos": []
+  },
+  "pericias": [],
+  "organizacao": {
+   "pericias": {
+    "modo": "az"
+   }
+  },
+  "inventario": {
+   "limite": 0,
+   "itens": []
+  },
+  "anotacoes": {
+   "pastas": [],
+   "soltas": []
+  },
+  "retratos": null,
+  "goblins": {
+   "v": 1,
+   "criacao": {
+    "modo": "",
+    "concluida": true,
+    "sorteios": [],
+    "equipamentoAplicado": true,
+    "nomeSugerido": "",
+    "pendenciaDeNome": ""
+   },
+   "nomeDeFamilia": "",
+   "ocupacao": "mercenario",
+   "descritor": "mediocre",
+   "supimpa": "",
+   "modEscolhido": "",
+   "caracteristicas": [
+    {
+     "id": "ca-1",
+     "chave": "pintas",
+     "quantidade": null
+    }
+   ],
+   "equipamentoInicial": 0,
+   "escolhas": {
+    "armaFavorita": "espada",
+    "especieInimiga": "",
+    "magias": [],
+    "grupoWar": "",
+    "equipamentoWar": [],
+    "inicialCthulin": ""
+   },
+   "nivel": 1,
+   "epicas": [],
+   "tecnicasHb": [],
+   "ajustes": [],
+   "ferimentos": 0,
+   "itens": [
+    {
+     "id": "it-b1b4bafa42584d9f",
+     "chave": "espada",
+     "categoria": "arma",
+     "nome": "Espada",
+     "equipado": true,
+     "quantidade": 1,
+     "nota": "",
+     "destruido": false,
+     "consumido": false,
+     "arremessado": false,
+     "precisaRecarregar": false,
+     "municao": null,
+     "durabilidade": null,
+     "magico": {},
+     "personalizado": null,
+     "aceso": null
+    },
+    {
+     "id": "it-4e342c9ce6d741e0",
+     "chave": "escudo",
+     "categoria": "protecao",
+     "nome": "Escudo",
+     "equipado": true,
+     "quantidade": 1,
+     "nota": "",
+     "destruido": false,
+     "consumido": false,
+     "arremessado": false,
+     "precisaRecarregar": false,
+     "municao": null,
+     "durabilidade": {
+      "atual": 2,
+      "original": 2
+     },
+     "magico": {},
+     "personalizado": null,
+     "aceso": null
+    }
+   ],
+   "efeitos": [],
+   "marcas": {
+    "dia": {},
+    "batalha": {},
+    "turno": {}
+   },
+   "tempo": {
+    "dia": 1,
+    "batalha": false,
+    "turno": 0
+   },
+   "estado": {
+    "situacao": "ativo",
+    "causa": "",
+    "marcas": [],
+    "vozGoblin": "",
+    "pendenteEpico": false
+   },
+   "opcoes": {
+    "vozGoblin": false,
+    "deuRuim": false,
+    "niveisEpicos": false,
+    "explosoesManuais": false,
+    "adaptacoes": {
+     "cthulin": false,
+     "pokepragas": false,
+     "wargoblin": false,
+     "goblinHigh": false,
+     "vale": false
+    }
+   },
+   "adaptacoes": {
+    "cthulin": {
+     "medo": 0
+    },
+    "pokepragas": {
+     "pokepedras": 0,
+     "pragas": [],
+     "encontrada": null
+    },
+    "goblinHigh": {
+     "estudantes": [],
+     "popular": false,
+     "humilhado": false,
+     "briga": null
+    },
+    "vale": {
+     "fazenda": false,
+     "galinhas": 0,
+     "vacas": 0,
+     "minas": 0,
+     "bosques": 0,
+     "hortas": [],
+     "construcoes": [],
+     "recursos": {
+      "ovo": 0,
+      "leite": 0,
+      "pedra": 0,
+      "madeira": 0
+     },
+     "alimentos": {},
+     "peixes": [],
+     "pratos": {}
+    }
+   },
+   "linhagem": {
+    "anterior": null,
+    "seguinte": null
+   },
+   "historico": [
+    {
+     "n": 1,
+     "dia": 1,
+     "tipo": "criacao",
+     "texto": "Equipamento inicial: Espada, Escudo"
+    },
+    {
+     "n": 2,
+     "dia": 1,
+     "tipo": "criacao",
+     "texto": "Criação concluída"
+    }
+   ],
+   "operacoes": [],
+   "seq": 2
+  },
+  "camposCustomizados": [],
+  "habilidades": {
+   "filhos": []
+  },
+  "rituais": {
+   "rotuloSecao": "Rituais",
+   "rotulos": {
+    "circulo": "Círculo",
+    "elemento": "Elemento",
+    "execucao": "Execução",
+    "alcance": "Alcance",
+    "alvo": "Alvo",
+    "area": "Área",
+    "efeito": "Efeito",
+    "duracao": "Duração",
+    "resistencia": "Resistência",
+    "descricao": "Descrição"
+   },
+   "itens": []
+  },
+  "modulos": {
+   "atributos": true,
+   "status": true,
+   "defesa": true,
+   "pericias": true,
+   "habilidades": true,
+   "rituais": true,
+   "inventario": true,
+   "anotacoes": true,
+   "aliados": true
+  },
+  "aliados": [],
+  "aparencia": {
+   "v": 1,
+   "modo": "conta"
+  }
+ },
+ "foto": ""
+}

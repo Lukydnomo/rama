@@ -137,6 +137,7 @@
   var AS6 = "AS6";
   var AS7 = "AS7";
   var AS9 = "AS9";
+  var AS11 = "AS11";
 
   var SA = "sangue";
   var MO = "morte";
@@ -6272,6 +6273,41 @@
     ], ["Com o perfil na aba Aliados, o painel de aliados pede as 2 perícias e liga o +1d20 nelas enquanto Ryder acompanha."]));
   })();
 
+  /* =================================================================
+     ARQUIVOS SECRETOS 11 — os aliados de Carcaças Vermelhas (p. 92–97)
+     -----------------------------------------------------------------
+     Perfis "como aliado": benefícios para quem acompanham, sem ficha de
+     combate no pacote. Bruna e Rômulo têm os mesmos efeitos, de
+     propósito (p. 92). Se uma ficha for necessária, a remissão está na
+     nota (Policial de Elite, OPRPG p. 287). Os Carcaças Vermelhas,
+     Emanuel e Valentina são remissões a ameaças existentes, listadas nos
+     controles da missão na campanha.
+     ================================================================= */
+  (function () {
+    function aliadoAs11(chave, nome, pagina, descricao, habilidades, notas, rotulo) {
+      return {
+        id: "as11.criatura." + chave + "-aliado", livro: AS11, pagina: pagina, aliada: true,
+        nome: nome + " (" + (rotulo || "aliado") + ")", natureza: "humana", tipo: "Aliado", tamanho: null, categoria: "Aliados",
+        nivel: "Aliado (OPRPG p. 170)", elementos: [], vd: null,
+        descricao: descricao,
+        notas: ["Perfil “como aliado” (Arquivos Secretos 11, p. " + pagina + "): os benefícios para quem o acompanha, sem estatísticas de combate."].concat(notas || []),
+        habilidades: habilidades,
+        acoes: [],
+      };
+    }
+    var PILOTAGEM = hab("Bônus", "Você é considerado treinado em Pilotagem. Se já for treinado, em vez disso, recebe +1d20 em testes de Pilotagem.");
+    var TROCA_TIRO = hab("Troca Tiro e Dá Porrada", "Quando faz um teste de Luta ou Pontaria, você pode gastar 1 PE para receber +1d6 nesse teste.", { custo: "1 PE", rolagens: [soma("Troca Tiro e Dá Porrada", "1d6")] });
+    var NOTA_FICHA = "Se uma ficha for necessária: tão competente quanto um policial de elite (OPRPG, p. 287), adaptado";
+    CRIATURAS.push(aliadoAs11("bruna-machado", "Bruna Machado", 92, "Motociclista dos Caranchos do Asfalto, combativa e carismática.", [PILOTAGEM, TROCA_TIRO],
+      ["Com o perfil na aba Aliados, o painel de aliados liga o treinamento em Pilotagem (ou o +1d20, se já for treinado) enquanto Bruna acompanha; o +1d6 por 1 PE aparece no resultado de cada teste de Luta ou Pontaria.", NOTA_FICHA + " com soqueira (OPRPG, p. 66) e revólver (OPRPG, p. 56).", "Bruna e Rômulo têm, de propósito, os mesmos efeitos (p. 92)."], "aliada"));
+    CRIATURAS.push(aliadoAs11("nicole-oliva", "Nicole Oliva da Silva", 96, "Guitarrista da banda Purple Day, resgatada pelos irmãos Machado.", [
+      hab("Bônus", "Você é considerado treinado em Artes. Se já for treinado, em vez disso, recebe +1d20 em testes de Artes."),
+      hab("Ajuda Como Dá", "Você pode gastar 1 PE para que Nicole faça algo simples por você — trazer um objeto e guardar no seu bolso, passar munição de uma pessoa para outra, usar um cicatrizante em alguém. Ela é uma civil: o mestre decide o que ela consegue fazer correndo risco de vida.", { custo: "1 PE" }),
+    ], ["Com o perfil na aba Aliados, o painel de aliados liga o treinamento em Artes (ou o +1d20, se já for treinado) enquanto Nicole acompanha; o Ajuda Como Dá tem um botão que gasta o 1 PE e registra o pedido — a viabilidade é do mestre."], "aliada"));
+    CRIATURAS.push(aliadoAs11("romulo-machado", "Rômulo Machado", 97, "Motociclista dos Caranchos do Asfalto, leal e protetor; irmão de Bruna.", [PILOTAGEM, TROCA_TIRO],
+      ["Com o perfil na aba Aliados, o painel de aliados liga o treinamento em Pilotagem (ou o +1d20, se já for treinado) enquanto Rômulo acompanha; o +1d6 por 1 PE aparece no resultado de cada teste de Luta ou Pontaria.", NOTA_FICHA + " com faca e revólver (OPRPG, p. 56).", "Bruna e Rômulo têm, de propósito, os mesmos efeitos (p. 92)."]));
+  })();
+
   global.RAMAOrdemCriaturasDados = {
     versao: 1,
     fontes: {
@@ -6285,6 +6321,7 @@
       AS6: { nome: "Arquivos Secretos 6", sigla: "AS6" },
       AS7: { nome: "Arquivos Secretos 7", sigla: "AS7" },
       AS9: { nome: "Arquivos Secretos 9", sigla: "AS9" },
+      AS11: { nome: "Arquivos Secretos 11", sigla: "AS11" },
     },
     criaturas: CRIATURAS,
   };

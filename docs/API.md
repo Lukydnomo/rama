@@ -1,5 +1,49 @@
 # A API
 
+## Viagens nas estradas (Arquivos Secretos 11) — entrega em desenvolvimento
+
+- `ler_viagens` (leitura; `campanhaId`, `incluirVeiculos`): exige a campanha de
+  Ordem (`outro_sistema` em outra) e quem não é espectador. Mestre: `{ mestre:
+  true, rev, estado, vinculados, personagens }` e, com `incluirVeiculos`,
+  `veiculosOperacionais` (os veículos do AS3 das fichas da campanha). Jogador:
+  `{ mestre: false, rev, vista, vinculados, personagens, meus }` — a vista vem
+  de `RAMAViagens.vistaDoJogador` (sem notas, encontros futuros, etapas fixas
+  não reveladas, remissões e linhas privadas do histórico).
+- `viagem_operar` (gravação; `campanhaId`, `opId`, `operacao: { tipo, … }`): uma
+  operação de `RAMAViagens.OPS_DO_MESTRE` (só o mestre) ou `OPS_DO_JOGADOR`
+  (`caca_gastar`, `sonnenblume`, `passageiro`, `querida` — o dono do agente ou o
+  mestre). Suplemento `ordem.as11` desligado na campanha: `suplemento_desligado`
+  (desligar a ferramenta continua). Regra recusada: `operacao_recusada` com
+  `motivo`. O servidor rola os dados da operação; o mesmo `opId` de novo devolve
+  `{ repetida: true, resultado }` gravado, sem rolar nem cobrar. Sonnenblume e
+  `missao_encerrar` escrevem nas fichas (com o `opId`). Resposta: `{ ok, rev,
+  dados, resultado: { texto, resultado } }`.
+- `salvar_campanha` aceita `limiteDeDados` (booleano; ligar exige o AS11
+  permitido); `ler_campanha` devolve `limiteDeDados`.
+- Exige `Ordem.gs`, `Dados.gs`, `Sistemas.gs`, `Campanhas.gs` e `Codigo.gs`
+  atualizados, `setupRama()` (aba `CAMPANHA_VIAGENS`) e nova versão da
+  implantação.
+
+## Tutorial inicial — entrega em desenvolvimento
+
+- `concluir_tutorial` (gravação, sem campos): grava a conclusão do tutorial
+  inicial na conta **da sessão**, em `preferenciasJson.tutorial.inicial` (data
+  ISO). Idempotente: repetir devolve a mesma data com `repetida: true`, sem
+  regravar. Resposta: `{ ok, tutorial: { inicial } }`.
+- `login` e `sessao`: o agente traz `tutorial: { inicial: "" | data }`. `""` é
+  pendente (inclui a conta antiga, sem o registro). A presença do campo diz ao
+  site que o servidor sabe gravar a conclusão; servidor anterior não traz o
+  campo e o site não exige o tutorial.
+- `salvar_perfil` recusa a chave `tutorial` (`dados_invalidos`) e, como sempre,
+  só mexe nas chaves pedidas: gravar o tema numa aba antiga não apaga a
+  conclusão. `ler_perfil` mostra a chave (só leitura).
+- Na página de demonstração (`ficha/?tutorial=inicial`, `ficha/?demo=<sistema>`),
+  `RAMAApi.modoDemonstracao(true)` recusa no próprio site toda ação que não seja
+  leitura, `logout` ou `concluir_tutorial` (erro local `demonstracao`, sem
+  viajar).
+- Exige atualizar `Codigo.gs` e criar uma nova versão da implantação. Sem aba,
+  coluna ou `setupRama`.
+
 ## Dependências nos pacotes — v9.34
 
 - `ler_pacote` / `abrir_pacote_codigo`: cada entrada traz `depende`, a

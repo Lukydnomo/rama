@@ -78,6 +78,10 @@
     return nova;
   }
 
+  /* Prévia sem gravar (o tutorial inicial): null volta ao que este
+     aparelho guarda. */
+  function definirPrevia(v) { pintar(valida(v) ? v : ler()); }
+
   function aoMudar(fn) { if (typeof fn === "function") ouvintes.push(fn); }
 
   /* Antes da primeira pintura. */
@@ -97,7 +101,7 @@
     NOMES: NOMES,
     atual: atual,
     preferencia: ler,
-    definir: definir,
+    definir: definir, definirPrevia: definirPrevia,
     aoMudar: aoMudar,
   };
 })(typeof window !== "undefined" ? window : globalThis);

@@ -1,0 +1,350 @@
+{
+ "gerado": "testes/gerar-demos-ajuda.js",
+ "ficha": {
+  "schemaVersion": 38,
+  "tipoFicha": "vampiro",
+  "nome": "Rita Valença",
+  "campanhaId": null,
+  "classe": "",
+  "origem": "",
+  "criadoEm": "2026-11-28T04:02:19.494Z",
+  "atualizadoEm": "2026-11-28T04:02:19.494Z",
+  "atributos": [
+   {
+    "id": "d33697d4-be30-4256-a138-6c25f3ccae73",
+    "natureza": "rolavel",
+    "nome": "Força",
+    "sigla": "FOR",
+    "valor": 0,
+    "dado": "1d20",
+    "formula": "",
+    "contagem": "maior"
+   },
+   {
+    "id": "748b7ee0-ae7e-4af9-acb6-812a377e3e8c",
+    "natureza": "rolavel",
+    "nome": "Agilidade",
+    "sigla": "AGI",
+    "valor": 0,
+    "dado": "1d20",
+    "formula": "",
+    "contagem": "maior"
+   },
+   {
+    "id": "6383d8a6-89e1-4f1d-944d-cb1c590a0eff",
+    "natureza": "rolavel",
+    "nome": "Presença",
+    "sigla": "PRE",
+    "valor": 0,
+    "dado": "1d20",
+    "formula": "",
+    "contagem": "maior"
+   },
+   {
+    "id": "761e47a7-9eae-453a-a93b-7d288710ffad",
+    "natureza": "rolavel",
+    "nome": "Intelecto",
+    "sigla": "INT",
+    "valor": 0,
+    "dado": "1d20",
+    "formula": "",
+    "contagem": "maior"
+   },
+   {
+    "id": "182fee8f-0693-403d-84ce-b2f3c080af76",
+    "natureza": "rolavel",
+    "nome": "Vigor",
+    "sigla": "VIG",
+    "valor": 0,
+    "dado": "1d20",
+    "formula": "",
+    "contagem": "maior"
+   }
+  ],
+  "status": [
+   {
+    "id": "65e2bb82-8255-40f7-b0bf-f3596527f2af",
+    "nome": "PV",
+    "atual": 0,
+    "maximo": 0
+   },
+   {
+    "id": "9b3a77c8-51db-4b16-b205-560e76d6d860",
+    "nome": "PE",
+    "atual": 0,
+    "maximo": 0
+   },
+   {
+    "id": "3ae18605-59fa-41ce-81dc-f50c6d22e82d",
+    "nome": "Sanidade",
+    "atual": 0,
+    "maximo": 0
+   }
+  ],
+  "defesa": {
+   "dt": 0,
+   "esquiva": 0,
+   "bloqueio": 0,
+   "resistencia": 0,
+   "campos": [],
+   "ocultos": []
+  },
+  "pericias": [],
+  "organizacao": {
+   "pericias": {
+    "modo": "az"
+   }
+  },
+  "inventario": {
+   "limite": 0,
+   "itens": []
+  },
+  "anotacoes": {
+   "pastas": [],
+   "soltas": []
+  },
+  "retratos": null,
+  "vampiro": {
+   "v": 1,
+   "natureza": "vampiro",
+   "conceito": "Mecânica de motos que não aceita o Príncipe",
+   "cla": "brujah",
+   "senhor": "Ana",
+   "geracao": 13,
+   "idade": "neofito",
+   "abraco": {
+    "data": "",
+    "local": "",
+    "circunstancias": ""
+   },
+   "idadeVerdadeira": "",
+   "idadeAparente": "",
+   "epoca": "",
+   "ambicao": "Tirar o bairro das mãos do Príncipe",
+   "desejo": "Ganhar a corrida de sábado",
+   "predador": "viraLata",
+   "perdicaoParametro": "",
+   "atributos": {
+    "forca": 4,
+    "destreza": 3,
+    "vigor": 3,
+    "carisma": 3,
+    "manipulacao": 2,
+    "autocontrole": 2,
+    "inteligencia": 2,
+    "raciocinio": 2,
+    "determinacao": 1
+   },
+   "habilidades": {
+    "armasBrancas": 2,
+    "atletismo": 3,
+    "briga": 4,
+    "conducao": 1,
+    "furtividade": 2,
+    "sobrevivencia": 1,
+    "intimidacao": 3,
+    "manha": 3,
+    "persuasao": 2,
+    "percepcao": 1
+   },
+   "disciplinas": {
+    "celeridade": 1,
+    "potencia": 2
+   },
+   "especializacoes": [
+    {
+     "id": "es-1",
+     "habilidade": "briga",
+     "nome": "Membros",
+     "origem": "criacao"
+    }
+   ],
+   "poderes": [
+    {
+     "id": "p1",
+     "chave": "corpoLetal",
+     "origem": "criacao"
+    },
+    {
+     "id": "p2",
+     "chave": "poderio",
+     "origem": "criacao"
+    },
+    {
+     "id": "p3",
+     "chave": "reflexosRapidos",
+     "origem": "criacao"
+    }
+   ],
+   "rituais": [],
+   "formulas": [],
+   "metodoAlquimia": "",
+   "vantagens": [
+    {
+     "id": "v1",
+     "chave": "recursos",
+     "pontos": 2,
+     "nota": "",
+     "parametro": "",
+     "relacaoId": "",
+     "origem": "criacao",
+     "compartilhada": false
+    },
+    {
+     "id": "v2",
+     "chave": "aliados",
+     "pontos": 3,
+     "nota": "",
+     "parametro": "",
+     "relacaoId": "",
+     "origem": "criacao",
+     "compartilhada": false
+    },
+    {
+     "id": "v3",
+     "chave": "refugio",
+     "pontos": 2,
+     "nota": "",
+     "parametro": "",
+     "relacaoId": "",
+     "origem": "criacao",
+     "compartilhada": false
+    },
+    {
+     "id": "v4",
+     "chave": "inimigos",
+     "pontos": 2,
+     "nota": "",
+     "parametro": "",
+     "relacaoId": "",
+     "origem": "criacao",
+     "compartilhada": false
+    }
+   ],
+   "fichas": [],
+   "sangueRalo": {
+    "qualidades": [],
+    "defeitos": []
+   },
+   "convicoes": [
+    {
+     "id": "cv1",
+     "texto": "Nunca abandonar um amigo",
+     "perdida": false
+    }
+   ],
+   "pilares": [
+    {
+     "id": "pi1",
+     "nome": "Irmã",
+     "convicaoId": "cv1",
+     "relacaoId": "",
+     "estado": "vivo",
+     "historico": []
+    }
+   ],
+   "principiosAceitos": true,
+   "humanidadeBase": 7,
+   "maculas": 0,
+   "potenciaBase": 1,
+   "fome": 1,
+   "fracaoDeFome": 0,
+   "vitalidade": {
+    "superficial": 0,
+    "agravado": 0
+   },
+   "forcaDeVontade": {
+    "superficial": 0,
+    "agravado": 0
+   },
+   "ressonancia": null,
+   "estado": {
+    "torpor": null,
+    "estacado": false,
+    "morteFinal": null,
+    "frenesi": null,
+    "compulsao": null,
+    "degeneracao": false,
+    "wassail": false,
+    "dormindo": false,
+    "ambienteFeio": false,
+    "ferimentos": []
+   },
+   "efeitos": [],
+   "lacos": [],
+   "formulasProntas": [],
+   "compras": [],
+   "ajustes": [],
+   "xp": {
+    "recebido": 0,
+    "historico": [],
+    "creditos": {}
+   },
+   "criacao": {
+    "concluida": false,
+    "etapa": 0,
+    "distribuicao": "especialista",
+    "predador": {
+     "especializacao": 1,
+     "disciplina": "celeridade",
+     "poder": "gracaFelina",
+     "escolhas": {}
+    },
+    "excecoes": [],
+    "semPredador": false
+   },
+   "equipamento": [],
+   "notas": "",
+   "tempo": {
+    "sessao": 0,
+    "noite": 0,
+    "cena": 0,
+    "turno": 0
+   },
+   "marcas": {
+    "sessao": {},
+    "noite": {},
+    "cena": {}
+   },
+   "historicoDeEventos": [],
+   "operacoes": []
+  },
+  "camposCustomizados": [],
+  "habilidades": {
+   "filhos": []
+  },
+  "rituais": {
+   "rotuloSecao": "Rituais",
+   "rotulos": {
+    "circulo": "Círculo",
+    "elemento": "Elemento",
+    "execucao": "Execução",
+    "alcance": "Alcance",
+    "alvo": "Alvo",
+    "area": "Área",
+    "efeito": "Efeito",
+    "duracao": "Duração",
+    "resistencia": "Resistência",
+    "descricao": "Descrição"
+   },
+   "itens": []
+  },
+  "modulos": {
+   "atributos": true,
+   "status": true,
+   "defesa": true,
+   "pericias": true,
+   "habilidades": true,
+   "rituais": true,
+   "inventario": true,
+   "anotacoes": true,
+   "aliados": true
+  },
+  "aliados": [],
+  "aparencia": {
+   "v": 1,
+   "modo": "conta"
+  }
+ },
+ "foto": ""
+}

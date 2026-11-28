@@ -1,0 +1,917 @@
+{
+ "gerado": "testes/gerar-demos-ajuda.js",
+ "ficha": {
+  "schemaVersion": 38,
+  "tipoFicha": "ordem",
+  "nome": "Davi Ferraz",
+  "campanhaId": null,
+  "classe": "Combatente",
+  "origem": "Atleta",
+  "criadoEm": "2026-11-28T04:02:19.453Z",
+  "atualizadoEm": "2026-11-28T04:02:19.453Z",
+  "atributos": [
+   {
+    "id": "1b3ba09e-a611-4116-8804-05736c0094bf",
+    "natureza": "rolavel",
+    "nome": "Força",
+    "sigla": "FOR",
+    "valor": 0,
+    "dado": "1d20",
+    "formula": "",
+    "contagem": "maior"
+   },
+   {
+    "id": "a4635191-a668-4e7f-9909-04e5bba789e9",
+    "natureza": "rolavel",
+    "nome": "Agilidade",
+    "sigla": "AGI",
+    "valor": 0,
+    "dado": "1d20",
+    "formula": "",
+    "contagem": "maior"
+   },
+   {
+    "id": "920ea00d-1e99-43c4-87d4-79c5d9b3d207",
+    "natureza": "rolavel",
+    "nome": "Presença",
+    "sigla": "PRE",
+    "valor": 0,
+    "dado": "1d20",
+    "formula": "",
+    "contagem": "maior"
+   },
+   {
+    "id": "bb49fa67-a48c-46d1-8041-bd87755f49a7",
+    "natureza": "rolavel",
+    "nome": "Intelecto",
+    "sigla": "INT",
+    "valor": 0,
+    "dado": "1d20",
+    "formula": "",
+    "contagem": "maior"
+   },
+   {
+    "id": "80080104-71c6-4c99-adeb-f5737c7bc3aa",
+    "natureza": "rolavel",
+    "nome": "Vigor",
+    "sigla": "VIG",
+    "valor": 0,
+    "dado": "1d20",
+    "formula": "",
+    "contagem": "maior"
+   }
+  ],
+  "status": [
+   {
+    "id": "aca347a7-dfa9-409d-a723-7ff893db57b8",
+    "nome": "PV",
+    "atual": 0,
+    "maximo": 0
+   },
+   {
+    "id": "630e1493-b501-4895-aea3-1a36d6a3f282",
+    "nome": "PE",
+    "atual": 0,
+    "maximo": 0
+   },
+   {
+    "id": "ddc864d1-5207-4bab-a6ad-bcf64df05f49",
+    "nome": "Sanidade",
+    "atual": 0,
+    "maximo": 0
+   }
+  ],
+  "defesa": {
+   "dt": 0,
+   "esquiva": 0,
+   "bloqueio": 0,
+   "resistencia": 0,
+   "campos": [],
+   "ocultos": []
+  },
+  "pericias": [
+   {
+    "id": "13e40014-24c9-4476-b190-11cfd827875c",
+    "natureza": "dependente",
+    "nome": "Acrobacia",
+    "atributoId": "a4635191-a668-4e7f-9909-04e5bba789e9",
+    "bonus": 0,
+    "bonusTemporario": 0,
+    "dadosExtras": [],
+    "formula": "",
+    "contagem": "soma"
+   },
+   {
+    "id": "cf2510ae-2cd7-4530-970e-f2133277ea32",
+    "natureza": "dependente",
+    "nome": "Adestramento*",
+    "atributoId": "920ea00d-1e99-43c4-87d4-79c5d9b3d207",
+    "bonus": 0,
+    "bonusTemporario": 0,
+    "dadosExtras": [],
+    "formula": "",
+    "contagem": "soma"
+   },
+   {
+    "id": "4552328a-5430-4f9a-83b2-c9aecd062f9e",
+    "natureza": "dependente",
+    "nome": "Artes*",
+    "atributoId": "920ea00d-1e99-43c4-87d4-79c5d9b3d207",
+    "bonus": 0,
+    "bonusTemporario": 0,
+    "dadosExtras": [],
+    "formula": "",
+    "contagem": "soma"
+   },
+   {
+    "id": "1942b445-4331-4da0-ba2a-10c31cb861c0",
+    "natureza": "dependente",
+    "nome": "Atletismo",
+    "atributoId": "1b3ba09e-a611-4116-8804-05736c0094bf",
+    "bonus": 0,
+    "bonusTemporario": 0,
+    "dadosExtras": [],
+    "formula": "",
+    "contagem": "soma"
+   },
+   {
+    "id": "1f45d73e-0549-4158-abb1-21bea5cef44a",
+    "natureza": "dependente",
+    "nome": "Atualidades",
+    "atributoId": "bb49fa67-a48c-46d1-8041-bd87755f49a7",
+    "bonus": 0,
+    "bonusTemporario": 0,
+    "dadosExtras": [],
+    "formula": "",
+    "contagem": "soma"
+   },
+   {
+    "id": "58bbc3a9-c1f6-41b1-a03c-9aa2316fe6bb",
+    "natureza": "dependente",
+    "nome": "Ciências*",
+    "atributoId": "bb49fa67-a48c-46d1-8041-bd87755f49a7",
+    "bonus": 0,
+    "bonusTemporario": 0,
+    "dadosExtras": [],
+    "formula": "",
+    "contagem": "soma"
+   },
+   {
+    "id": "cd78e2ef-c65b-4d64-aa8f-0492aa55553e",
+    "natureza": "dependente",
+    "nome": "Crime*",
+    "atributoId": "a4635191-a668-4e7f-9909-04e5bba789e9",
+    "bonus": 0,
+    "bonusTemporario": 0,
+    "dadosExtras": [],
+    "formula": "",
+    "contagem": "soma"
+   },
+   {
+    "id": "3e63f543-83da-4102-abc0-48754895e649",
+    "natureza": "dependente",
+    "nome": "Diplomacia",
+    "atributoId": "920ea00d-1e99-43c4-87d4-79c5d9b3d207",
+    "bonus": 0,
+    "bonusTemporario": 0,
+    "dadosExtras": [],
+    "formula": "",
+    "contagem": "soma"
+   },
+   {
+    "id": "b4b1d262-94c7-4131-8650-99a916973b2c",
+    "natureza": "dependente",
+    "nome": "Enganação",
+    "atributoId": "920ea00d-1e99-43c4-87d4-79c5d9b3d207",
+    "bonus": 0,
+    "bonusTemporario": 0,
+    "dadosExtras": [],
+    "formula": "",
+    "contagem": "soma"
+   },
+   {
+    "id": "8c9d24ef-2e4c-4a0e-a741-8dc761f3ad8d",
+    "natureza": "dependente",
+    "nome": "Fortitude",
+    "atributoId": "80080104-71c6-4c99-adeb-f5737c7bc3aa",
+    "bonus": 0,
+    "bonusTemporario": 0,
+    "dadosExtras": [],
+    "formula": "",
+    "contagem": "soma"
+   },
+   {
+    "id": "a7bdd48e-3f52-475d-9f70-60a0f893b1ac",
+    "natureza": "dependente",
+    "nome": "Furtividade",
+    "atributoId": "a4635191-a668-4e7f-9909-04e5bba789e9",
+    "bonus": 0,
+    "bonusTemporario": 0,
+    "dadosExtras": [],
+    "formula": "",
+    "contagem": "soma"
+   },
+   {
+    "id": "2848f182-ebfa-400e-a6fd-6e9b9991a9e6",
+    "natureza": "dependente",
+    "nome": "Iniciativa",
+    "atributoId": "a4635191-a668-4e7f-9909-04e5bba789e9",
+    "bonus": 0,
+    "bonusTemporario": 0,
+    "dadosExtras": [],
+    "formula": "",
+    "contagem": "soma"
+   },
+   {
+    "id": "5f6cabc7-510a-4611-9692-376f037c2a31",
+    "natureza": "dependente",
+    "nome": "Intimidação",
+    "atributoId": "920ea00d-1e99-43c4-87d4-79c5d9b3d207",
+    "bonus": 0,
+    "bonusTemporario": 0,
+    "dadosExtras": [],
+    "formula": "",
+    "contagem": "soma"
+   },
+   {
+    "id": "193c14fe-7e92-48f5-b075-cd9327b426ae",
+    "natureza": "dependente",
+    "nome": "Intuição",
+    "atributoId": "bb49fa67-a48c-46d1-8041-bd87755f49a7",
+    "bonus": 0,
+    "bonusTemporario": 0,
+    "dadosExtras": [],
+    "formula": "",
+    "contagem": "soma"
+   },
+   {
+    "id": "37863353-1604-408c-a9e2-e1c5d58e17f4",
+    "natureza": "dependente",
+    "nome": "Investigação",
+    "atributoId": "bb49fa67-a48c-46d1-8041-bd87755f49a7",
+    "bonus": 0,
+    "bonusTemporario": 0,
+    "dadosExtras": [],
+    "formula": "",
+    "contagem": "soma"
+   },
+   {
+    "id": "7b6d7770-7294-43d3-99f3-5d4b2ed9e173",
+    "natureza": "dependente",
+    "nome": "Luta",
+    "atributoId": "1b3ba09e-a611-4116-8804-05736c0094bf",
+    "bonus": 0,
+    "bonusTemporario": 0,
+    "dadosExtras": [],
+    "formula": "",
+    "contagem": "soma"
+   },
+   {
+    "id": "22996a9f-18c5-4dae-8076-6cc4405667de",
+    "natureza": "dependente",
+    "nome": "Medicina",
+    "atributoId": "bb49fa67-a48c-46d1-8041-bd87755f49a7",
+    "bonus": 0,
+    "bonusTemporario": 0,
+    "dadosExtras": [],
+    "formula": "",
+    "contagem": "soma"
+   },
+   {
+    "id": "6d5d84da-0eef-4512-9a33-a974cf743dd8",
+    "natureza": "dependente",
+    "nome": "Ocultismo*",
+    "atributoId": "bb49fa67-a48c-46d1-8041-bd87755f49a7",
+    "bonus": 0,
+    "bonusTemporario": 0,
+    "dadosExtras": [],
+    "formula": "",
+    "contagem": "soma"
+   },
+   {
+    "id": "dec30b43-bf04-4497-8f05-e9c0fd993394",
+    "natureza": "dependente",
+    "nome": "Percepção",
+    "atributoId": "920ea00d-1e99-43c4-87d4-79c5d9b3d207",
+    "bonus": 0,
+    "bonusTemporario": 0,
+    "dadosExtras": [],
+    "formula": "",
+    "contagem": "soma"
+   },
+   {
+    "id": "1a40c41a-1d1d-492e-b2a3-a4e5a323bbbc",
+    "natureza": "dependente",
+    "nome": "Pilotagem*",
+    "atributoId": "a4635191-a668-4e7f-9909-04e5bba789e9",
+    "bonus": 0,
+    "bonusTemporario": 0,
+    "dadosExtras": [],
+    "formula": "",
+    "contagem": "soma"
+   },
+   {
+    "id": "c7313ba8-f1b9-487d-9273-46155905adb6",
+    "natureza": "dependente",
+    "nome": "Pontaria",
+    "atributoId": "a4635191-a668-4e7f-9909-04e5bba789e9",
+    "bonus": 0,
+    "bonusTemporario": 0,
+    "dadosExtras": [],
+    "formula": "",
+    "contagem": "soma"
+   },
+   {
+    "id": "b1723856-237f-40ab-bfef-f4fe21cc0a08",
+    "natureza": "dependente",
+    "nome": "Profissão*",
+    "atributoId": "bb49fa67-a48c-46d1-8041-bd87755f49a7",
+    "bonus": 0,
+    "bonusTemporario": 0,
+    "dadosExtras": [],
+    "formula": "",
+    "contagem": "soma"
+   },
+   {
+    "id": "cb02e309-5c6f-46d6-add5-db01107e0b24",
+    "natureza": "dependente",
+    "nome": "Reflexos",
+    "atributoId": "a4635191-a668-4e7f-9909-04e5bba789e9",
+    "bonus": 0,
+    "bonusTemporario": 0,
+    "dadosExtras": [],
+    "formula": "",
+    "contagem": "soma"
+   },
+   {
+    "id": "e0b5e392-a6ac-469d-8d4e-ed14a77d441f",
+    "natureza": "dependente",
+    "nome": "Religião*",
+    "atributoId": "bb49fa67-a48c-46d1-8041-bd87755f49a7",
+    "bonus": 0,
+    "bonusTemporario": 0,
+    "dadosExtras": [],
+    "formula": "",
+    "contagem": "soma"
+   },
+   {
+    "id": "23b8f8a9-5cdd-4e5a-92ee-850aebe3b7cb",
+    "natureza": "dependente",
+    "nome": "Sobrevivência",
+    "atributoId": "bb49fa67-a48c-46d1-8041-bd87755f49a7",
+    "atributosPermitidos": [
+     "bb49fa67-a48c-46d1-8041-bd87755f49a7",
+     "920ea00d-1e99-43c4-87d4-79c5d9b3d207"
+    ],
+    "bonus": 0,
+    "bonusTemporario": 0,
+    "dadosExtras": [],
+    "formula": "",
+    "contagem": "soma"
+   },
+   {
+    "id": "7124f549-c05a-48b7-8f73-5e8cec674720",
+    "natureza": "dependente",
+    "nome": "Tática*",
+    "atributoId": "bb49fa67-a48c-46d1-8041-bd87755f49a7",
+    "bonus": 0,
+    "bonusTemporario": 0,
+    "dadosExtras": [],
+    "formula": "",
+    "contagem": "soma"
+   },
+   {
+    "id": "5cf068e2-3bf4-418a-9be5-59a526340c99",
+    "natureza": "dependente",
+    "nome": "Tecnologia*",
+    "atributoId": "bb49fa67-a48c-46d1-8041-bd87755f49a7",
+    "bonus": 0,
+    "bonusTemporario": 0,
+    "dadosExtras": [],
+    "formula": "",
+    "contagem": "soma"
+   },
+   {
+    "id": "285f3d3c-0140-4a7c-836b-dfa3ef897972",
+    "natureza": "dependente",
+    "nome": "Vontade",
+    "atributoId": "920ea00d-1e99-43c4-87d4-79c5d9b3d207",
+    "bonus": 0,
+    "bonusTemporario": 0,
+    "dadosExtras": [],
+    "formula": "",
+    "contagem": "soma"
+   }
+  ],
+  "organizacao": {
+   "pericias": {
+    "modo": "az"
+   }
+  },
+  "inventario": {
+   "limite": 0,
+   "itens": []
+  },
+  "anotacoes": {
+   "pastas": [],
+   "soltas": [
+    {
+     "id": "demo-nota",
+     "titulo": "Conceito",
+     "conteudo": "Ex-atleta de corrida de rua recrutado depois de sobreviver a um ataque paranormal no parque.",
+     "imagens": [],
+     "criadoEm": "2026-11-28T04:02:19.453Z",
+     "atualizadoEm": "2026-11-28T04:02:19.453Z"
+    }
+   ]
+  },
+  "retratos": null,
+  "ordem": {
+   "nex": 5,
+   "nivel": 1,
+   "nivelDefinido": false,
+   "estagio": 1,
+   "trajetoria": [],
+   "sessao": {
+    "id": "",
+    "iniciadaEm": ""
+   },
+   "sacrificios": [],
+   "periciasDaOrigem": [
+    "acrobacia",
+    "atletismo"
+   ],
+   "especialidades": [],
+   "estadoDasOrigens": {},
+   "classe": "combatente",
+   "origem": "atleta",
+   "trilha": "",
+   "prestigio": 0,
+   "patenteConquistada": 0,
+   "atributos": {
+    "agi": 2,
+    "for": 3,
+    "int": 1,
+    "pre": 1,
+    "vig": 2
+   },
+   "pericias": {
+    "acrobacia": "treinado",
+    "atletismo": "treinado",
+    "fortitude": "treinado",
+    "iniciativa": "treinado",
+    "luta": "treinado",
+    "percepcao": "treinado"
+   },
+   "escolhas": [],
+   "personalizacoes": [],
+   "excluidas": [],
+   "organizacao": {
+    "habilidades": {
+     "modo": "personalizada",
+     "regras": [],
+     "lugares": {},
+     "ordem": {}
+    },
+    "rituais": {
+     "modo": "personalizada",
+     "criterios": []
+    },
+    "inventario": {
+     "modo": "personalizada"
+    },
+    "pericias": {
+     "modo": "az",
+     "ordem": []
+    }
+   },
+   "bonusExtra": {
+    "defesa": 0,
+    "bloqueio": 0,
+    "esquiva": 0
+   },
+   "periciasAjustes": {},
+   "progressao": [],
+   "afinidade": {
+    "elemento": "",
+    "nomeOutro": "",
+    "adiada": false
+   },
+   "patente": {
+    "aplicar": true,
+    "limites": null
+   },
+   "recursos": {
+    "pv": null,
+    "pe": null,
+    "san": null,
+    "pd": null
+   },
+   "ajustes": [],
+   "temporarios": {
+    "pv": 0,
+    "pe": 0,
+    "san": 0,
+    "defesa": 0,
+    "capacidade": 0
+   },
+   "opcionais": {},
+   "ramificacao": null,
+   "registrosDeRitual": [],
+   "condicoes": {
+    "cena": {
+     "id": "",
+     "iniciadaEm": "",
+     "interludio": false
+    },
+    "interludio": {
+     "numero": 0,
+     "iniciadoEm": ""
+    },
+    "integrarCombate": true,
+    "morrendo": {
+     "ativa": false,
+     "desde": "",
+     "eventos": [],
+     "descartados": []
+    },
+    "inconsciente": {
+     "ativa": false,
+     "desde": ""
+    },
+    "enlouquecendo": {
+     "ativa": false,
+     "desde": "",
+     "eventos": [],
+     "descartados": []
+    },
+    "perturbado": {
+     "ativa": false,
+     "desde": ""
+    },
+    "efeitos": [],
+    "imunidades": [],
+    "limiteExtra": {}
+   },
+   "componentes": {
+    "elementos": {
+     "sangue": {
+      "modo": "posse",
+      "tem": false,
+      "quantidade": 0,
+      "unidade": "usos",
+      "porUso": 1
+     },
+     "morte": {
+      "modo": "posse",
+      "tem": false,
+      "quantidade": 0,
+      "unidade": "usos",
+      "porUso": 1
+     },
+     "conhecimento": {
+      "modo": "posse",
+      "tem": false,
+      "quantidade": 0,
+      "unidade": "usos",
+      "porUso": 1
+     },
+     "energia": {
+      "modo": "posse",
+      "tem": false,
+      "quantidade": 0,
+      "unidade": "usos",
+      "porUso": 1
+     }
+    },
+    "extras": []
+   },
+   "consumos": [],
+   "temporariosDeCena": [],
+   "camposPersonalizados": [],
+   "inventarioGrade": {
+    "slotsExtras": [],
+    "colunas": {}
+   },
+   "retencoes": [],
+   "maldicoesMemorizadas": [],
+   "contadores": {},
+   "intencao": {
+    "contato": {
+     "registrado": false,
+     "em": "",
+     "nota": "",
+     "por": ""
+    },
+    "poderes": []
+   },
+   "formaSuprema": {
+    "configurada": false,
+    "aprovada": false,
+    "nome": "",
+    "descricao": "",
+    "sugestoes": [],
+    "custoComPd": "",
+    "ativa": null,
+    "historico": []
+   },
+   "sintonizacoes": [],
+   "pendentes": [],
+   "fortalecimentos": [],
+   "reservas": [],
+   "marcas": {},
+   "hexatombe": {
+    "campanhaId": "",
+    "dia": 0,
+    "lancamentos": []
+   },
+   "arquivo3": {
+    "cronologia": {
+     "missao": 0,
+     "dia": 0,
+     "semana": 0,
+     "sessao": 0
+    },
+    "sacrificio": {
+     "digno": false,
+     "dignoEm": "",
+     "dignoPor": "",
+     "dignoNota": "",
+     "estigma": "",
+     "estigmaEm": "",
+     "estigmaPor": "",
+     "fruto": null,
+     "usos": []
+    },
+    "flagelo": {
+     "pvGastos": 0,
+     "interludio": 0,
+     "recuperacoes": 0
+    },
+    "guardiao": [],
+    "entrada": {
+     "sessao": -1,
+     "pendente": false,
+     "transferida": false,
+     "em": ""
+    },
+    "ensaio": null,
+    "ritmo": null,
+    "frase": null,
+    "ambidestria": null,
+    "instrumento": {
+     "itemId": "",
+     "nome": "",
+     "criadoEm": "",
+     "quebrados": []
+    },
+    "paixoes": [],
+    "recordacoes": {
+     "fotos": [],
+     "missaoUsada": -1,
+     "bonusDia": -1,
+     "bonusGasto": false
+    },
+    "batalha": null,
+    "circo": [],
+    "veiculos": [],
+    "animais": [],
+    "aliados": [],
+    "itens": {
+     "pacocaDia": -1,
+     "cranioDia": -1,
+     "gaiolaAberta": false,
+     "couracas": []
+    }
+   },
+   "arquivo4": {
+    "influencer": {
+     "registros": [],
+     "cena": "",
+     "memorizado": null
+    },
+    "cacador": {
+     "pendente": false,
+     "cena": "",
+     "em": ""
+    },
+    "exercicios": {
+     "bonus": 0,
+     "missao": -1,
+     "rolagens": []
+    },
+    "analises": [],
+    "profissao": {
+     "missao": -1,
+     "de": "",
+     "para": "",
+     "em": ""
+    },
+    "explorador": null,
+    "sinestesia": {
+     "ativa": false,
+     "pares": [],
+     "dia": -1,
+     "san": 0,
+     "em": ""
+    },
+    "terrores": null,
+    "gororoba": {
+     "interludio": -1
+    },
+    "ruido": {
+     "cena": ""
+    },
+    "olhada": {
+     "cena": ""
+    },
+    "foco": {
+     "itens": []
+    },
+    "sobrepor": [],
+    "granadeiro": {
+     "missoes": []
+    },
+    "backup": null,
+    "explosoes": [],
+    "timers": []
+   },
+   "arquivo5": {
+    "teorias": [],
+    "turnos": [],
+    "folego": [],
+    "meditacoes": [],
+    "ruidos": [],
+    "desafios": [],
+    "rodada": null,
+    "acido": null,
+    "destruir": [],
+    "deadMan": null,
+    "recebidos": [],
+    "aliados": {},
+    "telas": null,
+    "dirigindo": null,
+    "larva": null,
+    "nitro": [],
+    "transmissao": {
+     "sino": {
+      "registrado": false,
+      "registradoEm": "",
+      "nota": "",
+      "confirmado": false,
+      "confirmadoPor": "",
+      "confirmadoEm": ""
+     },
+     "portadores": {},
+     "conexao": null,
+     "sincronia": null,
+     "pericia": null,
+     "poder": null,
+     "ritual": null,
+     "usos": {
+      "pericia": "",
+      "poder": "",
+      "ritual": ""
+     }
+    },
+    "selos": {
+     "fabricacoes": [],
+     "usos": []
+    }
+   },
+   "arquivo6": {
+    "forcas": {
+     "ocorrencias": []
+    },
+    "resgates": [],
+    "salvacao": [],
+    "escudo": [],
+    "grilhoes": [],
+    "salto": {
+     "marca": null,
+     "consumidas": [],
+     "operacoes": []
+    },
+    "fabricacoes": [],
+    "usos": [],
+    "afeccoes": [],
+    "recebidos": [],
+    "hesitacao": [],
+    "rebotes": [],
+    "modular": {
+     "grupos": {}
+    }
+   },
+   "arquivo7": {
+    "contatos": [],
+    "procedimento": {
+     "registros": [],
+     "semProcedimento": [],
+     "usos": [],
+     "tocados": [],
+     "periciasConhecimento": [],
+     "periciasApavorante": [],
+     "rituaisMarcados": [],
+     "rituais99": {
+      "elemento": "",
+      "medo": ""
+     },
+     "corporeidade": "",
+     "acoplado": ""
+    },
+    "vampirismo": {
+     "corpos": [],
+     "consumos": []
+    },
+    "submerso": {
+     "ativo": false,
+     "profundidade": 0,
+     "natacao": false,
+     "oxigenio": false,
+     "testes": 0,
+     "efeitoId": "",
+     "cena": "",
+     "em": ""
+    },
+    "infeccao": {
+     "ativa": false,
+     "desde": 0,
+     "estagio": 1,
+     "treinoPorBonus": false,
+     "falhasSeguidas": 0,
+     "testes": [],
+     "efeitos": [],
+     "curadaEm": ""
+    },
+    "exposicoes": [],
+    "usos": []
+   },
+   "arquivo9": {
+    "tatica": {
+     "planos": []
+    },
+    "analisar": {
+     "cena": "",
+     "bonus": 0,
+     "efeitoId": ""
+    },
+    "municiar": {
+     "pacotes": 0,
+     "cena": "",
+     "rolagens": []
+    },
+    "alvo": null,
+    "refens": {
+     "rodada": "",
+     "nomes": []
+    },
+    "ripostar": {
+     "pendente": false,
+     "rodada": ""
+    },
+    "drones": {
+     "escolha99": "",
+     "metralhar": ""
+    },
+    "usos": []
+   }
+  },
+  "camposCustomizados": [],
+  "habilidades": {
+   "filhos": []
+  },
+  "rituais": {
+   "rotuloSecao": "Rituais",
+   "rotulos": {
+    "circulo": "Círculo",
+    "elemento": "Elemento",
+    "execucao": "Execução",
+    "alcance": "Alcance",
+    "alvo": "Alvo",
+    "area": "Área",
+    "efeito": "Efeito",
+    "duracao": "Duração",
+    "resistencia": "Resistência",
+    "descricao": "Descrição"
+   },
+   "itens": []
+  },
+  "modulos": {
+   "atributos": true,
+   "status": true,
+   "defesa": true,
+   "pericias": true,
+   "habilidades": true,
+   "rituais": true,
+   "inventario": true,
+   "anotacoes": true,
+   "aliados": true
+  },
+  "aliados": [],
+  "aparencia": {
+   "v": 1,
+   "modo": "conta"
+  }
+ },
+ "foto": ""
+}

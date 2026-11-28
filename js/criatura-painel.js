@@ -16,6 +16,11 @@
      aoIniciativa(total)  combate: o resultado vira iniciativa SÓ quando
                        o mestre clica em "Usar na ordem"
      resultadosLocais  repete o cartão da rolagem dentro do painel
+     limiteDeDados     (Ordem) a regra da comunidade Limite de Dados
+                       (AS11 p. 103–104) vale nos testes desta criatura:
+                       no máximo 5d20 (ou −5d20), salvo a Fonte do Medo
+                       enquanto o Enigma de Medo não for resolvido. O
+                       atributo da ficha não muda
    })
 
    ---------------------------------------------------------------------
@@ -44,6 +49,23 @@
   var NOMES_ELEMENTO = { sangue: "Sangue", morte: "Morte", conhecimento: "Conhecimento", energia: "Energia", medo: "Medo" };
   var NOMES_NATUREZA = { paranormal: "Paranormal", humana: "Pessoa", animal: "Animal" };
   var NOMES_DEFESA = { percepcao: "Percepção", iniciativa: "Iniciativa", fortitude: "Fortitude", reflexos: "Reflexos", vontade: "Vontade" };
+
+  /* Limite de Dados (Arquivos Secretos 11, p. 103–104 — conteúdo da
+     comunidade, de Luna Moth, não oficial e não canônico): um teste rola
+     no máximo cinco d20, com o maior; com dados negativos, no máximo
+     cinco, com o menor. Ameaça com Enigma de Medo ainda não resolvido tem
+     a Fonte do Medo: rola o atributo inteiro. Só a expressão do TESTE
+     muda; o resto da ficha da ameaça fica como está. */
+  function limitarExpressao(expr, ligado, fonteDoMedo) {
+    var s = String(expr || "");
+    var m = /^(\s*)(-?)(\d+)d20/i.exec(s);
+    if (!ligado || !m) return { expressao: s, nota: "" };
+    var n = Number(m[3]);
+    if (n <= 5) return { expressao: s, nota: "" };
+    if (m[2] === "-") return { expressao: m[1] + "-5d20" + s.slice(m[0].length), nota: "Limite de Dados: no máximo cinco dados — −" + n + "d20 vira −5d20 (o menor)." };
+    if (fonteDoMedo) return { expressao: s, nota: "Fonte do Medo (Limite de Dados, AS11 p. 103): com o Enigma de Medo ainda não resolvido, a ameaça rola os " + n + "d20 do atributo." };
+    return { expressao: m[1] + "5d20" + s.slice(m[0].length), nota: "Limite de Dados (AS11 p. 103–104, regra da comunidade): " + n + "d20 → 5d20. O atributo continua valendo nas outras estatísticas." };
+  }
 
   function criar(criatura, opcoes) {
     if (C().ehOrdem(criatura)) return criarOrdem(criatura, opcoes || {});
@@ -247,6 +269,19 @@
     var abertos = {};
     var pendente = false;
 
+    /* Limite de Dados: a Fonte do Medo segue o estado EFETIVO do Enigma
+       desta ocorrência (resolver passa ao limite normal). */
+    function limitar(expr) {
+      var medo = !!(atual.enigma && !(atual.instancia && atual.instancia.enigma));
+      return limitarExpressao(expr, !!o.limiteDeDados, medo);
+    }
+    function comNota(extra, nota) {
+      if (!nota) return extra;
+      var x = Object.assign({}, extra || {});
+      x.notas = (x.notas || []).concat([nota]);
+      return x;
+    }
+
     /* ---------- rolagens ---------- */
 
     function rolar(rotulo, resultado, extra) {
@@ -277,7 +312,8 @@
     }
 
     function rolarTeste(rotulo, expressao, extra) {
-      return rolar(rotulo, D().teste(expressao, { nome: rotulo }), extra);
+      var l = limitar(expressao);
+      return rolar(rotulo, D().teste(l.expressao, { nome: rotulo }), comNota(extra, l.nota));
     }
 
     function rolarRolagem(r, contexto) {
@@ -300,11 +336,12 @@
       var n = ataque.quantidade || 1;
       for (var i = 1; i <= n; i++) {
         var rotulo = contexto + " · " + ataque.nome + (n > 1 ? " (" + i + "/" + n + ")" : "");
-        var r = D().teste(ataque.teste, { nome: rotulo });
+        var lim = limitar(ataque.teste);
+        var r = D().teste(lim.expressao, { nome: rotulo });
         var critico = r.ok && D().ehCritico(r.natural, ataque.critico.margem);
         rolar(rotulo, r, {
           critico: critico,
-          notas: ataque.nota ? [ataque.nota] : [],
+          notas: (ataque.nota ? [ataque.nota] : []).concat(lim.nota ? [lim.nota] : []),
           acoes: D().danoValido(ataque.dano) ? [{
             rotulo: critico ? "Rolar dano crítico" : "Rolar dano",
             dica: critico ? "O natural atingiu a margem de crítico (" + ataque.critico.margem + ")" : "",
@@ -327,8 +364,9 @@
         type: "button", texto: c.texto, "aria-label": "Rolar " + rotulo + ", " + c.texto,
         onclick: function () {
           var nomeDoTeste = contexto ? contexto + " · " + rotulo : rotulo;
-          var r = D().teste(expressao, { nome: nomeDoTeste });
-          rolar(nomeDoTeste, r, extra && r.ok ? extra(r) : null);
+          var lim = limitar(expressao);
+          var r = D().teste(lim.expressao, { nome: nomeDoTeste });
+          rolar(nomeDoTeste, r, comNota(extra && r.ok ? extra(r) : null, lim.nota));
         },
       });
     }
@@ -1054,5 +1092,5 @@
     UI.modal({ titulo: nome, largo: true, conteudo: [el("div.criatura-corpo__caixa", {}, [img, falha])], botoes: [{ rotulo: "Fechar" }] });
   }
 
-  global.RAMACriaturaPainel = { criar: criar, verCorpoInteiro: verCorpoInteiro };
+  global.RAMACriaturaPainel = { criar: criar, verCorpoInteiro: verCorpoInteiro, limitarExpressao: limitarExpressao };
 })(window);

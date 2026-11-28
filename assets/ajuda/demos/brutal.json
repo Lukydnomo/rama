@@ -1,0 +1,173 @@
+{
+ "gerado": "testes/gerar-demos-ajuda.js",
+ "ficha": {
+  "schemaVersion": 38,
+  "tipoFicha": "brutal",
+  "nome": "Iva Martins",
+  "campanhaId": null,
+  "classe": "",
+  "origem": "",
+  "criadoEm": "2026-11-28T04:02:19.509Z",
+  "atualizadoEm": "2026-11-28T04:02:19.509Z",
+  "atributos": [
+   {
+    "id": "542fea8f-4d06-49be-97d3-7bcf06fcaf60",
+    "natureza": "rolavel",
+    "nome": "Força",
+    "sigla": "FOR",
+    "valor": 0,
+    "dado": "1d20",
+    "formula": "",
+    "contagem": "maior"
+   },
+   {
+    "id": "16682d42-b098-4935-af6b-e1e2e3cea1df",
+    "natureza": "rolavel",
+    "nome": "Agilidade",
+    "sigla": "AGI",
+    "valor": 0,
+    "dado": "1d20",
+    "formula": "",
+    "contagem": "maior"
+   },
+   {
+    "id": "9caa7084-a21d-4e65-8743-d264d668978d",
+    "natureza": "rolavel",
+    "nome": "Presença",
+    "sigla": "PRE",
+    "valor": 0,
+    "dado": "1d20",
+    "formula": "",
+    "contagem": "maior"
+   },
+   {
+    "id": "b364a6fe-3eba-48db-8593-0123140b0565",
+    "natureza": "rolavel",
+    "nome": "Intelecto",
+    "sigla": "INT",
+    "valor": 0,
+    "dado": "1d20",
+    "formula": "",
+    "contagem": "maior"
+   },
+   {
+    "id": "dcb264eb-0abc-450d-aa22-ea0063a08268",
+    "natureza": "rolavel",
+    "nome": "Vigor",
+    "sigla": "VIG",
+    "valor": 0,
+    "dado": "1d20",
+    "formula": "",
+    "contagem": "maior"
+   }
+  ],
+  "status": [
+   {
+    "id": "ad44c0a5-cef6-4190-8a4e-3cb9958640d2",
+    "nome": "PV",
+    "atual": 0,
+    "maximo": 0
+   },
+   {
+    "id": "ede9a29a-ccf3-4c84-8d01-9aed43053e2a",
+    "nome": "PE",
+    "atual": 0,
+    "maximo": 0
+   },
+   {
+    "id": "5264d078-e931-4bba-9d66-cd0add4882d2",
+    "nome": "Sanidade",
+    "atual": 0,
+    "maximo": 0
+   }
+  ],
+  "defesa": {
+   "dt": 0,
+   "esquiva": 0,
+   "bloqueio": 0,
+   "resistencia": 0,
+   "campos": [],
+   "ocultos": []
+  },
+  "pericias": [],
+  "organizacao": {
+   "pericias": {
+    "modo": "az"
+   }
+  },
+  "inventario": {
+   "limite": 0,
+   "itens": []
+  },
+  "anotacoes": {
+   "pastas": [],
+   "soltas": []
+  },
+  "retratos": null,
+  "brutal": {
+   "versao": 1,
+   "arquetipo": "cetica",
+   "pronomes": "ela/dela",
+   "interprete": "",
+   "apegos": {
+    "item": {
+     "nome": "Bloco de notas",
+     "texto": ""
+    },
+    "relacao": {
+     "nome": "O irmão mais novo",
+     "texto": ""
+    },
+    "desejo": {
+     "texto": "Provar que o fantasma do acampamento é um homem de verdade.",
+     "revelado": false,
+     "reveladoEm": ""
+    }
+   },
+   "detalhes": {
+    "aparencia": "",
+    "historia": "",
+    "notas": ""
+   },
+   "treino": null,
+   "operacoes": []
+  },
+  "camposCustomizados": [],
+  "habilidades": {
+   "filhos": []
+  },
+  "rituais": {
+   "rotuloSecao": "Rituais",
+   "rotulos": {
+    "circulo": "Círculo",
+    "elemento": "Elemento",
+    "execucao": "Execução",
+    "alcance": "Alcance",
+    "alvo": "Alvo",
+    "area": "Área",
+    "efeito": "Efeito",
+    "duracao": "Duração",
+    "resistencia": "Resistência",
+    "descricao": "Descrição"
+   },
+   "itens": []
+  },
+  "modulos": {
+   "atributos": true,
+   "status": true,
+   "defesa": true,
+   "pericias": true,
+   "habilidades": true,
+   "rituais": true,
+   "inventario": true,
+   "anotacoes": true,
+   "aliados": true
+  },
+  "aliados": [],
+  "aparencia": {
+   "v": 1,
+   "modo": "conta"
+  }
+ },
+ "foto": "assets/brutal/arquetipos/cetica.webp"
+}

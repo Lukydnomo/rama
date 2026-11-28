@@ -211,6 +211,31 @@ E abra `http://localhost:8099/rama/`.
 
 `file://` também abre, mas o `localStorage` fica instável — prefira HTTP.
 
+### Abrir testes (Windows, um clique)
+
+Duplo clique em **`Abrir testes.cmd`**, na raiz. Ele sobe o servidor de testes
+(o backend de verdade dentro do simulador do Apps Script, `testes/servidor-local.js`)
+e abre o navegador em `http://localhost:8124/__testes`, onde se escolhe a conta
+fictícia: **dona**, **editora**, **leitora** ou **mestre** (senha de todas no
+formulário comum: `senha-de-teste`). Precisa do [Deno](https://deno.com)
+(`winget install DenoLand.Deno`); sem ele, a janela diz como instalar.
+
+- **Os dados continuam**: fichas, campanhas, aliados, inventários e
+  compartilhamentos ficam em `testes/dados-locais/` (fora do Git) e voltam
+  iguais ao abrir de novo. Cada gravação é atômica e guarda o estado anterior;
+  arquivo ilegível nunca é apagado — o servidor explica e pergunta como seguir.
+- **Encerrar**: feche a janela do servidor (ou Ctrl+C nela).
+- **Já está aberto?** Abrir de novo só abre o navegador. Porta 8124 ocupada
+  por outro programa: a janela diz qual e como continuar.
+- **Restaurar**: `Restaurar dados de teste.cmd` (pede para digitar SIM) ou o
+  botão em `/__testes` (pede confirmação) voltam ao conjunto fictício inicial;
+  o estado de antes fica em `testes/dados-locais/estado.antes-de-restaurar.json`.
+- **Mudou o site?** Atualize a página. **Mudou um `.gs`?** Feche e abra o
+  servidor — os dados continuam.
+
+Sem `--dados`, o mesmo servidor é o de medição, com tudo só na memória (ver
+Testes). O acesso ao backend real continua pelo HTTP acima.
+
 ### Testes
 
 Há conjuntos de testes no terminal e páginas específicas no navegador.
@@ -766,7 +791,13 @@ deno run --allow-read testes/medir-salvamento.js
 ```
 
 `testes/servidor-local.js` serve o site com o backend simulado e contas sintéticas,
-para medir a interface no navegador (`testes/medir-interface.js`).
+para medir a interface no navegador (`testes/medir-interface.js`). Sem `--dados`
+os dados vivem só na memória; com `--dados`, é o ambiente de testes do dia a dia
+(“Abrir testes”, acima), conferido por:
+
+```bash
+deno run --allow-run --allow-read --allow-write --allow-net --allow-env testes/executar-servidor-testes.js
+```
 
 Ver [docs/PERFORMANCE.md](docs/PERFORMANCE.md) para o que esses números podem e
 não podem dizer.
@@ -940,6 +971,22 @@ próprio `<script src>`, então funciona debaixo de subpasta sem ajuste.
 segredo nenhum — ele os lê das Script Properties. Publicá-lo não expõe nada.
 
 ### Atualizar o backend
+
+**v9.26.0 — TRANSCRITO:** exportação da ficha em PDF e PNG no modelo de cada
+sistema; Arquivos Secretos 11 (viagens nas estradas, Carcaças Vermelhas,
+regalias, aliados e Limite de Dados); aba Ajuda e tutorial inicial; forma de
+progressão de Ordem na primeira etapa da criação. **Backend muda:** atualize
+`Ordem.gs`, `Dados.gs`, `Sistemas.gs`, `Campanhas.gs` e `Codigo.gs`, **rode
+`setupRama()`** (cria a aba `CAMPANHA_VIAGENS`) e crie uma nova versão da
+implantação. Sem `setupRama`, a ferramenta de viagens responde
+`instalacao_incompleta`; enquanto o Apps Script não for atualizado, o site não
+exige o tutorial. Site: `js/exportar/` (novo), `js/ajuda/` (novo), `ajuda/`
+(novo), `js/ordem/viagens.js` e as telas novas do AS11, `js/ficha.js` (schema
+38) e as demais listadas em `docs/ENTREGA.md`.
+
+**Exportação** — `deno run --allow-read testes/executar-exportar.js`;
+**AS11** — `deno run --allow-read testes/executar-as11.js`;
+**Ajuda** — `deno run --allow-read testes/executar-ajuda.js`.
 
 **v9.25.2 — SOBREPOSTO:** o resultado do dado aparece por cima de janela aberta
 (a ficha do aliado), em vez de atrás dela. **Só o site muda.** Site:
@@ -2310,12 +2357,15 @@ Três números diferentes, que não se misturam:
 
 | | Onde | O que é |
 |---|---|---|
-| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v9.25.2 |
+| versão do aplicativo | `js/versao.js` | o que a pessoa vê: v9.26.0 |
 | `schemaVersion` | `js/ficha.js` | o formato da FICHA |
 | `versaoFormato` | `js/config.js` | o formato dos arquivos de importação |
 
-A cada entrega: um registro novo no topo, com codinome inédito e a data real, e
-os números de baixo zeram ao subir. Em resumo (desde a v2.49.2): **MAJOR** é um
+A cada versão fechada: um registro novo no topo, com codinome inédito e a data
+real, e os números de baixo zeram ao subir. Os pedidos se acumulam numa entrega
+em desenvolvimento ([docs/ENTREGA.md](docs/ENTREGA.md)) sem commit nem registro
+até a ordem de fechar a versão, que gera um registro só para o conjunto — o
+passo a passo está no [CLAUDE.md](CLAUDE.md). Em resumo (desde a v2.49.2): **MAJOR** é um
 marco do R.A.M.A. — uma transformação da plataforma ou da experiência, quebrando
 compatibilidade ou não; **MINOR** é funcionalidade, módulo ou expansão, mesmo
 grande; **PATCH** é manutenção e refino. Uma minor importante pode levar o

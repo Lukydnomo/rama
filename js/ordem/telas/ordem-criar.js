@@ -103,8 +103,9 @@
          que a ficha grava. */
       escolhas: [],
       afinidade: { elemento: "", nomeOutro: "", adiada: false },
-      /* Regras opcionais ligadas na revisão e, com NEX & Experiência, o
-         nível de experiência — que passa a mandar na progressão. */
+      /* Regras opcionais (a forma de progressão é escolhida na etapa
+         Conceito) e, com NEX & Experiência, o nível de experiência — que
+         passa a mandar na progressão. */
       opcionais: {},
       nivel: 1,
       nivelDefinido: false,
@@ -267,7 +268,15 @@
         if (!separaNivel()) d.nex = 0;
       }
       if (chave === "agente" && antes !== "agente" && !separaNivel() && !d.nex) d.nex = 5;
+      /* Mundano e Sobrevivente não têm patente: a forma volta a Somente
+         NEX, com aviso (as escolhas ficam guardadas). */
+      var avisoForma = "";
+      if (chave !== "agente" && OP && OP.ligada(d, "evolucaoPatentes")) {
+        var r = aplicarRegra(OP.regra("evolucaoPatentes"), false);
+        if (r.ok) { d.nex = separaNivel() ? d.nex : 0; avisoForma = "Forma de progressão: " + (chave === "mundano" ? "o Mundano" : "o Sobrevivente") + " não tem patente — voltou a Somente NEX."; }
+      }
       pintarFocando("criacao-perfil-" + chave);
+      if (avisoForma) UI.aviso(avisoForma);
     }
 
     /* O que ficou inválido — depois de trocar de perfil, por exemplo. A
@@ -289,8 +298,8 @@
     function seletorDePerfil() {
       var ajustes = ajustesPendentes().filter(function (x) { return !/^Classe:/.test(x) || d.perfil === "agente"; });
       return el("div.pilha--curta", { class: "pilha" }, [
-        el("h4.t-secao", { texto: "Perfil de progressão" }),
-        el("div.criacao-lista.criacao-perfis", { role: "group", "aria-label": "Perfil de progressão" }, PERFIS.map(function (pf) {
+        el("h4.t-secao", { texto: "Perfil do personagem" }),
+        el("div.criacao-lista.criacao-perfis", { role: "group", "aria-label": "Perfil do personagem" }, PERFIS.map(function (pf) {
           var marcado = d.perfil === pf.chave;
           var cl = C.classe(pf.chave);
           var fora = !!cl && !marcado && !liberada(cl);
@@ -311,6 +320,105 @@
               el("ul.bib-lista-textos", {}, ajustes.map(function (a) { return el("li.t-mini", { texto: a }); })),
             ])
           : null,
+      ]);
+    }
+
+    /* =================================================================
+       FORMA DE PROGRESSÃO (na etapa Conceito)
+       -----------------------------------------------------------------
+       As duas regras opcionais que trocam o trilho de progressão (NEX &
+       Experiência, SAH p. 98; Evolução por Patentes, SAH p. 108) são
+       incompatíveis entre si: com o padrão do livro, viram uma escolha de
+       três. A escolha liga e desliga as MESMAS chaves de `opcionais`, com
+       as mesmas conversões da aba Regras (aplicarRegra). É outra coisa que
+       o perfil Agente/Mundano/Sobrevivente, logo abaixo.
+       ================================================================= */
+
+    var FORMAS = [
+      { chave: "nex", nome: "Somente NEX", regra: "", texto: "O padrão do livro: o NEX mede a exposição e manda na progressão.", fonte: "Ordem Paranormal RPG, p. 22" },
+      { chave: "nivel", nome: "Nível + NEX", regra: "nexExperiencia", texto: "O nível de experiência manda na progressão; o NEX mede só a exposição ao paranormal.", fonte: "Sobrevivendo ao Horror, p. 98 (NEX & Experiência)" },
+      { chave: "patentes", nome: "Evolução por Patentes", regra: "evolucaoPatentes", texto: "A patente é a progressão: o agente começa como recruta; o NEX mede só a exposição.", fonte: "Sobrevivendo ao Horror, p. 108" },
+    ];
+
+    function formaAtual() {
+      if (OP && OP.ligada(d, "evolucaoPatentes")) return "patentes";
+      if (separaNivel()) return "nivel";
+      return "nex";
+    }
+    function nomeDaForma(chave) { return (FORMAS.filter(function (f) { return f.chave === chave; })[0] || FORMAS[0]).nome; }
+
+    /* Por que a forma não está disponível agora (suplemento desligado,
+       perfil sem patente) — ou "". A incompatibilidade entre as duas
+       regras não conta: trocar desliga a outra. */
+    function formaIndisponivel(f) {
+      if (!f.regra || !OP) return "";
+      if (f.regra === "evolucaoPatentes" && comum()) return "Mundano e Sobrevivente não têm patente (Ordem Paranormal RPG, p. 171): escolha o perfil Agente para usar esta forma.";
+      var ordem = rascunhoParaRegras();
+      ordem.opcionais = {};
+      var problemas = OP.conflitos(ordem, f.regra, true).filter(function (p) { return p.tipo !== "incompativel"; });
+      return problemas.map(function (p) { return p.texto; }).join(" ");
+    }
+
+    /* O que está nos campos de NEX e nível vai para o rascunho antes de
+       trocar a forma (a troca converte a partir deles). */
+    function guardarParametrosDoConceito() {
+      if (campoExposicao) d.nex = R.nexValido(campoExposicao.entrada.value);
+      if (campoNex && campoExposicao) d.nivel = Math.max(1, Math.min(20, parseInt(campoNex.entrada.value, 10) || 1));
+      else if (campoNex) {
+        var lido = parseInt(campoNex.entrada.value, 10);
+        if (Number.isFinite(lido) && lido >= C.REGRAS.nexMinimo) d.nex = lido;
+      }
+    }
+
+    function escolherForma(chave) {
+      var atual = formaAtual();
+      if (atual === chave) return;
+      var alvo = FORMAS.filter(function (f) { return f.chave === chave; })[0];
+      if (!alvo || formaIndisponivel(alvo)) return;
+      guardarCamposDoConceito();
+      guardarParametrosDoConceito();
+      var avisos = [];
+      var regraAtual = FORMAS.filter(function (f) { return f.chave === atual; })[0].regra;
+      if (regraAtual) {
+        var r1 = aplicarRegra(OP.regra(regraAtual), false);
+        if (!r1.ok) { UI.avisoErro(r1.erro); return; }
+        if (!alvo.regra && r1.aviso) avisos.push(r1.aviso);
+      }
+      if (alvo.regra) {
+        var r2 = aplicarRegra(OP.regra(alvo.regra), true);
+        if (!r2.ok) { UI.avisoErro(r2.erro); pintarFocando("criacao-forma-" + chave); return; }
+        if (r2.aviso) avisos.push(r2.aviso);
+      }
+      pintarFocando("criacao-forma-" + chave);
+      if (avisos.length) UI.aviso(avisos.join(" "), { duracao: 9000 });
+    }
+
+    /* Só as formas que dá para escolher agora (e a que está marcada):
+       a indisponível some em vez de aparecer bloqueada. */
+    function formasVisiveis() {
+      var atual = formaAtual();
+      return FORMAS.filter(function (f) { return f.chave === atual || !formaIndisponivel(f); });
+    }
+
+    function seletorDeForma() {
+      var atual = formaAtual();
+      var visiveis = formasVisiveis();
+      if (visiveis.length < 2) return null;
+      return el("div.pilha--curta", { class: "pilha" }, [
+        el("h4.t-secao", { id: "criacao-forma-titulo", texto: "Forma de progressão" }),
+        el("p.t-mini", { texto: "Decida primeiro: ela define os campos de NEX e nível abaixo e as escolhas das próximas etapas. Combine com a mesa — dá para trocar depois na aba Regras da ficha." }),
+        el("div.criacao-lista.criacao-perfis", { role: "group", "aria-labelledby": "criacao-forma-titulo" }, visiveis.map(function (f) {
+          var marcado = atual === f.chave;
+          return el("button.criacao-opcao", {
+            type: "button", id: "criacao-forma-" + f.chave,
+            "aria-pressed": String(marcado), class: marcado ? "criacao-opcao--escolhida" : "",
+            onclick: function () { escolherForma(f.chave); },
+          }, [
+            el("span.criacao-opcao__nome", { texto: f.nome }),
+            el("span.criacao-opcao__texto", { texto: f.texto }),
+            el("span.criacao-opcao__fonte", { texto: f.fonte }),
+          ]);
+        })),
       ]);
     }
 
@@ -345,13 +453,13 @@
         campoExposicao = separaNivel() ? UI.campo({
           rotulo: "NEX por exposição", tipo: "selecao", valor: String(d.nex),
           opcoes: opcoesDeParametro({ chave: "nex", minimo: 0, maximo: C.REGRAS.nexMaximo }),
-          ajuda: "Nível 0: a regra “NEX & Experiência” separa a exposição, que pode crescer mesmo antes da Ordem.",
+          ajuda: "Nível 0: com “Nível + NEX”, a exposição fica separada e pode crescer mesmo antes da Ordem.",
         }) : null;
       } else if (separaNivel()) {
         campoNex = UI.campo({
           rotulo: "Nível de experiência inicial", tipo: "selecao", valor: String(d.nivel),
           opcoes: opcoesDeParametro({ chave: "nivel", minimo: 1, maximo: 20 }),
-          ajuda: "A regra “NEX & Experiência” está ligada (etapa Revisão): o nível manda na progressão.",
+          ajuda: "Forma de progressão “Nível + NEX”: o nível manda na progressão.",
         });
         campoExposicao = UI.campo({
           rotulo: "NEX por exposição", tipo: "selecao", valor: String(d.nex),
@@ -363,7 +471,7 @@
         campoExposicao = UI.campo({
           rotulo: "NEX por exposição", tipo: "selecao", valor: String(d.nex),
           opcoes: opcoesDeParametro({ chave: "nex", minimo: 0, maximo: C.REGRAS.nexMaximo }),
-          ajuda: "Evolução por Patentes está ligada: o agente começa como recruta, e o NEX mede só o contato com o Outro Lado.",
+          ajuda: "Forma de progressão “Evolução por Patentes”: o agente começa como recruta, e o NEX mede só o contato com o Outro Lado.",
         });
       } else {
         campoNex = UI.campo({
@@ -371,7 +479,7 @@
           opcoes: nivelDeExposicaoOpcoes(),
           ajuda: "Um agente novato começa em NEX 5%. Se a sua mesa começa adiantada, escolha aqui — " +
                  "a revisão reúne tudo o que esse NEX acumula. Se a mesa separa nível e NEX, " +
-                 "ligue “NEX & Experiência” na revisão.",
+                 "escolha “Nível + NEX” na forma de progressão, acima.",
         });
         campoExposicao = null;
       }
@@ -380,6 +488,7 @@
         el("p", { texto: "Comece pelo que dá vontade de jogar. O resto se encaixa depois." }),
         campoNome,
         campoConceito,
+        seletorDeForma(),
         seletorDePerfil(),
         comum() && !separaNivel() ? el("p.t-mini", { texto: (d.perfil === "mundano" ? "O Mundano" : "O Sobrevivente") + " começa em NEX 0% — e o NEX não sobe até o treinamento que o torna agente." }) : null,
         el("div.editar-grade", {}, [campoCampanha, campoEstagio, campoNex, campoExposicao]),
@@ -544,8 +653,15 @@
       var Hb = global.RAMAOrdemHomebrew;
       if (Hb && !bibliotecaHb) Hb.carregarBiblioteca().then(function (b) { bibliotecaHb = b; if (b.origens && b.origens.length && ETAPAS[etapa] && ETAPAS[etapa].chave === "origem") pintar(); });
       var origens = (C.origensDisponiveis ? C.origensDisponiveis() : C.ORIGENS).filter(function (org) { return liberada(org, d.origem); });
+      /* A origem aparece na aba de cada livro que a traz e está liberado
+         (republicada no AS11: na do original e na do AS11). */
+      var noLivro = function (org, sigla) {
+        var fs = C.fontesDe ? C.fontesDe(org) : [org.fonte || "OPRPG"];
+        var livres = fs.filter(function (f) { return !C.fonteLiberada || C.fonteLiberada(f); });
+        return (livres.length ? livres : [fs[0]]).indexOf(sigla) >= 0;
+      };
       var livros = [{ sigla: TODAS, curto: "Todas" }].concat(C.LIVROS.concat([{ sigla: "HOMEBREW", curto: "Homebrew" }]).filter(function (l) {
-        return origens.some(function (org) { return (org.fonte || "OPRPG") === l.sigla; });
+        return origens.some(function (org) { return noLivro(org, l.sigla); });
       }));
       /* Um livro que saiu (suplemento desligado): volta para Todas. */
       if (!livros.some(function (l) { return l.sigla === abaOrigem; })) abaOrigem = TODAS;
@@ -564,7 +680,7 @@
       function pintarLista() {
         var todas = achadas();
         U.trocar(abas, livros.map(function (l, i) {
-          var n = l.sigla === TODAS ? todas.length : todas.filter(function (org) { return (org.fonte || "OPRPG") === l.sigla; }).length;
+          var n = l.sigla === TODAS ? todas.length : todas.filter(function (org) { return noLivro(org, l.sigla); }).length;
           return el("button.r-aba", {
             type: "button", "aria-pressed": String(l.sigla === abaOrigem), texto: l.curto + " (" + n + ")",
             onclick: function () { abaOrigem = l.sigla; pintarLista(); },
@@ -579,8 +695,8 @@
           });
         }));
         var emTodas = abaOrigem === TODAS;
-        var doLivro = emTodas ? todas.slice().sort(porNome) : todas.filter(function (org) { return (org.fonte || "OPRPG") === abaOrigem; });
-        var outras = livros.filter(function (l) { return l.sigla !== TODAS && l.sigla !== abaOrigem && todas.some(function (org) { return (org.fonte || "OPRPG") === l.sigla; }); });
+        var doLivro = emTodas ? todas.slice().sort(porNome) : todas.filter(function (org) { return noLivro(org, abaOrigem); });
+        var outras = livros.filter(function (l) { return l.sigla !== TODAS && l.sigla !== abaOrigem && todas.some(function (org) { return noLivro(org, l.sigla); }); });
         U.trocar(lista, doLivro.map(cartaoDeOrigem));
         var termo = U.aparar(buscaOrigem.entrada.value);
         var avisos = [];
@@ -1061,7 +1177,7 @@
           feitas.length ? el("dd", { texto: feitas.join(" · ") }) : null,
         ]),
 
-        regrasDeProgressao(rascunho),
+        resumoDaForma(),
         resumoDosRituais(),
 
         pend.length
@@ -1079,87 +1195,14 @@
       ]);
     }
 
-    /* As regras opcionais que trocam o trilho de progressão, com a mesma
-       chave da aba Regras da ficha. Ficam acima das pendências porque
-       mudam quais pendências existem. */
-    function regrasDeProgressao(rascunho) {
-      var regras = OP ? OP.deProgressao() : [];
-      if (!regras.length) return null;
-
-      return el("div.pilha--curta", { class: "pilha" }, [
-        el("h4.t-secao", { texto: "Regras que mudam a progressão" }),
-        el("p.t-mini", {
-          texto: "Decida antes de resolver o que falta: estas regras mudam o que conta como " +
-                 "progressão — e, com isso, as pendências abaixo. Todas começam desligadas, " +
-                 "e as outras regras opcionais ficam na aba Regras da ficha.",
-        }),
-        el("div.pilha--curta", { class: "pilha" }, regras.map(function (r) {
-          return cartaoDeRegra(rascunho, r);
-        })),
-      ]);
-    }
-
-    function cartaoDeRegra(rascunho, r) {
-      var ligada = OP.ligada(rascunho, r.chave);
-      var problemas = OP.conflitos(rascunho, r.chave, true);
-      var bloqueada = !ligada && problemas.length > 0;
-
-      var chave = el("button.r-interruptor", {
-        type: "button",
-        role: "switch",
-        id: "criacao-regra-" + r.chave,
-        "aria-checked": String(ligada),
-        "aria-label": r.nome,
-        disabled: bloqueada,
-        class: ligada ? "r-interruptor--ligado" : "",
-        onclick: function () { alternarRegra(r, !ligada); },
-      }, [el("span.r-interruptor__bola", { "aria-hidden": "true" })]);
-
-      var corpo = [
-        el("p.t-mini", { texto: r.resumo }),
-        el("p.t-mini", { texto: r.efeito }),
-        ES.etiquetaAutomacao(r.automacao),
-        referencia(C.nomeDoLivro(r.fonte) + (r.pagina ? ", p. " + r.pagina : "")),
-      ];
-
-      /* Evolução por Patentes ainda não tem a tabela estruturada: ligar
-         não muda conta nem pendência, e o cartão precisa dizer isso para
-         ninguém esperar que a lista abaixo mude. */
-      if (r.automacao !== "calculo") {
-        corpo.push(el("p.t-mini", {
-          texto: "O R.A.M.A. ainda não recalcula a progressão com esta regra: ligada, as pendências " +
-                 "abaixo não mudam. Ela fica registrada na ficha, para a mesa.",
-        }));
-      }
-
-      if (bloqueada) {
-        corpo.push(el("p.t-mini.t-erro", { texto: problemas.map(function (p) { return p.texto; }).join(" ") }));
-      }
-
-      if (ligada && r.parametros.length) {
-        corpo.push(el("div.editar-grade", {}, r.parametros.map(function (par) {
-          var id = "criacao-parametro-" + par.chave;
-          return UI.campo({
-            id: id,
-            rotulo: par.rotulo,
-            tipo: "selecao",
-            valor: String(d[par.chave]),
-            opcoes: opcoesDeParametro(par),
-            ajuda: par.ajuda,
-            aoMudar: function (v) {
-              d[par.chave] = Math.max(par.minimo, Math.min(par.maximo, parseInt(v, 10) || par.minimo));
-              pintarFocando(id);
-            },
-          });
-        })));
-      }
-
-      return el("div.ordem-regra", { class: ligada ? "ordem-regra--ligada" : "" }, [
-        el("div.ordem-regra__topo", {}, [
-          el("span.ordem-regra__nome", { texto: r.nome }),
-          chave,
-        ]),
-        el("div.pilha--curta", { class: "pilha" }, corpo),
+    /* A forma de progressão escolhida na etapa Conceito, como resumo, com
+       a volta para trocá-la (a troca muda as pendências abaixo). */
+    function resumoDaForma() {
+      var f = formaAtual();
+      return el("div.faixa.criacao-forma-resumo", {}, [
+        el("span.t-mini", {}, [el("strong", { texto: "Forma de progressão: " + nomeDaForma(f) + "." }),
+          el("span", { texto: " Trocar muda o que conta como progressão — e as pendências abaixo." })]),
+        formasVisiveis().length < 2 ? null : el("button.r-botao.r-botao--mini", { type: "button", texto: "Alterar na etapa Conceito", onclick: function () { etapa = 0; pintarFocando("criacao-forma-" + f); } }),
       ]);
     }
 
@@ -1201,13 +1244,11 @@
       return lista;
     }
 
-    async function alternarRegra(r, ligar) {
-      /* Com decisões já tomadas, avisa antes — como a aba Regras. Num
-         rascunho sem nada decidido não há o que perder, e o cartão já
-         diz o que a regra faz. */
-      /* v9.18.4: sem janela de confirmação — nada do que já foi decidido é
-         apagado. Com decisões tomadas, um aviso passageiro diz o que mudou
-         (sem travar o interruptor). */
+    /* Liga ou desliga uma regra de progressão NO RASCUNHO, com as mesmas
+       conversões da aba Regras (OP.definir) e o personagem no mesmo degrau.
+       Não desenha: devolve { ok, aviso } ou { ok: false, erro }. Nada do
+       que já foi decidido é apagado. */
+    function aplicarRegra(r, ligar) {
       var decidiu = (d.escolhas || []).length > 0 || !!d.trilha ||
                     !!(d.afinidade && (d.afinidade.elemento || d.afinidade.adiada));
       var mudancaDecidida = decidiu ? textoDaMudanca(r, ligar) : null;
@@ -1220,31 +1261,25 @@
          converter, só a exposição passa a ser um campo próprio. */
       if (comum() && r.chave === "nexExperiencia") {
         var res = OP.definir(ordem, r.chave, ligar);
-        if (!res.ok) { UI.avisoErro((res.problemas || []).map(function (p) { return p.texto; }).join(" ")); return; }
+        if (!res.ok) return { ok: false, erro: (res.problemas || []).map(function (p) { return p.texto; }).join(" ") };
         d.opcionais = ordem.opcionais || {};
         d.nex = 0;
-        pintarFocando("criacao-regra-" + r.chave);
-        UI.aviso(ligar ? "Nível 0, NEX de exposição 0%. A exposição fica editável na primeira etapa." : "NEX 0%, como o livro manda sem a regra.");
-        return;
+        return { ok: true, aviso: ligar ? "Nível 0, NEX de exposição 0%: a exposição fica editável aqui." : "NEX 0%, como o livro manda sem a regra." };
       }
 
       var resultado = OP.definir(ordem, r.chave, ligar);
-      if (!resultado.ok) {
-        UI.avisoErro((resultado.problemas || []).map(function (p) { return p.texto; }).join(" ") ||
-          "Não foi possível mudar esta regra.");
-        return;
-      }
+      if (!resultado.ok) return { ok: false, erro: (resultado.problemas || []).map(function (p) { return p.texto; }).join(" ") || "Não foi possível mudar a forma de progressão." };
 
       var aviso = null;
       if (r.chave === "evolucaoPatentes" && !comum()) {
         if (!ligar && ordem.nex < C.REGRAS.nexMinimo) ordem.nex = C.REGRAS.nexMinimo;
         aviso = ligar
-          ? "Evolução por Patentes: o agente começa como recruta. O NEX " + ordem.nex + "% fica como exposição." + (d.classe === "ocultista" ? " Volte à etapa Classe para escolher Ocultismo ou Vontade." : "")
+          ? "Evolução por Patentes: o agente começa como recruta. O NEX " + ordem.nex + "% fica como exposição." + (d.classe === "ocultista" ? " Na etapa Classe, escolha Ocultismo ou Vontade." : "")
           : "O NEX voltou a mandar na progressão: NEX " + ordem.nex + "%.";
       }
       if (ligar && r.chave === "nexExperiencia") {
         aviso = "O nível começou em " + ordem.nivel + ", o equivalente ao NEX " + ordem.nex +
-                "% escolhido. O NEX por exposição continua " + ordem.nex + "% — ajuste os dois se a mesa combinou outros valores.";
+                "%. O NEX por exposição continua " + ordem.nex + "% — ajuste os dois se a mesa combinou outros valores.";
       }
       if (!ligar && r.chave === "nexExperiencia") {
         /* O personagem continua no mesmo degrau: o NEX volta a mandar,
@@ -1257,10 +1292,8 @@
       d.nivel = ordem.nivel;
       d.nivelDefinido = !!ordem.nivelDefinido;
       d.nex = ordem.nex;
-
-      pintarFocando("criacao-regra-" + r.chave);
-      if (!aviso && mudancaDecidida) aviso = mudancaDecidida.texto + " Nada do que você já decidiu foi apagado.";
-      if (aviso) UI.aviso(aviso);
+      if (mudancaDecidida) aviso = (aviso ? aviso + " " : "") + "Revise as escolhas já feitas na etapa Revisão: nada foi apagado, e as que não valem mais ficam guardadas.";
+      return { ok: true, aviso: aviso };
     }
 
     /* =================================================================

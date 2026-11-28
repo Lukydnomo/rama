@@ -1,0 +1,155 @@
+/* =====================================================================
+   R.A.M.A. — Ajuda e tutoriais (Legacy; o Modern20 refina em
+   css/modern20/ajuda.css)
+   ---------------------------------------------------------------------
+   O cartão do tutorial (js/tutorial.js), o destaque do controle da
+   etapa, o botão "Ajuda desta tela" da casca e a página Ajuda.
+   ===================================================================== */
+
+/* ---------------- "Ajuda desta tela" (casca) ---------------- */
+.app-ajuda { flex-shrink: 0; }
+
+/* ---------------- o cartão do tutorial ---------------- */
+.tut {
+  position: fixed;
+  right: var(--e4);
+  bottom: var(--e4);
+  /* Acima das janelas e do dado (55), abaixo dos avisos (60). */
+  z-index: calc(var(--z-modal) + 7);
+  width: min(400px, calc(100vw - 2 * var(--e4)));
+  max-height: min(78vh, 640px);
+  display: flex;
+  flex-direction: column;
+  gap: var(--e2);
+  padding: var(--e3) var(--e4);
+  background: var(--fundo-superficie);
+  color: var(--cor-texto);
+  border: var(--borda) solid var(--cor-traco-forte);
+  box-shadow: 4px 4px 0 var(--cor-sombra);
+  overflow: hidden;
+}
+.tut.tut--sob-janela { z-index: calc(var(--z-modal) - 1); }
+.tut__topo { display: flex; align-items: center; gap: var(--e2); flex-wrap: wrap; }
+.tut__nome { font-weight: 700; font-size: var(--texto-mini); text-transform: uppercase; letter-spacing: var(--espaco-letra-titulo); }
+.tut__etapa { font-size: var(--texto-mini); color: var(--cor-texto-2); }
+.tut__espaco { flex: 1; }
+.tut__trilha { display: flex; gap: 4px; margin: 0; padding: 0; list-style: none; }
+.tut__trilha li { flex: 1; height: 4px; background: var(--cor-traco-fraca); }
+.tut__trilha li.tut__ponto--feito { background: var(--cor-texto-2); }
+.tut__trilha li.tut__ponto--atual { background: var(--cor-foco, var(--cor-texto)); }
+.tut__titulo { margin: 0; font-size: var(--texto-medio); line-height: 1.25; }
+.tut__titulo:focus { outline: none; }
+.tut__titulo:focus-visible { outline: 2px solid var(--cor-foco); outline-offset: 2px; }
+.tut__corpo { overflow-y: auto; min-height: 0; display: flex; flex-direction: column; gap: var(--e2); padding-right: 2px; }
+.tut__texto p { margin: 0 0 var(--e2); line-height: var(--altura-linha); }
+.tut__texto p:last-child { margin-bottom: 0; }
+.tut__tarefa { margin: 0; padding: var(--e2); border-left: 3px solid var(--cor-aviso); background: var(--fundo-superficie-2); font-size: var(--texto-mini); }
+.tut__tarefa-rotulo { font-weight: 700; }
+.tut__tarefa--feita { border-left-color: var(--cor-ok); }
+.tut__botoes { display: flex; gap: var(--e2); align-items: center; flex-wrap: wrap; }
+.tut--recolhido .tut__trilha,
+.tut--recolhido .tut__corpo,
+.tut--recolhido .tut__botoes { display: none; }
+
+/* O dado aparece no canto oposto ao cartão, para os dois ficarem à vista. */
+body.com-tutorial .rolagens { right: auto; left: var(--e4); }
+body.tut-cartao-esquerda .tut { right: auto; left: var(--e4); }
+body.com-tutorial.tut-cartao-esquerda .rolagens { left: auto; right: var(--e4); }
+
+/* Conteúdo das etapas */
+.tut-lista { display: grid; gap: var(--e1); margin: 0; }
+.tut-lista > div { display: grid; grid-template-columns: 7.5em 1fr; gap: var(--e2); }
+.tut-lista dt { font-weight: 700; }
+.tut-lista dd { margin: 0; color: var(--cor-texto-2); }
+.tut-opcoes { display: flex; flex-wrap: wrap; gap: var(--e1); }
+.tut-rotulo { margin: var(--e1) 0 0; font-size: var(--texto-mini); font-weight: 700; text-transform: uppercase; letter-spacing: var(--espaco-letra-titulo); color: var(--cor-texto-2); }
+.tut-consequencia { margin: var(--e2) 0 0; padding: var(--e2); background: var(--fundo-superficie-2); border-left: 3px solid var(--cor-ok); }
+.tut-busca { display: flex; flex-direction: column; gap: var(--e1); }
+.tut-busca__resultados { margin: 0; padding-left: 1.1em; display: flex; flex-direction: column; gap: var(--e1); }
+.tut-fim { display: flex; flex-direction: column; gap: var(--e2); margin-top: var(--e2); }
+.tut-fim p { margin: 0; }
+.tut-fim__ok { font-weight: 700; color: var(--cor-ok); }
+.tut-fim__erro { color: var(--cor-erro); }
+.tut-atalhos { display: flex; flex-wrap: wrap; gap: var(--e2); }
+
+/* O controle da etapa: contorno que pisca uma vez e fica. */
+body.com-tutorial .tut-alvo {
+  outline: 3px solid var(--cor-aviso);
+  outline-offset: 3px;
+  scroll-margin: 90px 0 45vh;
+  animation: tut-alvo 1.2s var(--curva) 2;
+}
+@keyframes tut-alvo {
+  0%, 100% { outline-color: var(--cor-aviso); }
+  50% { outline-color: transparent; }
+}
+:root[data-efeitos="off"] body.com-tutorial .tut-alvo { animation: none; }
+@media (prefers-reduced-motion: reduce) { body.com-tutorial .tut-alvo { animation: none; } }
+/* A variação do Modern20 (anel em vez de contorno), usada por
+   css/modern20/ajuda.css. */
+@keyframes tut-alvo-m20 {
+  0%, 100% { box-shadow: 0 0 0 3px var(--m20-anel, var(--cor-aviso)), 0 0 0 6px var(--m20-aviso-suave, transparent); }
+  50% { box-shadow: 0 0 0 3px transparent, 0 0 0 6px transparent; }
+}
+
+/* Celular: uma folha no pé da tela, com o controle acima dela. */
+@media (max-width: 760px) {
+  .tut {
+    left: 0; right: 0; bottom: 0;
+    width: auto;
+    max-height: 52vh;
+    padding: var(--e2) var(--e3);
+    border-left: 0; border-right: 0; border-bottom: 0;
+    box-shadow: 0 -2px 0 var(--cor-sombra);
+  }
+  body.com-tutorial { padding-bottom: 52vh; }
+  body.com-tutorial .rolagens { left: var(--e2); right: var(--e2); bottom: calc(52vh + var(--e2)); }
+  .tut-lista > div { grid-template-columns: 6.5em 1fr; }
+}
+
+/* ---------------- a página Ajuda ---------------- */
+.ajuda-busca { display: flex; flex-direction: column; gap: var(--e2); }
+.ajuda-busca__campo { width: 100%; }
+.ajuda-resultados:empty { display: none; }
+.ajuda-indice { display: flex; flex-direction: column; gap: var(--e6); }
+.ajuda-secao { display: flex; flex-direction: column; gap: var(--e2); }
+.ajuda-lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--e1); }
+.ajuda-link {
+  display: flex; flex-direction: column; gap: 2px;
+  padding: var(--e2) var(--e3);
+  border: var(--borda) solid var(--cor-traco-fraca);
+  background: var(--fundo-superficie);
+  color: var(--cor-texto);
+  text-decoration: none;
+}
+.ajuda-link:hover, .ajuda-link:focus-visible { border-color: var(--cor-traco-forte); }
+.ajuda-link__titulo { font-weight: 700; }
+.ajuda-link__resumo { color: var(--cor-texto-2); font-size: var(--texto-mini); }
+.ajuda-lista--compacta .ajuda-link { padding: var(--e1) var(--e2); flex-direction: row; flex-wrap: wrap; align-items: center; gap: var(--e2); }
+.ajuda-etiquetas { display: flex; flex-wrap: wrap; gap: var(--e1); }
+.ajuda-areas { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: var(--e4); }
+.ajuda-area__titulo { margin: 0 0 var(--e2); font-size: var(--texto-base); }
+.ajuda-tutorial { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--e3); padding: var(--e3); border: var(--borda) solid var(--cor-traco-forte); background: var(--fundo-superficie-2); }
+.ajuda-tutorial p { margin: var(--e1) 0 0; }
+.ajuda-sistemas { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: var(--e3); }
+.ajuda-sistema { display: flex; gap: var(--e3); align-items: flex-start; }
+.ajuda-sistema__texto { display: flex; flex-direction: column; gap: var(--e1); min-width: 0; flex: 1; }
+.ajuda-sistema__texto p { margin: 0; }
+.ajuda-sistema__texto .ajuda-link { padding: 0; border: 0; background: none; }
+.ajuda-sistema__sem-capa { width: 48px; height: 72px; display: grid; place-items: center; border: var(--borda) solid var(--cor-traco-forte); font-weight: 700; flex-shrink: 0; }
+.ajuda-nada { display: flex; flex-direction: column; gap: var(--e2); padding: var(--e3); border: var(--borda) dashed var(--cor-traco-media); }
+.ajuda-nada p { margin: 0; }
+.ajuda-feedback p { margin: 0; }
+.ajuda-trilha { display: flex; align-items: center; gap: var(--e2); }
+.ajuda-artigo { display: flex; flex-direction: column; gap: var(--e4); max-width: 820px; }
+.ajuda-artigo__topo { display: flex; flex-direction: column; gap: var(--e2); }
+.ajuda-artigo__topo .t-titulo:focus { outline: none; }
+.ajuda-artigo__resumo { margin: 0; color: var(--cor-texto-2); font-size: var(--texto-medio); }
+.ajuda-bloco { display: flex; flex-direction: column; gap: var(--e2); padding-left: var(--e3); border-left: 2px solid var(--cor-traco-fraca); }
+.ajuda-bloco__titulo { margin: 0; font-size: var(--texto-base); }
+.ajuda-bloco p { margin: 0; line-height: var(--altura-linha); }
+.ajuda-bloco__lista, .ajuda-bloco__passos { margin: 0; padding-left: 1.3em; display: flex; flex-direction: column; gap: var(--e1); line-height: var(--altura-linha); }
+.ajuda-fonte { display: flex; gap: var(--e1); align-items: baseline; font-size: var(--texto-mini); color: var(--cor-texto-2); }
+.ajuda-fonte--rama { color: var(--cor-texto-3); }
+.ajuda-fonte--aviso { color: var(--cor-aviso); }
+.ajuda-fonte__icone { flex-shrink: 0; }

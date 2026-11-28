@@ -191,7 +191,7 @@
   }
 
   /* =================================================================
-     FRATERNIDADE GAUDÉRIA (Gaudério Abutre, Extra · marca-página, v9.15)
+     FRATERNIDADE GAUDÉRIA (Gaudério Abutre, Arquivos Secretos 11 p. 63; v9.15)
      -----------------------------------------------------------------
      A ficha não vê o mapa: adjacência, a troca de lugar e o ataque (ou
      efeito) redirecionado são confirmados por quem joga. O que a ficha

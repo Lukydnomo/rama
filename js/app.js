@@ -30,7 +30,17 @@
     { chave: "catalogo",     rotulo: "Catálogo",    caminho: "catalogo/" },
     { chave: "homebrew",     rotulo: "Homebrew",    caminho: "homebrew/" },
     { chave: "perfil",       rotulo: "Perfil",      caminho: "perfil/" },
+    { chave: "ajuda",        rotulo: "Ajuda",       caminho: "ajuda/" },
   ];
+
+  /* "Ajuda desta tela": o guia que cada seção abre por padrão (os mesmos
+     artigos da aba Ajuda, js/ajuda/artigos.js). Uma página pode trocar
+     pelo dela com definirAjuda(id) — a ficha aponta para o guia da ficha. */
+  var AJUDA_DA_SECAO = {
+    home: "primeiros-passos", personagens: "criar-personagem", campanhas: "campanhas-comecar",
+    catalogo: "catalogo-consultar", homebrew: "homebrew-criar", perfil: "personalizar-aparencia",
+  };
+  var ajudaDaTela = { secao: "", guia: "", link: null };
 
   var CHAVE_EFEITOS = "rama.pref.efeitos";
   var CHAVE_ESCALA = "rama.pref.escala";
@@ -166,6 +176,10 @@
           ]),
         ]),
         el("div.app-topo__espaco"),
+        ajudaDaTela.link = o.secao !== "ajuda" ? el("a.r-icone.app-ajuda", {
+          href: enderecoDaAjuda(ajudaDaTela.guia || AJUDA_DA_SECAO[o.secao] || ""),
+          "aria-label": "Ajuda desta tela", title: "Ajuda desta tela",
+        }, [global.RAMAUI.simbolo("ajuda")]) : null,
         el("div.agente", {}, [
           avatarDoAgente(agente),
           el("span.agente__nome", { texto: agente.nome || "Agente" }),
@@ -195,6 +209,24 @@
     }
 
     return { cabecalho: cabecalho, conteudo: conteudo };
+  }
+
+  function enderecoDaAjuda(guia) {
+    return U.url("ajuda/" + (guia ? "?guia=" + encodeURIComponent(guia) : ""));
+  }
+
+  /* A página diz qual guia é o dela (antes ou depois de a casca existir). */
+  function definirAjuda(guia) {
+    ajudaDaTela.guia = String(guia || "");
+    if (ajudaDaTela.link) ajudaDaTela.link.href = enderecoDaAjuda(ajudaDaTela.guia);
+  }
+
+  /* O endereço desta página, a partir da raiz do site — para voltar a ele
+     depois do tutorial inicial. */
+  function destinoAtual() {
+    var raiz = U.raiz ? U.raiz() : "";
+    var aqui = location.href;
+    return raiz && aqui.indexOf(raiz) === 0 ? aqui.slice(raiz.length) : "";
   }
 
   function avatarDoAgente(agente) {
@@ -430,6 +462,15 @@
       }
 
       global.RAMAAuth.exigirSessao(async function (agente, respostas) {
+        /* Tutorial inicial obrigatório (por conta): toda página manda para
+           ele enquanto a conclusão não estiver gravada, guardando o
+           endereço pedido para voltar no fim. A ficha embutida (semCasca)
+           não abre outra instância — quem cuida disso é a página de fora. */
+        if (!o.semCasca && !o.tutorial && global.RAMAAuth.tutorialPendente && global.RAMAAuth.tutorialPendente()) {
+          var voltar = destinoAtual();
+          location.replace(U.url("ficha/?tutorial=inicial" + (voltar ? "&voltar=" + encodeURIComponent(voltar) : "")));
+          return;
+        }
         /* semCasca: a página vai morar dentro de outra (a ficha no painel
            lateral do combate). Cabeçalho, navegação e rodapé ficam com a
            página de fora; a sessão é conferida do mesmo jeito. */
@@ -441,7 +482,7 @@
           /* Com a página montada, para o aviso não disputar com ela. Na
              ficha embutida no combate (semCasca), não: quem avisa é a
              página de fora. */
-          if (!o.semCasca) novidadesDaVersao();
+          if (!o.semCasca && !o.tutorial) novidadesDaVersao();
         } catch (e) {
           console.error("[R.A.M.A.] a página falhou ao montar", e);
           var conteudo = U.$("#conteudo");
@@ -461,6 +502,9 @@
     montar: montar,
     titulo: titulo,
     iniciar: iniciar,
+    definirAjuda: definirAjuda,
+    enderecoDaAjuda: enderecoDaAjuda,
+    novidadesDaVersao: novidadesDaVersao,
     preferencias: preferencias,
     abrirChangelog: abrirChangelog,
     definirEfeitos: definirEfeitos,

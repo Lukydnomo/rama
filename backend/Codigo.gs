@@ -397,6 +397,9 @@ function rotasDoNucleo() {
 
   ler_perfil:            { publica: false, fn: acaoLerPerfil },
   salvar_perfil:         { publica: false, fn: acaoSalvarPerfil },
+  /* Tutorial inicial: a conclusão é da conta da sessão e só esta ação a
+     grava (salvar_perfil recusa a chave). Repetir não muda nada. */
+  concluir_tutorial:     { publica: false, fn: acaoConcluirTutorial },
   /* Temas de dados (v2.40): o resgate é a ÚNICA porta que concede. */
   resgatar_codigo:       { publica: false, fn: acaoResgatarCodigo },
   listar_desbloqueios:   { publica: false, fn: acaoListarDesbloqueios },
@@ -491,6 +494,7 @@ function abasDaAcao(acao) {
       return [
         { definicao: ABAS.CAMPANHAS }, { definicao: ABAS.CAMPANHA_MEMBROS }, { definicao: ABAS.CAMPANHA_CAPAS },
         { definicao: ABAS.CAMPANHA_HEXATOMBE }, { definicao: ABAS.CAMPANHA_HACKING }, { definicao: ABAS.CAMPANHA_PERIGOS },
+        { definicao: ABAS.CAMPANHA_VIAGENS },
         { definicao: ABAS.PERFIS, extras: ['atualizadoEm'] },
       ];
     case 'ler_fotos':
@@ -981,7 +985,50 @@ function perfilPublico(usuario) {
     /* As preferências de apresentação vêm com a sessão: a página as
        aplica sem outra consulta. */
     preferencias: preferenciasDaSessao(perfil),
+    /* O tutorial inicial: a data da conclusão, ou "" (pendente). Conta
+       antiga, sem o registro, é pendente. A presença do campo é o sinal
+       de que este servidor sabe gravar a conclusão. */
+    tutorial: { inicial: conclusaoDoTutorial(perfil) },
   };
+}
+
+/* ---- Tutorial inicial ----
+   A conclusão mora em `preferenciasJson`, sob a chave reservada
+   `tutorial` ({ inicial: data ISO }). Ela não está em
+   PREFERENCIAS_ACEITAS: salvar_perfil recusa quem a mandar, e o remendo
+   de preferências (juntarPreferencias) só mexe nas chaves pedidas — uma
+   aba antiga salvando o tema nunca apaga a conclusão. Nenhum campo novo
+   na planilha, nenhum setupRama. */
+function conclusaoDoTutorial(perfil) {
+  var prefs = lerJson(perfil && perfil.preferenciasJson, {});
+  var t = prefs && prefs.tutorial;
+  var quando = t && typeof t === 'object' ? t.inicial : '';
+  return typeof quando === 'string' && /^\d{4}-\d{2}-\d{2}T/.test(quando) ? quando : '';
+}
+
+function acaoConcluirTutorial(corpo, usuario) {
+  /* A conta é sempre a da sessão; o corpo não escolhe nada. */
+  return comTrava(function () {
+    var agora = new Date().toISOString();
+    var perfil = acharPor(ABAS.PERFIS, 'userId', usuario.id);
+    if (!perfil) {
+      inserir(ABAS.PERFIS, { userId: usuario.id, avatar: '', preferenciasJson: '{}', atualizadoEm: agora });
+      perfil = acharPor(ABAS.PERFIS, 'userId', usuario.id);
+    }
+    var ja = conclusaoDoTutorial(perfil);
+    /* Idempotente: a segunda aba, o clique repetido e a nova tentativa
+       depois de uma resposta perdida recebem a mesma data, sem gravar. */
+    if (ja) return { ok: true, tutorial: { inicial: ja }, repetida: true };
+    var prefs = lerJson(perfil.preferenciasJson, {});
+    if (!prefs || typeof prefs !== 'object' || Array.isArray(prefs)) prefs = {};
+    prefs.tutorial = { inicial: agora };
+    var json = JSON.stringify(prefs);
+    if (json.length > MAX_PREFERENCIAS_JSON) return { ok: false, erro: 'dados_grandes' };
+    perfil.preferenciasJson = json;
+    perfil.atualizadoEm = agora;
+    atualizarLinha(ABAS.PERFIS, perfil._linha, perfil);
+    return { ok: true, tutorial: { inicial: agora } };
+  });
 }
 
 /* ---- Preferências da conta (v2.25) ----

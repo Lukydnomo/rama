@@ -307,6 +307,9 @@ function acaoLerCampanha(corpo, usuario) {
      do mestre estão ocultas, senão o histórico parece quebrado. */
   resposta.rolagensMestreOcultas = !!dados.rolagensMestreOcultas;
   resposta.ocultarStatusJogadores = !!dados.ocultarStatusJogadores;
+  /* Limite de Dados nas ameaças (Arquivos Secretos 11, p. 103–104): o
+     combate da campanha limita os testes das criaturas. */
+  resposta.limiteDeDados = !!dados.limiteDeDados;
   /* Suplementos (v6.1): o que a mesa permite, por sistema. Ausente =
      todos; lista vazia = só o livro básico. Todo membro recebe — define
      o que vale nas escolhas feitas na campanha. */
@@ -520,6 +523,16 @@ function acaoSalvarCampanha(corpo, usuario) {
        antes de qualquer leitura. */
     if (dados.ocultarStatusJogadores !== undefined) {
       guardado.ocultarStatusJogadores = !!dados.ocultarStatusJogadores;
+    }
+    /* Limite de Dados nas ameaças (AS11 p. 103–104): ligar exige o
+       suplemento permitido na campanha; desligar, sempre. */
+    if (dados.limiteDeDados !== undefined) {
+      if (dados.limiteDeDados === true) {
+        var mapaLim = normalizarMapaDeSuplementos(guardado.suplementos);
+        var selLim = Object.prototype.hasOwnProperty.call(mapaLim, 'ordem') ? mapaLim.ordem : null;
+        if (selLim && selLim.indexOf('ordem.as11') < 0) return { ok: false, erro: 'suplemento_desligado', suplemento: 'ordem.as11' };
+      }
+      guardado.limiteDeDados = dados.limiteDeDados === true;
     }
 
     if (dados.nome !== undefined) {
@@ -2242,7 +2255,7 @@ function acaoLerImagemDoTurno(corpo, usuario) {
   if (p.tipo === 'criatura' && !imagem) {
     var origem = p.snapshot && p.snapshot.origem && typeof p.snapshot.origem === 'object' ? p.snapshot.origem : {};
     var candidato = String(origem.catalogoId || origem.copiadoDe || p.origemId || '');
-    if (/^(op|sah|as1|as2|as3|as4|as5|as6|as7|as9)\.criatura\.[a-z0-9.-]+$/.test(candidato)) retratoCatalogo = candidato;
+    if (/^(op|sah|as1|as2|as3|as4|as5|as6|as7|as9|as11)\.criatura\.[a-z0-9.-]+$/.test(candidato)) retratoCatalogo = candidato;
   }
   var nomeAtual = p.tipo === 'personagem' ? personagensDaMesaPorId(ctx)[p.personagemId] : null;
   var dadosDoTurno = { participanteId: p.id, tipo: p.tipo, nome: nomeAtual || p.nome || '', imagem: String(imagem) };

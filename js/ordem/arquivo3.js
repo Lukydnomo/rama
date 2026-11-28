@@ -212,7 +212,10 @@
       categoria: "IV", tamanho: "Enorme", defesaBase: 12, rd: 15, pv: 200, seres: 6, carga: 40, total: 160, regalias: 3, pagina: 126 },
     { chave: "motoGauderios", nome: "Motocicleta dos Gaudérios Abutres", descricao: "Adaptação do livro para quem prefere andar de moto.",
       categoria: "III", tamanho: "Médio", defesaBase: 14, rd: 5, pv: 120, seres: 2, carga: 5, total: 45, regalias: 2, pagina: 131,
-      regaliasFixas: ["arsenalSecreto", "aprimoramentosDeVelocidade"] },
+      regaliasFixas: ["arsenalSecreto", "aprimoramentosDeVelocidade"],
+      /* A mesma moto, republicada no Arquivos Secretos 11 (p. 57): uma
+         identidade só, com as duas referências. */
+      republicacoes: [{ fonte: "AS11", pagina: 57 }] },
   ];
   var POR_MODELO = {};
   MODELOS_VEICULO.forEach(function (m) { POR_MODELO[m.chave] = m; });
@@ -261,6 +264,37 @@
       resumo: "Uma arma de fogo de duas mãos num suporte no teto ou na lateral: um passageiro a opera normalmente com a Pontaria dele, sem a penalidade por disparar de um veículo em movimento, mas sem a cobertura do veículo enquanto opera. A arma e a munição são requisitadas à parte e ficam na carga do veículo." },
     { chave: "lancadoresDeFumaca", nome: "Lançadores de Fumaça", fonte: "AS9", pagina: 42,
       resumo: "Uma vez por cena, um tripulante gasta uma ação de movimento para criar uma nuvem de fumaça ao redor do veículo: os mesmos efeitos de uma granada de fumaça (OPRPG p. 64).", fumaca: true },
+
+    /* Arquivos Secretos 11, p. 56–57 — onze regalias para a mesma regra.
+       `menor`: três delas ocupam a vaga de UMA regalia inteira (a vaga é
+       consumida na proporção). Estepe e extintor: até 3 cada (a primeira
+       aquisição já conta — interpretação do RAMA), cada uma com a sua
+       unidade de reserva, gasta e reposta explicitamente. O que a fonte
+       não quantifica (airbag) fica como texto: decisão da mesa. As mesmas
+       chaves descrevem o equipamento dos veículos de viagem do AS11
+       (js/ordem/viagens.js). */
+    { chave: "airbag", nome: "Airbag", fonte: "AS11", pagina: 56, menor: true, maximo: 2,
+      resumo: "Bolsas de ar para o motorista e o passageiro da frente; a segunda aquisição estende aos demais assentos. A fonte não dá redução numérica de dano: a mesa decide." },
+    { chave: "arCondicionado", nome: "Ar-condicionado", fonte: "AS11", pagina: 56, menor: true,
+      resumo: "Controle de temperatura: o veículo evita o efeito de temperatura extrema dos encontros de viagem (p. 52)." },
+    { chave: "carregadorDeAparelhos", nome: "Carregador de aparelhos", fonte: "AS11", pagina: 56, menor: true,
+      resumo: "Conectores no painel para recarregar celulares e outros aparelhos." },
+    { chave: "carrinhoLateral", nome: "Carrinho Lateral", fonte: "AS11", pagina: 56, soMoto: true,
+      resumo: "Side-car numa motocicleta: leva um ser Médio OU 10 espaços de itens." },
+    { chave: "computadorDeBordo", nome: "Computador de Bordo", fonte: "AS11", pagina: 56,
+      resumo: "Notebook e GPS juntos: com internet, +2 em testes de perícia para adquirir informações; relaxar com ele num interlúdio recupera 1 SAN a mais; com sinal de internet ou satélite, navegação por Tecnologia." },
+    { chave: "estepe", nome: "Estepe", fonte: "AS11", pagina: 56, menor: true, maximo: 3, reserva: true,
+      resumo: "Encaixe com um pneu de reserva; cada aquisição a mais traz +1 pneu (até 3)." },
+    { chave: "extintor", nome: "Extintor", fonte: "AS11", pagina: 56, menor: true, maximo: 3, reserva: true,
+      resumo: "Encaixe com um extintor para apagar incêndios; cada aquisição a mais traz +1 (até 3)." },
+    { chave: "gps", nome: "GPS", fonte: "AS11", pagina: 56, menor: true,
+      resumo: "Garante navegação usando Tecnologia (com sinal)." },
+    { chave: "paineisSolares", nome: "Painéis Solares Avançados", fonte: "AS11", pagina: 57,
+      resumo: "Painéis no teto: o veículo não sofre mais com problemas elétricos e eletrônicos e, num carro elétrico, a autonomia dobra." },
+    { chave: "sensoresECameras", nome: "Sensores e câmeras", fonte: "AS11", pagina: 57, menor: true, pilotagem: 2,
+      resumo: "Sensores de estacionamento e câmeras: +2 em testes de Pilotagem." },
+    { chave: "travasEAlarme", nome: "Travas elétricas e alarme", fonte: "AS11", pagina: 57, menor: true,
+      resumo: "Travas contra furtos e alarme acionado pela chave, com som agudo em alcance extremo." },
   ];
   /* Indução Forçada (AS5 p. 59): a tabela de velocidade que substitui a do
      AS3 enquanto a regalia está instalada. */
@@ -315,6 +349,29 @@
     return { dt: 0, pv: 0, penalidades: 0, texto: "Abaixo de DT 10: o trabalho não rende." };
   }
 
+  /* As vagas que as regalias ocupam (AS11 p. 56): cada inteira, uma
+     vaga; as menores, um terço cada — três completam uma. A extra do
+     Apaixonado por Veículos não conta. */
+  function vagasUsadas(regalias) {
+    var inteiras = 0, menores = 0;
+    lista(regalias).forEach(function (r) {
+      if (!r || r.extra) return;
+      var d = POR_REGALIA[r.chave];
+      if (!d) return;
+      if (d.menor) menores++; else inteiras++;
+    });
+    return { inteiras: inteiras, menores: menores, vagas: inteiras + Math.ceil(menores / 3), sobraMenores: menores % 3 ? 3 - (menores % 3) : 0 };
+  }
+  function cabeRegalia(v, chave) {
+    var m = POR_MODELO[v.modelo];
+    var d = POR_REGALIA[chave];
+    if (!m || !d) return { ok: false, motivo: "Regalia desconhecida." };
+    if (d.soMoto && m.tamanho !== "Médio") return { ok: false, motivo: d.nome + " só vale numa motocicleta." };
+    var depois = vagasUsadas(v.regalias.concat([{ chave: chave }]));
+    if (depois.vagas > m.regalias) return { ok: false, motivo: "O veículo tem " + m.regalias + " vaga(s) de regalia" + (d.menor ? " (três menores ocupam uma vaga)." : ".") };
+    return { ok: true };
+  }
+
   var COMBUSTIVEL_MAXIMO = 5;
   /* O maior tanque possível (Conversão de Combustível, AS5 p. 59). */
   var COMBUSTIVEL_TETO = 10;
@@ -356,8 +413,13 @@
     });
     var danos = obj(x.danos);
     var usos = obj(x.usos);
+    var res = obj(x.reservas);
+    var qtd = function (k) { return regalias.filter(function (r) { return r.chave === k; }).length; };
     return {
       id: id, modelo: modelo,
+      /* As unidades de reserva do AS11 (estepe e extintor): ausente =
+         cheio (o que a regalia trouxe); nunca mais do que as aquisições. */
+      reservas: { estepe: inteiro(res.estepe, 0, qtd("estepe"), qtd("estepe")), extintor: inteiro(res.extintor, 0, qtd("extintor"), qtd("extintor")) },
       nome: texto(x.nome, 80) || m.nome,
       pvAtual: inteiro(x.pvAtual, 0, 9999, m.pv),
       combustivel: inteiro(x.combustivel, 0, combustivelMaximo({ regalias: regalias }), COMBUSTIVEL_MAXIMO),
@@ -433,9 +495,10 @@
       dadosPilotagem: -penalidadePilotagem,
       deslocamento: desloc ? { dt: desloc.dt, metros: metros, quadrados: Math.floor(metros / 1.5), inducao: inducao, nitro: !!(x.nitro && temRegalia(v, "oxidoNitroso")) } : null,
       vagas: Math.max(0, m.regalias - (m.regaliasFixas ? 0 : 0)),
-      /* As regalias que contam no limite e as extras (Apaixonado por
-         Veículos, AS5 p. 56). */
-      noLimite: v.regalias.filter(function (r) { return !r.extra; }).length,
+      /* As vagas ocupadas (inteiras + menores em terços, AS11 p. 56) e as
+         extras (Apaixonado por Veículos, AS5 p. 56). */
+      noLimite: vagasUsadas(v.regalias).vagas,
+      menores: vagasUsadas(v.regalias).menores,
       extras: v.regalias.filter(function (r) { return r.extra; }).length,
       combustivelMaximo: combustivelMaximo(v),
       imunidades: imunidades,
@@ -450,6 +513,33 @@
       id: novoId("vei"), modelo: modelo, nome: nome || m.nome, pvAtual: m.pv, combustivel: COMBUSTIVEL_MAXIMO,
       regalias: (m.regaliasFixas || []).map(function (k) { return { chave: k }; }),
     });
+  }
+
+  /* Usar ou repor um estepe ou extintor (AS11 p. 56), sempre explícito. */
+  function mexerReserva(v, item, delta) {
+    if (["estepe", "extintor"].indexOf(item) < 0) return { ok: false, motivo: "Item desconhecido." };
+    var max = v.regalias.filter(function (r) { return r.chave === item; }).length;
+    if (!max) return { ok: false, motivo: "O veículo não tem a regalia " + item + "." };
+    var antes = v.reservas[item];
+    var depois = Math.max(0, Math.min(max, antes + (delta > 0 ? 1 : -1)));
+    if (depois === antes) return { ok: false, motivo: delta > 0 ? "As reservas já estão cheias (" + max + ")." : "Não há " + item + " de reserva." };
+    v.reservas[item] = depois;
+    registrarNoVeiculo(v, "reserva", (delta > 0 ? "Reposto: " : "Usado: ") + item + " (" + depois + "/" + max + ").");
+    return { ok: true, antes: antes, depois: depois, maximo: max };
+  }
+  /* Instalar ou tirar regalias: só as reservas acompanham (cada estepe
+     ou extintor novo vem com a sua unidade); combustível, PV e avarias
+     ficam como estavam. */
+  function trocarRegalias(v, novas) {
+    var antes = { estepe: v.regalias.filter(function (r) { return r.chave === "estepe"; }).length, extintor: v.regalias.filter(function (r) { return r.chave === "extintor"; }).length };
+    var limpo = normalizarVeiculo(Object.assign({}, v, { regalias: novas }));
+    v.regalias = limpo.regalias;
+    ["estepe", "extintor"].forEach(function (k) {
+      var agora = v.regalias.filter(function (r) { return r.chave === k; }).length;
+      var res = v.reservas && typeof v.reservas[k] === "number" ? v.reservas[k] : antes[k];
+      v.reservas[k] = Math.max(0, Math.min(agora, res + (agora - antes[k])));
+    });
+    return v;
   }
 
   function registrarNoVeiculo(v, tipo, txt) {
@@ -1277,6 +1367,14 @@
     "as9.criatura.stella-green-aliado": { efeitos: [{ tipo: "dadosPericia", pericias: ["pilotagem"], valor: 1 }], texto: "+1d20 em Pilotagem", fonte: "Arquivos Secretos 9, p. 29" },
     "as9.criatura.chloe-grey-aliado": { efeitos: [{ tipo: "dadosPericia", pericias: ["investigacao"], valor: 1 }], texto: "+1d20 em Investigação", fonte: "Arquivos Secretos 9, p. 33" },
     "as9.criatura.ryder-staten-aliado": { escolha: { quantas: 2, qualquer: true, dados: 1 }, texto: "+1d20 em 2 perícias escolhidas (até o fim da missão)", fonte: "Arquivos Secretos 9, p. 34" },
+    /* Arquivos Secretos 11: os aliados de Carcaças Vermelhas. Bruna e
+       Rômulo têm, de propósito, os mesmos efeitos (p. 92 e 97). O treino
+       considera o grau ORIGINAL da ficha: destreinado, vale o de treinado;
+       já treinado, +1d20. O +1d6 por 1 PE (Troca Tiro e Dá Porrada) e o
+       Ajuda Como Dá ficam com botões (js/ordem/telas/ficha-arquivo11.js). */
+    "as11.criatura.bruna-machado-aliado": { efeitos: [{ tipo: "treinadoPorAliado", pericias: ["pilotagem"], seJaTreinadoDados: 1 }], texto: "treinada em Pilotagem (+1d20 se já for)", fonte: "Arquivos Secretos 11, p. 92", trocaTiro: true },
+    "as11.criatura.romulo-machado-aliado": { efeitos: [{ tipo: "treinadoPorAliado", pericias: ["pilotagem"], seJaTreinadoDados: 1 }], texto: "treinado em Pilotagem (+1d20 se já for)", fonte: "Arquivos Secretos 11, p. 97", trocaTiro: true },
+    "as11.criatura.nicole-oliva-aliado": { efeitos: [{ tipo: "treinadoPorAliado", pericias: ["artes"], seJaTreinadoDados: 1 }], texto: "treinada em Artes (+1d20 se já for)", fonte: "Arquivos Secretos 11, p. 96", ajudaComoDa: true },
   };
 
   function normalizarRegistroDeAliado(b) {
@@ -1470,6 +1568,10 @@
     repararVeiculo: repararVeiculo,
     definirManobra: definirManobra,
     usarArsenal: usarArsenal,
+    vagasUsadas: vagasUsadas,
+    cabeRegalia: cabeRegalia,
+    mexerReserva: mexerReserva,
+    trocarRegalias: trocarRegalias,
 
     EFEITOS_DE_ALIADO: EFEITOS_DE_ALIADO,
     PERICIAS_DE_INTELECTO: PERICIAS_DE_INTELECTO,

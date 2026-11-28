@@ -61,13 +61,17 @@
       descricao: "Conteúdos das Indústrias Panacea, com novas opções, medicamentos, doenças e venenos.",
       capa: "assets/sistemas/ordem-as6-capa.webp", capaAlt: "Capa de Arquivos Secretos 6: três pessoas diante de um tanque de líquido verde num laboratório" },
     /* v6.5 */
-    { id: "ordem.as7", sistema: "ordem", fontes: ["AS7"], nome: "Arquivos Secretos 7", curto: "AS7",
+    { id: "ordem.as7", sistema: "ordem", fontes: ["AS7"], nome: "Arquivos Secretos 7: Vampiros", curto: "AS7",
       descricao: "Vampiros e terrores da fé: o ritual Vampirismo, novos itens e origens, ameaças de Sangue e a Apóstata, e duas novas variantes de Monstruoso.",
       capa: "assets/sistemas/ordem-as7-capa.webp", capaAlt: "Capa de Arquivos Secretos 7: cinco figuras vampirescas de presas à mostra, sob o título, num fundo vermelho" },
     /* v6.9 */
     { id: "ordem.as9", sistema: "ordem", fontes: ["AS9"], nome: "Arquivos Secretos 9: Hell Hunters", curto: "AS9",
       descricao: "O esquadrão Hell Hunters: mercenários com ficha e perfil de aliado, origens, poderes de combatente, as trilhas Incursor e Piloto de Drone, regalias de veículo, itens táticos e drones.",
       capa: "assets/sistemas/ordem-as9-capa.webp", capaAlt: "Capa de Arquivos Secretos 9: o esquadrão Hell Hunters armado diante de prédios ao entardecer, com um helicóptero no céu" },
+    /* Arquivos Secretos 11: Gaudérios e as Estradas. */
+    { id: "ordem.as11", sistema: "ordem", fontes: ["AS11"], nome: "Arquivos Secretos 11: Gaudérios e as Estradas", curto: "AS11",
+      descricao: "Viagens nas estradas (itinerários, veículos, encontros e acidentes), regalias novas para veículos, a missão Carcaças Vermelhas com os aliados Bruna, Nicole e Rômulo, e a regra da comunidade Limite de Dados.",
+      capa: "assets/sistemas/ordem-as11-capa.webp", capaAlt: "Capa de Arquivos Secretos 11: dois motociclistas cantam ao redor de uma fogueira, um tocando violão, com motos e araucárias sob a lua cheia ao fundo" },
     /* v6.2: o conteúdo oficial avulso (fonte EXTRA: marca-páginas e
        materiais promocionais) também é complemento — habilitável como os
        outros, não sempre ligado como o livro básico. */
@@ -80,7 +84,7 @@
      suplemento: ligar o suplemento NÃO as liga (cada uma continua com o
      próprio interruptor); desligar impede iniciá-las e novas operações. */
   var FERRAMENTAS = {
-    ordem: { hexatombe: "ordem.as2", hacking: "ordem.as4", perigos: "ordem.as5", sincronia: "ordem.as5" },
+    ordem: { hexatombe: "ordem.as2", hacking: "ordem.as4", perigos: "ordem.as5", sincronia: "ordem.as5", viagens: "ordem.as11" },
   };
 
   /* ---------------------------------------------------------------
@@ -167,6 +171,15 @@
   }
 
   function capa(s, tamanho) {
+    /* Sem capa conhecida: a lombada com o nome (js/capa-sistema.js),
+       nunca uma capa inventada. */
+    if (!s.capa) {
+      var CS = global.RAMACapaSistema;
+      var lombada = CS ? CS.elemento({ id: s.id, nome: s.nome, curto: s.curto }, { tamanho: tamanho === "p" ? "p" : "m" })
+        : el("span.capa-sistema.capa-sistema--sem-capa", { "aria-hidden": "true" }, [el("span.capa-sistema__lombada", {}, [el("span.capa-sistema__titulo", { texto: s.curto })])]);
+      lombada.classList.add("suplemento__capa");
+      return lombada;
+    }
     var src = U.url(tamanho === "p" ? s.capa.replace(/\.webp$/, "-pequena.webp") : s.capa);
     return el("span.capa-sistema.capa-sistema--" + (tamanho || "m") + ".suplemento__capa", { "aria-hidden": "true" }, [
       el("img.capa-sistema__imagem", { src: src, alt: "", loading: "lazy", decoding: "async", width: tamanho === "p" ? 160 : 320, height: tamanho === "p" ? 215 : 430 }),

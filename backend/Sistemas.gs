@@ -55,7 +55,7 @@
                    próprio "ligada" guardado na aba dela. */
 var SISTEMAS_DO_RAMA = [
   { id: 'ordem', nome: 'Ordem Paranormal', arquivo: 'Ordem.gs',
-    ferramentas: ['combate', 'condicoes', 'sincronia'], mecanicas: ['hexatombe', 'hacking', 'perigos'] },
+    ferramentas: ['combate', 'condicoes', 'sincronia'], mecanicas: ['hexatombe', 'hacking', 'perigos', 'viagens'] },
   { id: 'ordem2', nome: 'Ordem Paranormal RPG II', arquivo: 'Ordem2.gs',
     ferramentas: ['mesaOrdem2'], mecanicas: [] },
   { id: 'oblivio', nome: 'Oblívio', arquivo: 'Oblivio.gs',
@@ -89,6 +89,7 @@ var SUPLEMENTOS_DO_RAMA = {
     { id: 'ordem.as6', fontes: ['AS6'], ferramentas: [] },
     { id: 'ordem.as7', fontes: ['AS7'], ferramentas: [] },
     { id: 'ordem.as9', fontes: ['AS9'], ferramentas: [] },
+    { id: 'ordem.as11', fontes: ['AS11'], ferramentas: ['viagens'] },
     { id: 'ordem.extra', fontes: ['EXTRA'], ferramentas: [] },
   ],
 };

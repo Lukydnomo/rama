@@ -1,0 +1,50 @@
+/* =====================================================================
+   R.A.M.A. — Viagens nas estradas (aba da campanha · Arquivos Secretos 11)
+   ---------------------------------------------------------------------
+   O painel da viagem, os veículos, os encontros e os controles de
+   Carcaças Vermelhas. Os estados nunca dependem só da cor: a etapa
+   atual tem "►" e aria-current, a feita tem "✓", a pendência tem texto.
+   ===================================================================== */
+
+.vg-cartao {
+  display: flex; flex-direction: column; gap: var(--e1);
+  padding: var(--e2); border: var(--borda) solid var(--cor-traco-fraca);
+}
+.vg-cartao p { margin: 0; }
+.vg-cartao--acidente { border-left: calc(var(--borda) * 3) solid var(--cor-erro); }
+.vg-grupo { padding-top: var(--e1); }
+.vg-grupo__titulo { margin: 0; font-size: var(--texto-mini); text-transform: uppercase; letter-spacing: var(--espaco-letra); color: var(--cor-texto-2); }
+.vg-evento, .vg-estendido, .vg-registro, .vg-cena {
+  padding: var(--e1) 0 var(--e1) var(--e2);
+  border-left: var(--borda) solid var(--cor-traco-media);
+}
+.vg-evento p, .vg-estendido p, .vg-registro p, .vg-cena p { margin: 0; }
+.vg-consequencia--pendente { border-left: calc(var(--borda) * 2) solid var(--cor-aviso); padding-left: var(--e1); }
+.vg .faixa { flex-wrap: wrap; gap: var(--e1); align-items: center; }
+.vg-numero { width: 9ch; min-width: 0; }
+.vg .r-area { min-height: 2.6em; flex: 1 1 16rem; }
+.vg .faixa > .r-entrada:not(.vg-numero) { flex: 1 1 10rem; min-width: 0; }
+
+.vg-contador {
+  display: flex; flex-wrap: wrap; align-items: center; gap: var(--e2);
+  padding: var(--e2); border: var(--borda) solid var(--cor-traco-media);
+}
+.vg-contador__rotulo { font-size: var(--texto-mini); text-transform: uppercase; letter-spacing: var(--espaco-letra); color: var(--cor-texto-2); }
+.vg-contador__valor { font-size: 2rem; line-height: 1; font-variant-numeric: tabular-nums; min-width: 2ch; text-align: center; }
+
+.vg-etapas { margin: 0; padding-left: var(--e4); display: flex; flex-direction: column; gap: var(--e1); }
+.vg-etapa { display: flex; flex-wrap: wrap; align-items: center; gap: var(--e1); }
+.vg-etapa--feita .vg-etapa__nome { color: var(--cor-texto-3); }
+.vg-etapa--atual .vg-etapa__nome { font-weight: 700; color: var(--cor-texto); }
+
+.vg-decisoes { display: flex; flex-wrap: wrap; gap: var(--e1); }
+.vg-decisoes .r-botao { white-space: normal; text-align: left; height: auto; }
+
+.vg-historico { margin: 0; padding-left: var(--e3); display: flex; flex-direction: column; gap: var(--e1); }
+.vg-historico__item { display: flex; flex-wrap: wrap; align-items: center; gap: var(--e1); }
+.vg-historico__item--desfeito > span { text-decoration: line-through; color: var(--cor-texto-3); }
+
+@media (max-width: 560px) {
+  .vg-contador__valor { font-size: 1.6rem; }
+  .vg-cartao { padding: var(--e1) var(--e2); }
+}

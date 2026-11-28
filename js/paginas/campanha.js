@@ -77,6 +77,8 @@
     { chave: "hexatombe",   rotulo: "Hexatombe",   secao: "RAMACampanhaHexatombe", mecanica: "hexatombe" },
     { chave: "hacking",     rotulo: "Hacking",     secao: "RAMACampanhaHacking", mecanica: "hacking" },
     { chave: "perigos",     rotulo: "Perigos",     secao: "RAMACampanhaPerigos", mecanica: "perigos" },
+    /* Ordem · Arquivos Secretos 11: viagens e Carcaças Vermelhas. */
+    { chave: "viagens",     rotulo: "Viagens",     secao: "RAMACampanhaViagens", mecanica: "viagens" },
     /* Oblívio (v3.0): a mesa da Testemunha — Missão, cenas, Farol,
        encontros com Ameaças e Buracos. */
     { chave: "oblivio",     rotulo: "Mesa da Testemunha", secao: "RAMACampanhaOblivio", ferramenta: "oblivio" },
@@ -462,6 +464,7 @@
     if (tem("hexatombe")) notificar("hexatombe");
     if (tem("hacking")) notificar("hacking");
     if (tem("perigos")) notificar("perigos");
+    if (tem("viagens")) notificar("viagens");
     if (tem("oblivio")) notificar("oblivio");
     if (tem("vampiro")) notificar("cronica");
     if (tem("goblins")) notificar("covil");
@@ -588,7 +591,7 @@
   }
 
   /* As abas que desenham fichas da mesa. As outras não pagam por ela. */
-  var PRECISAM_DA_MESA = { personagens: true, combate: true, notas: true, hexatombe: true, hacking: true, perigos: true, oblivio: true, cronica: true };
+  var PRECISAM_DA_MESA = { personagens: true, combate: true, notas: true, hexatombe: true, hacking: true, perigos: true, viagens: true, oblivio: true, cronica: true };
 
   function desenhar() {
     if (estado.semAcesso) return;
@@ -1079,7 +1082,33 @@
     }
     return el("div.pilha", {}, [
       el("p.t-mini", { texto: "Regras de suplemento de " + sistema.nome + " que esta campanha usa. Desligada, a aba da mecânica some para todos — nada é apagado, e ligar de novo volta ao que estava." }),
-    ].concat(linhas));
+    ].concat(linhas, [limiteDeDadosDaMesa(ctx, sistema)]));
+  }
+
+  /* Limite de Dados nas ameaças (Arquivos Secretos 11, p. 103–104 —
+     conteúdo da comunidade, de Luna Moth, não oficial e não canônico).
+     Vale para as criaturas do combate desta campanha; as fichas têm a
+     própria regra opcional. Só com o AS11 permitido para ligar. */
+  function limiteDeDadosDaMesa(ctx, sistema) {
+    if (sistema.id !== "ordem") return null;
+    var SUP = global.RAMASuplementos;
+    var permitido = !SUP || SUP.ligado(SUP.daCampanha(ctx.campanha.suplementos, "ordem"), "ordem.as11");
+    var ligado = !!ctx.campanha.limiteDeDados;
+    var entrada = el("input", { type: "checkbox", checked: ligado, disabled: !permitido && !ligado, onchange: function () {
+      var quer = entrada.checked;
+      entrada.disabled = true;
+      global.RAMAApi.salvarCampanha(ctx.campanhaId, ctx.rev, { limiteDeDados: quer }).then(function (r) {
+        entrada.disabled = false;
+        if (!r || !r.ok) { entrada.checked = !quer; UI.avisoDeFalha(r, "Limite de Dados"); return; }
+        UI.avisoOk(quer ? "Limite de Dados ligado nas ameaças desta campanha." : "Limite de Dados desligado nas ameaças desta campanha.");
+        ctx.recarregar();
+      });
+    } });
+    return el("div.pilha--curta", { class: "pilha" }, [
+      !permitido ? el("p.t-mini.t-aviso", { texto: "O Arquivos Secretos 11 está desligado nesta campanha: " + (ligado ? "dá para desligar." : "ligue o suplemento acima para usar esta regra.") }) : null,
+      el("label.r-marca", {}, [entrada, el("span", {}, [el("span.t-forte", { texto: "Limite de Dados nas ameaças" }), el("span.t-mini", { texto: " · Arquivos Secretos 11, p. 103–104 · regra da comunidade (Luna Moth), não oficial" })])]),
+      el("p.r-ajuda", { texto: "As criaturas do combate rolam no máximo 5d20 (ou −5d20) nos testes; a que tem Enigma de Medo ainda não resolvido rola o atributo inteiro (Fonte do Medo). O atributo da ficha da ameaça não muda. Nas fichas dos agentes, a regra é ligada em cada ficha (aba Regras)." }),
+    ]);
   }
 
   /* =================================================================

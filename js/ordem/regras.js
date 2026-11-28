@@ -1889,17 +1889,22 @@
        interlúdio, o atributo escolhido no ataque e no dano. */
     var sintA = A2() ? A2().sintonizacaoValendo(ficha, "arma", item.id) : null;
     if (sintA && pe) { atributoDoTeste = sintA.atributo; agil = false; }
-    var quantosDados = atributoDoTeste ? atributo(ficha, atributoDoTeste) + (a.dadosAtaque || 0) : 0;
+    var quantosDados = atributoDoTeste ? atributo(ficha, atributoDoTeste) : 0;
+    /* Os dados a mais e a menos da arma e do momento entram como parcelas
+       próprias (com o Limite de Dados, o positivo é limitado antes das
+       reduções — AS11 p. 103). */
+    var parcelasDeDados = [];
+    if (a.dadosAtaque && atributoDoTeste) parcelasDeDados.push({ rotulo: item.nome || "Arma", valor: a.dadosAtaque, detalhe: "dados de ataque da arma" });
     /* Ambidestria (AS3 p. 108): –1d20 nos ataques até o próximo turno. */
     var ambi = A3() ? A3().dadosDeAmbidestria(ficha) : 0;
-    if (ambi && atributoDoTeste) quantosDados += ambi;
+    if (ambi && atributoDoTeste) parcelasDeDados.push({ rotulo: "Ambidestria", valor: ambi, detalhe: "até o próximo turno (AS3 p. 108)" });
     /* Arma envelhecida pelo Escudo Espiral Temporal (AS6 p. 71): −1 dado. */
     var velha = A6() ? A6().dadosDeEnvelhecimento(item) : 0;
-    if (velha && atributoDoTeste) quantosDados += velha;
+    if (velha && atributoDoTeste) parcelasDeDados.push({ rotulo: "Arma envelhecida", valor: velha, detalhe: "Escudo Espiral Temporal (AS6 p. 71)" });
     /* O contexto do ataque: corpo a corpo ou à distância. Um efeito que
        vale só num deles não vira bônus de todo ataque. */
     var contexto = { ataque: a.tipo === "corpoACorpo" ? "corpo" : (a.tipo ? "distancia" : (chave === "luta" ? "corpo" : "distancia")) };
-    var dados = dadosDoTeste(ficha, chave, Object.assign({ atributo: atributoDoTeste, inventario: inventario }, contexto), quantosDados);
+    var dados = dadosDoTeste(ficha, chave, Object.assign({ atributo: atributoDoTeste, inventario: inventario, parcelasDeDados: parcelasDeDados }, contexto), quantosDados);
     var dado = atributoDoTeste ? dados.expressao : "-2d20";
 
     var ataque = pe ? bonusDePericia(ficha, chave, inventario, contexto) : conta();
@@ -2238,6 +2243,7 @@
     var valor = base !== undefined ? base : atributo(ficha, atrib);
     var c = conta();
     c.soma(atrib ? "Dados de " + siglaDe(atrib) : "Dados", valor, "1d20 por ponto do atributo");
+    (teste && Array.isArray(teste.parcelasDeDados) ? teste.parcelasDeDados : []).forEach(function (p) { if (p && p.valor) c.soma(p.rotulo, p.valor, p.detalhe || ""); });
     var ef = efeitosDaFicha(ficha);
     if (ef && (pe || (teste && teste.atributoPuro))) {
       var t = Object.assign({ pericia: pe ? chave : "", atributo: atrib }, teste || {});
@@ -2266,8 +2272,41 @@
         c.soma(l.origem || "Hexatombe", l.valor, l.motivo || "");
       });
     }
-    var expressao = EF() ? EF().expressaoDeDados(c.total) : (c.total <= 0 ? "-2d20" : c.total + "d20");
-    return { expressao: expressao, quantos: c.total, parcelas: c.parcelas, base: valor };
+    /* Limite de Dados (AS11 p. 103–104, regra da comunidade): o atributo
+       e os acréscimos positivos somam no máximo 5; as reduções entram
+       depois. O atributo da ficha não muda. */
+    var positivos = 0, negativos = 0;
+    c.parcelas.forEach(function (p) { if (p.valor > 0) positivos += p.valor; else negativos += p.valor; });
+    var limite = limiteDeDadosLigado(ficha);
+    var quantos = c.total;
+    var parcelas = c.parcelas;
+    if (limite && positivos > LIMITE_DE_DADOS) {
+      quantos = LIMITE_DE_DADOS + negativos;
+      parcelas = c.parcelas.concat([{ rotulo: "Limite de Dados", valor: LIMITE_DE_DADOS - positivos, detalhe: positivos + " → " + LIMITE_DE_DADOS + " dados positivos (AS11 p. 103, regra da comunidade)" }]);
+    }
+    return { expressao: expressaoDosDados(ficha, quantos), quantos: quantos, parcelas: parcelas, base: valor, positivos: positivos, negativos: negativos, limite: limite };
+  }
+
+  var LIMITE_DE_DADOS = 5;
+  function limiteDeDadosLigado(ficha) {
+    var OP = global.RAMAOrdemOpcionais;
+    return !!(OP && ficha && OP.ligada(ficha, "limiteDeDados"));
+  }
+  /* A expressão de uma quantidade de dados: com o Limite de Dados, −3 ou
+     menos rola cinco (o menor). */
+  function expressaoDosDados(ficha, quantos) {
+    var n = Math.round(Number(quantos) || 0);
+    if (limiteDeDadosLigado(ficha)) n = Math.max(-3, Math.min(LIMITE_DE_DADOS, n));
+    return EF() ? EF().expressaoDeDados(n) : (n <= 0 ? "-" + (2 - n) + "d20" : n + "d20");
+  }
+  /* Dados que uma ação acrescenta DEPOIS da composição (+1d20 de um
+     poder, –1 de um efeito): com o Limite de Dados, o positivo continua
+     limitado a 5 e a redução entra depois. */
+  function expressaoComDados(ficha, dados, delta) {
+    var d = Math.round(Number(delta) || 0);
+    if (!limiteDeDadosLigado(ficha) || !dados || dados.positivos === undefined) return expressaoDosDados(ficha, (dados ? dados.quantos : 0) + d);
+    var pos = Math.min(LIMITE_DE_DADOS, dados.positivos + Math.max(0, d));
+    return expressaoDosDados(ficha, pos + dados.negativos + Math.min(0, d));
   }
 
   /* Teste de atributo puro (OPRPG p. 75), com os efeitos que valem em
@@ -3237,6 +3276,10 @@
     /* Arquivos Secretos 9 (v6.9). Sem o módulo, passa como veio. */
     if (A9()) A9().normalizar(ficha, b);
     else if (b.arquivo9 && typeof b.arquivo9 === "object") ficha.arquivo9 = JSON.parse(JSON.stringify(b.arquivo9));
+    /* Arquivos Secretos 11 (v9.26): os temporários do Sonnenblume com a
+       origem e o Apfelstrudel (escritos pelo servidor, pela aba Viagens).
+       Sem o módulo, passa como veio. */
+    if (b.arquivo11 && typeof b.arquivo11 === "object") ficha.arquivo11 = global.RAMAViagens ? global.RAMAViagens.normalizarArquivo11(b.arquivo11) : JSON.parse(JSON.stringify(b.arquivo11));
     /* Barganha Insana (v2.41): as conjurações e as perdas pendentes. */
     if (b.barganhaInsana && typeof b.barganhaInsana === "object") ficha.barganhaInsana = normalizarBarganha(b.barganhaInsana);
 
@@ -3826,6 +3869,10 @@
     atributoDaPericia: atributoDaPericia,
     dadoDePericia: dadoDePericia,
     dadosDoTeste: dadosDoTeste,
+    expressaoDosDados: expressaoDosDados,
+    expressaoComDados: expressaoComDados,
+    limiteDeDadosLigado: limiteDeDadosLigado,
+    LIMITE_DE_DADOS: LIMITE_DE_DADOS,
     dadoDeAtributo: dadoDeAtributo,
     aumentarDados: aumentarDados,
 

@@ -87,6 +87,8 @@
     var painel = global.RAMACriaturaPainel.criar(a.criatura, {
       nome: a.criatura.nome, rotulo: "Aliado de " + ctx.ficha.nome, resultadosLocais: true,
       permitirRolagem: !ctx.emEdicao() && permitido(ctx),
+      /* Limite de Dados (AS11 p. 103–104): a regra opcional da ficha. */
+      limiteDeDados: !!(ctx.ficha.ordem && global.RAMAOrdemOpcionais && global.RAMAOrdemOpcionais.ligada(ctx.ficha.ordem, "limiteDeDados")),
       aoStatus: function (statusId, valor) {
         var existente = atual(ctx, id);
         var status = existente && U.porId(existente.criatura.status, statusId);

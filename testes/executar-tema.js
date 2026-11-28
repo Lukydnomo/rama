@@ -1116,8 +1116,9 @@ t.grupo("Depois de uma atualização, o histórico primeiro (v2.49.2; apresenta�
   a.liberar();
   t.ok("escondeu enquanto esperava: adia de novo", a.abertos.length === 0 && a.ouvintes.size === 1);
 
-  t.ok("só com a casca: a ficha embutida no combate não avisa", /if \(!o\.semCasca\) novidadesDaVersao\(\);/.test(fonte));
-  t.ok("o aviso vem depois de a página montar", fonte.indexOf("await aoPronto(agente, casca") < fonte.indexOf("if (!o.semCasca) novidadesDaVersao();"));
+  t.ok("só com a casca: a ficha embutida no combate não avisa", /if \(!o\.semCasca && !o\.tutorial\) novidadesDaVersao\(\);/.test(fonte));
+  t.ok("o tutorial inicial tem prioridade: a página dele não avisa", /!o\.tutorial\) novidadesDaVersao/.test(fonte));
+  t.ok("o aviso vem depois de a página montar", fonte.indexOf("await aoPronto(agente, casca") < fonte.indexOf("if (!o.semCasca && !o.tutorial) novidadesDaVersao();"));
   t.ok("o número no rodapé abre o histórico comum, não o aviso", /onclick: function \(\) \{ abrirChangelog\(\); \}/.test(fonte));
   t.ok("a classe da animação é só da abertura automática", /classe: novidade \? "r-modal--novidade" : ""/.test(fonte));
   t.ok("o fundo fecha direto (janela de consulta)", /fundoFecha: true/.test(fonte.slice(fonte.indexOf("function abrirChangelog"), fonte.indexOf("function versaoJaVista"))));

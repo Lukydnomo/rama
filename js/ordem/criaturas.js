@@ -41,6 +41,7 @@
     AS6: { nome: "Arquivos Secretos 6", sigla: "AS6", rotulo: "Arquivos Secretos 6" },
     AS7: { nome: "Arquivos Secretos 7", sigla: "AS7", rotulo: "Arquivos Secretos 7" },
     AS9: { nome: "Arquivos Secretos 9", sigla: "AS9", rotulo: "Arquivos Secretos 9" },
+    AS11: { nome: "Arquivos Secretos 11", sigla: "AS11", rotulo: "Arquivos Secretos 11" },
   };
 
   var NOMES_ELEMENTO = { sangue: "Sangue", morte: "Morte", conhecimento: "Conhecimento", energia: "Energia", medo: "Medo" };
@@ -297,7 +298,7 @@
      expressões válidas, variantes apontando para uma base que existe.
      ================================================================= */
 
-  var FORMATO_ID = /^(op|sah|as1|as2|as3|as4|as5|as6|as7|as9)\.criatura\.[a-z0-9-]+(\.[a-z0-9-]+)?$/;
+  var FORMATO_ID = /^(op|sah|as1|as2|as3|as4|as5|as6|as7|as9|as11)\.criatura\.[a-z0-9-]+(\.[a-z0-9-]+)?$/;
 
   function conferir(dados) {
     var erros = [];

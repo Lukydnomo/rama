@@ -36,6 +36,16 @@
 
   var PAINEL = U.parametro("painel") === "1";
 
+  /* DEMONSTRAÇÃO (tutorial inicial e Ajuda). ?tutorial=inicial abre a
+     ficha Universal de exemplo com o roteiro do tutorial inicial;
+     ?demo=<sistema> abre a ficha de exemplo daquele sistema com o
+     percurso dele. A ficha mora só nesta página: não há registro, a
+     camada de API recusa toda gravação (RAMAApi.modoDemonstracao), o
+     histórico da mesa não é ligado e nada sobe. Recarregar recomeça. */
+  var TUTORIAL = U.parametro("tutorial") === "inicial";
+  var DEMO = !TUTORIAL && !PAINEL ? U.parametro("demo").replace(/[^a-z0-9]/g, "").slice(0, 20) : "";
+  var DEMONSTRACAO = TUTORIAL || !!DEMO;
+
   /* As abas são do SISTEMA da ficha, declaradas no registro central
      (js/sistemas.js): cada sistema diz quais seções a ficha dele mostra,
      em que ordem, e qual desenha o bloco fixo acima delas. Esta página
@@ -116,11 +126,15 @@
   global.RAMAApp.iniciar("personagens", async function (agente, casca, prontas) {
     document.body.classList.add("pagina-ficha");
     if (PAINEL) document.body.classList.add("pagina-ficha--painel");
+    /* "Ajuda desta tela": o guia da ficha (modos, recursos, rolagens). */
+    if (global.RAMAApp.definirAjuda) global.RAMAApp.definirAjuda("ficha-modos");
 
     estado.personagemId = U.parametro("id");
-    estado.aba = lerAbaGuardada();
+    estado.aba = DEMONSTRACAO ? "geral" : lerAbaGuardada();
 
     var alvo = U.$("#ficha");
+
+    if (DEMONSTRACAO) { await abrirDemonstracao(alvo); return; }
 
     if (!estado.personagemId) {
       U.trocar(alvo, UI.vazio({
@@ -265,7 +279,7 @@
        sozinhas — e confere a sessão antes de todas elas. */
     pedidos: function () {
       var id = U.parametro("id");
-      if (!id) return [];
+      if (!id || DEMONSTRACAO) return [];
       return [
         { acao: "ler_personagem", personagemId: id },
         { acao: "ler_foto", personagemId: id },
@@ -273,7 +287,100 @@
       ];
     },
     semCasca: PAINEL,
+    /* O tutorial inicial é o destino do desvio obrigatório: não desvia
+       de novo nem disputa a tela com o aviso de novidades. */
+    tutorial: TUTORIAL,
   });
+
+  /* =================================================================
+     DEMONSTRAÇÃO
+     ================================================================= */
+
+  function avisarDemo(tipo, detalhe) {
+    if (!DEMONSTRACAO) return;
+    try { document.dispatchEvent(new CustomEvent("rama:demo", { detail: Object.assign({ tipo: tipo }, detalhe || {}) })); }
+    catch (e) { /* navegador sem CustomEvent: o roteiro só não avança sozinho */ }
+  }
+
+  async function abrirDemonstracao(alvo) {
+    global.RAMAApi.modoDemonstracao(true);
+    var T = global.RAMATutorial;
+    U.trocar(alvo, UI.carregando("Preparando a ficha de demonstração", { forma: "ficha" }));
+    var ficha = null;
+    var foto = "";
+    try {
+      if (!T) throw new Error("tutorial.js não carregou");
+      await T.carregar(["js/ajuda/demos.js"]);
+      var demo = await global.RAMAAjudaDemos.ficha(TUTORIAL ? "universal" : DEMO);
+      ficha = demo.ficha;
+      foto = demo.foto || "";
+    } catch (e) {
+      console.error("[R.A.M.A.] a demonstração não abriu", e);
+      U.trocar(alvo, falhaDaDemonstracao());
+      return;
+    }
+
+    estado.personagemId = "demonstracao";
+    estado.ficha = F.normalizarFicha(ficha);
+    estado.foto = foto;
+    estado.campanhas = [];
+    estado.capacidades = { ler: true, editar: true, copiar: false, gerenciar: false, dono: true };
+    estado.dono = true;
+    montarContexto();
+    /* O salvador de verdade (indicador, fila, conciliação), com um envio
+       que nunca sai da página. */
+    montarSalvador(0);
+
+    /* As rolagens aparecem como sempre; o tutorial só fica sabendo. */
+    var R = global.RAMARolagens;
+    if (R && R.mostrar && !R.mostrar.__demo) {
+      var original = R.mostrar;
+      R.mostrar = function (resultado, opcoes) {
+        var cartao = original.apply(this, arguments);
+        avisarDemo("rolagem", { aba: estado.aba, nome: (opcoes && opcoes.nome) || (resultado && resultado.nome) || "" });
+        return cartao;
+      };
+      R.mostrar.__demo = true;
+      /* Alguns sistemas (BRUTAL) mostram pelo exibir direto. mostrar
+         chama a função interna, então nada conta duas vezes. */
+      if (R.exibir) {
+        var exibirOriginal = R.exibir;
+        R.exibir = function (resultado, opcoes) {
+          var cartao = exibirOriginal.apply(this, arguments);
+          avisarDemo("rolagem", { aba: estado.aba, nome: (opcoes && opcoes.nome) || (resultado && resultado.nome) || "" });
+          return cartao;
+        };
+      }
+    }
+
+    desenhar();
+    global.RAMAFichaDemo = {
+      ctx: function () { return ctx; },
+      aba: function () { return estado.aba; },
+      modo: function () { return estado.modo; },
+      irParaAba: function (chave) { trocarAba(chave); },
+      trocarModo: function (m) { trocarModo(m); },
+      sistema: function () { return sistemaDaFicha(); },
+    };
+    try {
+      await T.iniciarNaFicha({ tipo: TUTORIAL ? "inicial" : "sistema", sistema: TUTORIAL ? "universal" : DEMO });
+    } catch (e) {
+      console.error("[R.A.M.A.] o roteiro do tutorial não abriu", e);
+      UI.avisoErro("O roteiro do tutorial não carregou. Recarregue a página para tentar de novo.", { duracao: 60000 });
+    }
+  }
+
+  /* Sem a ficha de exemplo não há tutorial: a pessoa recebe o motivo, o
+     recarregar e a saída da conta (no tutorial obrigatório não há outro
+     caminho, e ficar presa numa tela vazia não é opção). */
+  function falhaDaDemonstracao() {
+    return UI.vazio({
+      titulo: "A demonstração não abriu",
+      texto: "A ficha de exemplo não carregou neste aparelho (conexão instável ou arquivo do site desatualizado). Nada foi alterado na sua conta. " +
+        "Recarregue a página para tentar de novo; se continuar, use Feedback no menu do agente (⋯) para avisar quem administra o R.A.M.A., ou saia da conta pelo mesmo menu.",
+      acao: { rotulo: "Recarregar", aoClicar: function () { location.reload(); } },
+    });
+  }
 
   /* =================================================================
      CONTEXTO
@@ -309,6 +416,7 @@
         if (somenteLeitura()) { desfazerNaLeitura(); return; }
         estado.ficha.atualizadoEm = U.agoraISO();
         if (estado.salvador) estado.salvador.alterou();
+        avisarDemo("alterou", { aba: estado.aba });
         /* v9.13: o retrato em uso acompanha o estado (dano, cura, condição). */
         if (global.RAMARetratos) global.RAMARetratos.conferir(ctx);
       },
@@ -367,6 +475,8 @@
       instantaneo: function () { return estado.ficha; },
 
       enviar: function (dados, revisao, operacaoId) {
+        /* Demonstração: a "gravação" termina aqui mesmo. */
+        if (DEMONSTRACAO) return Promise.resolve({ ok: true, rev: U.inteiro(revisao, 0) + 1 });
         return global.RAMAApi.salvarPersonagem(estado.personagemId, revisao, comResumo(dados), operacaoId);
       },
 
@@ -812,7 +922,8 @@
         PAINEL
           ? null
           : el("a.r-icone", {
-              href: U.url("personagens/"), "aria-label": "Voltar para personagens",
+              href: DEMONSTRACAO ? U.url("ajuda/") : U.url("personagens/"),
+              "aria-label": DEMONSTRACAO ? "Voltar para a Ajuda" : "Voltar para personagens",
             }, [UI.simbolo("voltar")]),
 
         el("div.ficha-topo__identidade", {}, [
@@ -834,7 +945,15 @@
                 "aria-label": "Abrir a ficha de " + estado.ficha.nome + " em página inteira, numa nova aba",
               })
             : null,
-          UI.menu([
+          DEMONSTRACAO ? UI.menu([
+            { rotulo: "Exportar ficha", aoClicar: exportar },
+            /* Mostrado para o tutorial bater com a ficha de verdade; na
+               demonstração não abre (a ficha só existe na página). */
+            { rotulo: "Compartilhar…", aoClicar: function () {
+              avisarDemo("compartilhar", {});
+              UI.aviso("Numa ficha sua, Compartilhar… abre aqui a janela para dar acesso de Leitor ou Editor. Na demonstração ele fica desligado: esta ficha só existe nesta página.", { duracao: 8000 });
+            } },
+          ], { rotulo: "Opções da ficha", icone: "tresPontos" }) : UI.menu([
             { rotulo: "Exportar ficha", aoClicar: exportar },
           ].concat(global.RAMASuplementos && global.RAMASuplementos.temSuplementos(sistemaDaFicha().id) ? [
             { rotulo: "Suplementos…", aoClicar: abrirSuplementos },
@@ -862,7 +981,7 @@
       ? global.RAMAOblivioCatalogo.papel[estado.ficha.oblivio.papel] : null;
     if (papel) partes.push(papel.nome);
     if (estado.ficha.origem) partes.push(estado.ficha.origem);
-    partes.push("Registro // " + U.codigoCurto(estado.personagemId));
+    partes.push(DEMONSTRACAO ? "Demonstração — nada é gravado" : "Registro // " + U.codigoCurto(estado.personagemId));
     return partes.join(" · ");
   }
 
@@ -1017,6 +1136,7 @@
     if (novo === "edicao" && somenteLeitura()) return;
     estado.modo = novo;
     desenhar();
+    avisarDemo("modo", { modo: novo });
     UI.aviso(novo === "edicao"
       ? "Modo edição ativo. A estrutura da ficha está destravada."
       : "Modo normal. A estrutura está travada de novo.");
@@ -1075,9 +1195,10 @@
 
   function trocarAba(chave) {
     estado.aba = chave;
-    guardarAba(chave);
+    if (!DEMONSTRACAO) guardarAba(chave);
     /* Trocar de seção não muda a ficha: só a tira e a seção (v2.46). */
     atualizar(["abas", "conteudo"]);
+    avisarDemo("aba", { aba: chave });
 
     /* Se a pessoa já estava lendo abaixo da tira de abas, a aba nova
        precisa começar visível. Se ela estava olhando os atributos, lá
@@ -1451,24 +1572,68 @@
     }
   }
 
+  /* PDF e PNG (v9.?): o modelo do sistema da ficha (js/exportar/), com
+     o que a página tem AGORA — inclusive o que ainda não foi salvo. Só
+     lê: nada muda na ficha, no salvamento ou nos identificadores. */
+  var exportandoDocumento = false;
+  async function exportarDocumento(formato, aviso) {
+    var X = global.RAMAExportar;
+    if (!X || exportandoDocumento) return;
+    exportandoDocumento = true;
+    aviso.textContent = formato === "pdf" ? "Gerando o PDF…" : "Gerando as imagens…";
+    try {
+      var nomeCampanha = "";
+      (estado.campanhas || []).forEach(function (c) { if (c && c.id === estado.ficha.campanhaId) nomeCampanha = c.nome || ""; });
+      var agente = global.RAMAAuth && global.RAMAAuth.agente ? global.RAMAAuth.agente() : null;
+      var r = await X.exportar(estado.ficha, formato, {
+        /* Os códigos que a tela mostra: "Agente // XXXXX" (Perfil) e
+           "Registro // XXXXX" (ficha), do mesmo cálculo. */
+        contaId: DEMONSTRACAO ? "DEMO" : U.codigoCurto((agente && (agente.id || agente.usuario)) || "rama"),
+        fichaId: DEMONSTRACAO ? "DEMO" : U.codigoCurto(estado.personagemId),
+        fotoSrc: estado.foto || "",
+        campanha: nomeCampanha,
+      });
+      aviso.textContent = r.nomes.length === 1 ? "Arquivo gerado: " + r.nomes[0]
+        : r.nomes.length + " imagens geradas (uma por página): " + r.nomes[0] + " … " + r.nomes[r.nomes.length - 1];
+      UI.avisoOk(formato === "pdf" ? "PDF gerado." : r.nomes.length + " imagem(ns) gerada(s).");
+    } catch (e) {
+      aviso.textContent = "";
+      UI.avisoAtencao("Não foi possível gerar o arquivo neste navegador: " + (e && e.message ? e.message : e));
+    } finally {
+      exportandoDocumento = false;
+    }
+  }
+
   function exportar() {
     var pacote = global.RAMAValidacao.exportar("personagem", estado.ficha);
     var texto = JSON.stringify(pacote, null, 2);
 
-    var area = el("textarea.r-area", { rows: 10, readonly: true, "aria-label": "Ficha em JSON" });
+    var area = el("textarea.r-area", { rows: 8, readonly: true, "aria-label": "Ficha em JSON" });
     area.value = texto;
+
+    var avisoDoc = el("p.t-mini.exportar-aviso", { role: "status", "aria-live": "polite" });
+    var temDoc = !!global.RAMAExportar;
+    var nomeSistema = sistemaDaFicha().nome;
 
     UI.modal({
       titulo: "Exportar ficha",
       largo: true,
       conteudo: [
+        temDoc ? el("h3.t-secao", { texto: "PDF ou imagem" }) : null,
+        temDoc ? el("p", { texto: "A ficha no modelo de " + nomeSistema + ", pronta para imprimir ou compartilhar: o PDF é um arquivo com todas as páginas; o PNG baixa uma imagem por página. Sai o que está na tela agora, mesmo o que ainda não foi salvo." }) : null,
+        temDoc ? el("div.exportar-formatos", {}, [
+          el("button.r-botao", { type: "button", texto: "Baixar PDF", onclick: function () { exportarDocumento("pdf", avisoDoc); } }),
+          el("button.r-botao", { type: "button", texto: "Baixar PNG", onclick: function () { exportarDocumento("png", avisoDoc); } }),
+        ]) : null,
+        temDoc ? avisoDoc : null,
+        el("h3.t-secao", { texto: "JSON (cópia de segurança e importação)" }),
         el("p", { texto: "Copie o conteúdo abaixo e guarde num arquivo .json. Ele pode ser importado no Perfil, aqui ou em outra conta." }),
         area,
         el("p.t-mini", { texto: "Dono, identificadores e revisão ficam de fora do arquivo de propósito: quem importa recebe um registro novo, da própria conta." }),
       ],
       botoes: [
         {
-          rotulo: "Baixar arquivo",
+          rotulo: "Baixar JSON",
           classe: "r-botao--principal",
           aoClicar: function () { baixar(texto); },
         },

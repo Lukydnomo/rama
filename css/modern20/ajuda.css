@@ -1,0 +1,38 @@
+/* =====================================================================
+   R.A.M.A. — Modern20 · Ajuda e tutoriais
+   ---------------------------------------------------------------------
+   O mesmo cartão e a mesma página do Legacy (css/ajuda.css), com os
+   cantos, as bordas, as sombras e o anel de destaque do Modern20.
+   ===================================================================== */
+
+:where(:root[data-interface="modern20"]) {
+  & .tut {
+    border-radius: var(--m20-raio-janela);
+    border-color: var(--m20-borda);
+    box-shadow: var(--m20-sombra-3);
+  }
+  & .tut__trilha li { border-radius: 999px; }
+  & .tut__tarefa,
+  & .tut-consequencia { border-radius: var(--m20-raio-controle); background: var(--m20-aviso-suave); }
+  & .tut__tarefa--feita,
+  & .tut-consequencia { background: var(--m20-ok-suave); }
+  & body.com-tutorial .tut-alvo {
+    outline-color: transparent;
+    box-shadow: 0 0 0 3px var(--m20-anel), 0 0 0 6px var(--m20-aviso-suave);
+    border-radius: var(--m20-raio-controle);
+    animation-name: tut-alvo-m20;
+  }
+
+  & .ajuda-link,
+  & .ajuda-tutorial,
+  & .ajuda-nada { border-radius: var(--m20-raio-cartao); border-color: var(--m20-borda); }
+  & .ajuda-link { transition: border-color var(--m20-mov-estado) var(--m20-curva-mover), background var(--m20-mov-estado) var(--m20-curva-mover); }
+  & .ajuda-link:hover { background: var(--m20-realce); }
+  & .ajuda-tutorial { background: var(--m20-destaque-suave); }
+  & .ajuda-bloco { border-left-color: var(--m20-borda); }
+  & .ajuda-sistema__sem-capa { border-radius: var(--m20-raio-controle); border-color: var(--m20-borda); }
+
+  @media (max-width: 760px) {
+    & .tut { border-radius: var(--m20-raio-janela) var(--m20-raio-janela) 0 0; }
+  }
+}

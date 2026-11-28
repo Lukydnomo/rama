@@ -318,6 +318,9 @@
     aba: function (ctx) {
       var o = ordemDe(ctx);
       var c = calculo(ctx);
+      /* AS11: o saldo de dados de caçada (Carcaças Vermelhas) vem da
+         campanha, em segundo plano, para estar pronto no resultado. */
+      if (global.RAMAFichaArquivo11) global.RAMAFichaArquivo11.carregarCaca(ctx);
 
       /* As regras opcionais de consumo aparecem só ligadas. Desligar
          esconde o painel, mas guarda saldos e registros. */
@@ -774,17 +777,11 @@
      criadas à mão.
      ================================================================= */
 
-  function poderesDasRegras(ctx, o, c) {
-    var est = c.estado;
-    if (!est || (!C.classe(o.classe) && !C.origem(o.origem))) {
-      return {
-        itens: [],
-        fim: cartoesSemAquisicao(ctx, o, []),
-        aviso: "Escolha uma classe na aba Geral para ver as habilidades das regras.",
-        biblioteca: { classe: "", nomes: nomesPersonalizados(o) },
-      };
-    }
-
+  /* As habilidades das regras que a ficha tem (origem, automáticas e
+     escolhidas), já na ordem da aba e sem as excluídas. A aba
+     Habilidades monta os cartões com elas; a exportação em PDF/PNG
+     (js/exportar/modelo-ordem.js) lê a mesma lista. */
+  function aquisicoesDasRegras(o, est) {
     var aquisicoes = [];
 
     /* O poder da origem (v2.22): um cartão só, com id estável ligado à
@@ -898,6 +895,22 @@
       var pb = posicao[b.aq.id] === undefined ? guardada.length + b.i : posicao[b.aq.id];
       return pa - pb;
     }).map(function (x) { return x.aq; });
+    return { aquisicoes: aquisicoes, ativas: ativas };
+  }
+
+  function poderesDasRegras(ctx, o, c) {
+    var est = c.estado;
+    if (!est || (!C.classe(o.classe) && !C.origem(o.origem))) {
+      return {
+        itens: [],
+        fim: cartoesSemAquisicao(ctx, o, []),
+        aviso: "Escolha uma classe na aba Geral para ver as habilidades das regras.",
+        biblioteca: { classe: "", nomes: nomesPersonalizados(o) },
+      };
+    }
+
+    var lista = aquisicoesDasRegras(o, est);
+    var aquisicoes = lista.aquisicoes, ativas = lista.ativas;
     var ordemAtual = ativas.map(function (aq) { return aq.id; });
 
     var nomes = [];
@@ -1500,13 +1513,13 @@
       if (!rd || !rd.ok) { UI.avisoErro("Expressão de dado inválida para " + a.nome + "."); return; }
       rd.parcelas = rd.parcelas.slice(0, 1);
       var notas7 = global.RAMAFichaArquivo7.depoisDoTeste(ctx, rd, mods7);
-      global.RAMARolagens.mostrar(Object.assign(rd, { tipo: "atributo", nome: a.nome }), { nome: a.nome, notas: notasDosDados(dadosDoTeste).concat(notas7) });
+      global.RAMARolagens.mostrar(Object.assign(rd, { tipo: "atributo", nome: a.nome }), { nome: a.nome, notas: notasDosDados(dadosDoTeste).concat(notas7), acoes: acoesDoAs11(ctx, o7, { nome: a.nome, chave: "" }, rd) });
       return;
     }
     var r = D.rolar(expressao);
     if (!r.ok) { UI.avisoErro("Expressão de dado inválida para " + a.nome + "."); return; }
 
-    global.RAMARolagens.mostrar({
+    var resultado = {
       tipo: "atributo",
       nome: a.nome,
       expressao: r.expressao,
@@ -1514,7 +1527,13 @@
       natural: r.principal,
       total: r.principal,
       parcelas: [],
-    }, { nome: a.nome, notas: notasDosDados(dadosDoTeste) });
+    };
+    global.RAMARolagens.mostrar(resultado, { nome: a.nome, notas: notasDosDados(dadosDoTeste), acoes: acoesDoAs11(ctx, o7, { nome: a.nome, chave: "" }, resultado) });
+  }
+  /* Arquivos Secretos 11: dados de caçada e Troca Tiro e Dá Porrada no
+     resultado do teste. */
+  function acoesDoAs11(ctx, o, p, r) {
+    return global.RAMAFichaArquivo11 ? global.RAMAFichaArquivo11.acoesNoTeste(ctx, o, p, r) : [];
   }
 
   /* Os recursos: o que sobrou.
@@ -1665,9 +1684,14 @@
     /* Compacto (v9.18.2): rótulo e controle numa linha só, sem texto de
        ajuda ao lado — ele alargava a coluna e espremia "Aplicar com as
        regras". A explicação fica na dica do rótulo. */
-    return el("div.ordem-recurso__temp", { title: "Temporários: somem primeiro e podem passar do máximo." }, [
+    /* AS11: os temporários com origem (Sonnenblume) — expiram no fim da
+       missão; a origem aparece na dica e para o leitor de tela. */
+    var origens = global.RAMAFichaArquivo11 ? global.RAMAFichaArquivo11.temporarios(o).filter(function (t) { return t.recurso === item.chave; }) : [];
+    var dica = "Temporários: somem primeiro e podem passar do máximo." + (origens.length ? " Inclui " + origens.map(function (t) { return t.valor + " de " + t.origem; }).join("; ") + " — expiram no fim da missão." : "");
+    return el("div.ordem-recurso__temp", { title: dica }, [
       el("span.ordem-recurso__legenda", { "aria-hidden": "true", texto: "Temp." }),
       passoT,
+      origens.length ? el("span.so-leitor", { texto: dica }) : null,
     ]);
   }
 
@@ -3101,6 +3125,7 @@
   var SecaoPericias = {
     aba: function (ctx) {
       var o = ordemDe(ctx);
+      if (global.RAMAFichaArquivo11) global.RAMAFichaArquivo11.carregarCaca(ctx);
       var edicao = ctx.emEdicao();
       var org = organizacaoDasPericias(o);
 
@@ -3411,12 +3436,14 @@
     /* Arquivos Secretos 7: os DADOS que entram na rolagem (+1d6 de Ser
        Testado, +1d4 do Pé de Coelho) — não são bônus fixo. */
     var mods7 = global.RAMAFichaArquivo7 ? global.RAMAFichaArquivo7.modificadoresDoTeste(ctx, o, { pericia: p.chave, atributo: atributo }) : [];
+    /* Arquivos Secretos 11: o +1d4 do Apfelstrudel nas resistências. */
+    var mods11 = global.RAMAFichaArquivo11 ? global.RAMAFichaArquivo11.modificadoresDoTeste(ctx, o, { pericia: p.chave, atributo: atributo }) : [];
     var r = D.dependente({
       expressao: dado,
       sigla: siglaDe(atributo),
       nome: p.nome,
       bonus: bonus.total,
-      modificadores: mods7,
+      modificadores: mods7.concat(mods11),
     });
 
     if (!r || !r.ok) { UI.avisoErro("Expressão de dado inválida para " + p.nome + "."); return; }
@@ -3425,6 +3452,7 @@
        penalidade de carga — em vez de um "+15" sem explicação. */
     r.parcelas = [r.parcelas[0]].concat(bonus.parcelas.map(function (x) { return { rotulo: x.rotulo, valor: x.valor }; }));
     var notas7 = global.RAMAFichaArquivo7 ? global.RAMAFichaArquivo7.depoisDoTeste(ctx, r, mods7) : [];
+    if (global.RAMAFichaArquivo11) global.RAMAFichaArquivo11.depoisDoTeste(ctx, r, mods11);
     var dados = R.dadosDoTeste(o, p.chave);
     var restr = restricoesDaPericia(ctx, p.chave);
     global.RAMARolagens.mostrar(Object.assign(r, { tipo: "pericia", nome: p.nome }), {
@@ -3437,7 +3465,8 @@
         global.RAMAFichaArquivo5 ? global.RAMAFichaArquivo5.acoesNoTeste(ctx, o, p, r, dado, bonus, atributo) : [],
         global.RAMAFichaArquivo6 ? global.RAMAFichaArquivo6.acoesNoTeste(ctx, o, p, r, dado, bonus, atributo) : [],
         global.RAMAFichaArquivo7 ? global.RAMAFichaArquivo7.acoesNoTeste(ctx, o, p, r, dado, bonus, atributo) : [],
-        global.RAMAFichaArquivo9 ? global.RAMAFichaArquivo9.acoesNoTeste(ctx, o, p, r, dado, bonus, atributo) : []).filter(Boolean),
+        global.RAMAFichaArquivo9 ? global.RAMAFichaArquivo9.acoesNoTeste(ctx, o, p, r, dado, bonus, atributo) : [],
+        acoesDoAs11(ctx, o, p, r)).filter(Boolean),
     });
   }
 
@@ -5233,7 +5262,7 @@
         menos = 1;
         notas.push("Dois canos: −1 dado no ataque; o dano vira 6d6.");
       }
-      if (menos && ef.atributoDoTeste && global.RAMAOrdemEfeitos) dado = global.RAMAOrdemEfeitos.expressaoDeDados(ef.dados.quantos - menos);
+      if (menos && ef.atributoDoTeste) dado = R.expressaoComDados(ctx.ficha.ordem, ef.dados, -menos);
       notas = notasDosDados(ef.dados).concat(notas);
       if (m.nota) notas.push(m.nota);
 
@@ -5837,4 +5866,13 @@
   global.RAMASecaoOrdemInventario = SecaoInventarioOrdem;
   global.RAMASecaoOrdemHabilidades = SecaoHabilidadesOrdem;
   global.RAMAOrdemOrganizacao = Organizacao;
+  /* Para a exportação: as habilidades das regras, com a versão
+     personalizada de cada uma (quando há). */
+  global.RAMAOrdemHabilidadesDaFicha = function (o, inventario) {
+    var c = R.calcular(o, inventario);
+    if (!c.estado || (!C.classe(o.classe) && !C.origem(o.origem))) return [];
+    return aquisicoesDasRegras(o, c.estado).ativas.map(function (aq) {
+      return { aq: aq, pz: PZ() ? PZ().daAquisicao(o, aq.id) : null };
+    });
+  };
 })(window);
